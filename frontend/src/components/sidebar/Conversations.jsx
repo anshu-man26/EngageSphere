@@ -6,7 +6,7 @@ const Conversations = () => {
 	const { loading, conversations } = useGetConversations();
 	return (
 		<div className='py-2 flex flex-col overflow-auto'>
-			{conversations.map((conversation, idx) => (
+			{conversations.filter(conversation => conversation && conversation._id && conversation.fullName).map((conversation, idx) => (
 				<Conversation
 					key={conversation._id}
 					conversation={conversation}
