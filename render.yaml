@@ -1,0 +1,46 @@
+services:
+  # Backend API Service
+  - type: web
+    name: engagesphere-backend
+    env: node
+    plan: free
+    buildCommand: npm run build:backend
+    startCommand: npm run render-start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+      - key: CLOUDINARY_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_SECRET_KEY
+        sync: false
+      - key: AGORA_APP_ID
+        sync: false
+      - key: AGORA_APP_CERTIFICATE
+        sync: false
+      - key: CLIENT_URL
+        value: https://engagesphere-frontend.onrender.com
+
+  # Frontend Service
+  - type: web
+    name: engagesphere-frontend
+    env: static
+    plan: free
+    buildCommand: npm run build:frontend
+    staticPublishPath: ./frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://engagesphere-backend.onrender.com
+      - key: VITE_AGORA_APP_ID
+        sync: false 
