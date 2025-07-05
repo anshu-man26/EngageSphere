@@ -30,8 +30,7 @@ app.use(cors({
 		"http://localhost:3000", 
 		"http://localhost:5173", 
 		"http://10.18.214.234:3000",
-		"https://engagesphere-frontend.onrender.com",
-		"https://engagesphere.onrender.com"
+		"https://engagesphere-mrjv.onrender.com"
 	], // Allow both common frontend ports and your IP
 	credentials: true, // Allow cookies and authentication headers
 	methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
