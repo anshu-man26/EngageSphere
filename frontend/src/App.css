@@ -1,0 +1,259 @@
+/* Enhanced page transitions */
+.page-fade-enter {
+  opacity: 0;
+  transform: translateY(20px) scale(0.95);
+}
+
+.page-fade-enter-active {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition: all 500ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.page-fade-exit {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.page-fade-exit-active {
+  opacity: 0;
+  transform: translateY(-20px) scale(0.95);
+  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Slide transitions */
+.page-slide-enter {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+.page-slide-enter-active {
+  opacity: 1;
+  transform: translateX(0);
+  transition: all 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.page-slide-exit {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.page-slide-exit-active {
+  opacity: 0;
+  transform: translateX(-100%);
+  transition: all 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Scale transitions */
+.page-scale-enter {
+  opacity: 0;
+  transform: scale(0.8);
+}
+
+.page-scale-enter-active {
+  opacity: 1;
+  transform: scale(1);
+  transition: all 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.page-scale-exit {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.page-scale-exit-active {
+  opacity: 0;
+  transform: scale(1.1);
+  transition: all 300ms cubic-bezier(0.34, 1.1, 0.64, 1);
+}
+
+/* Performance optimizations */
+.page-transition-container {
+  min-height: 100vh;
+  overflow-x: hidden;
+  transform: translateZ(0); /* Force hardware acceleration */
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Global performance optimizations */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Smooth link transitions */
+a {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Smooth button transitions */
+button {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Smooth input transitions */
+input, textarea, select {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Enhanced message deletion animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Enhanced message shake animation for new messages */
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-3px);
+  }
+  75% {
+    transform: translateX(3px);
+  }
+}
+
+.shake {
+  animation: shake 0.6s cubic-bezier(0.36, 0, 0.66, 1);
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Pulse animation for loading text */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Prevent layout shift during transitions */
+.page-transition-container {
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Additional smooth transitions for interactive elements */
+.card, .message, .conversation-item {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card:hover, .message:hover, .conversation-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Smooth background transitions */
+.bg-gradient-to-br {
+  transition: background 0.5s ease-in-out;
+}
+
+/* Enhanced focus states */
+input:focus, textarea:focus, select:focus {
+  transform: scale(1.02);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Smooth modal transitions */
+.modal-enter {
+  opacity: 0;
+  transform: scale(0.9) translateY(-20px);
+}
+
+.modal-enter-active {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modal-exit {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+.modal-exit-active {
+  opacity: 0;
+  transform: scale(0.9) translateY(-20px);
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Sidebar specific transitions */
+.sidebar-transition {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Message container transitions */
+.message-container {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Profile and auth page specific transitions */
+.auth-page {
+  animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Loading overlay improvements */
+.loading-overlay {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* Prevent text selection during transitions */
+.transitioning {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}

@@ -4,9 +4,19 @@ import toast from "react-hot-toast";
 
 const useSendMessage = () => {
 	const [loading, setLoading] = useState(false);
-	const { messages, setMessages, selectedConversation } = useConversation();
+	const { addMessage, selectedConversation } = useConversation();
 
 	const sendMessage = async (message) => {
+		if (!selectedConversation?._id) {
+			toast.error("No conversation selected");
+			return;
+		}
+
+		if (!message.trim()) {
+			toast.error("Message cannot be empty");
+			return;
+		}
+		
 		setLoading(true);
 		try {
 			const res = await fetch(`/api/messages/send/${selectedConversation._id}`, {
@@ -14,14 +24,23 @@ const useSendMessage = () => {
 				headers: {
 					"Content-Type": "application/json",
 				},
-				body: JSON.stringify({ message }),
+				credentials: "include",
+				body: JSON.stringify({ message: message.trim() }),
 			});
+
+			if (!res.ok) {
+				throw new Error(`HTTP error! status: ${res.status}`);
+			}
+
 			const data = await res.json();
+			
 			if (data.error) throw new Error(data.error);
 
-			setMessages([...messages, data]);
+			// Use the addMessage helper to safely add the new message
+			addMessage(data);
 		} catch (error) {
-			toast.error(error.message);
+			console.error("Error sending message:", error);
+			toast.error(error.message || "Failed to send message");
 		} finally {
 			setLoading(false);
 		}

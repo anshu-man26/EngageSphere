@@ -12,10 +12,51 @@ const messageSchema = new mongoose.Schema(
 			ref: "User",
 			required: true,
 		},
+
 		message: {
 			type: String,
-			required: true,
+			default: "",
 		},
+		messageType: {
+			type: String,
+			enum: ["text", "image", "document"],
+			default: "text",
+		},
+		fileUrl: {
+			type: String,
+			default: "",
+		},
+		fileName: {
+			type: String,
+			default: "",
+		},
+		fileSize: {
+			type: Number,
+			default: 0,
+		},
+		deletedFor: [{
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "User",
+		}],
+		deletedForEveryone: {
+			type: Boolean,
+			default: false,
+		},
+		reactions: [{
+			userId: {
+				type: mongoose.Schema.Types.ObjectId,
+				ref: "User",
+				required: true,
+			},
+			emoji: {
+				type: String,
+				required: true,
+			},
+			createdAt: {
+				type: Date,
+				default: Date.now,
+			}
+		}],
 		// createdAt, updatedAt
 	},
 	{ timestamps: true }

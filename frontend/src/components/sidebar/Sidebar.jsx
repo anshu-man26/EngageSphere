@@ -1,15 +1,94 @@
+import { useState } from "react";
 import Conversations from "./Conversations";
 import LogoutButton from "./LogoutButton";
 import SearchInput from "./SearchInput";
+import ProfileButton from "./ProfileButton";
+import { IoMenu, IoClose } from "react-icons/io5";
+import useConversation from "../../zustand/useConversation";
+import useListenConversations from "../../hooks/useListenConversations";
+import logo from '../../assets/images/logo.png';
 
 const Sidebar = () => {
+	const [isOpen, setIsOpen] = useState(true);
+	const { selectedConversation } = useConversation();
+	
+	// Listen for conversation updates
+	useListenConversations();
+
+	// Auto-close sidebar on mobile when conversation is selected
+	const handleConversationSelect = () => {
+		if (window.innerWidth < 1024) {
+			setIsOpen(false);
+		}
+	};
+
 	return (
-		<div className='border-r border-slate-500 p-4 flex flex-col'>
-			<SearchInput />
-			<div className='divider px-3'></div>
-			<Conversations />
-			<LogoutButton />
-		</div>
+		<>
+			{/* Mobile Menu Button - Outside sidebar */}
+			<div className='lg:hidden fixed top-4 left-4 z-50'>
+				<button
+					onClick={() => setIsOpen(!isOpen)}
+					className='p-2 bg-gray-700 rounded-lg border border-gray-600 text-white hover:bg-gray-600 transition-colors shadow-lg'
+					style={{ 
+						minWidth: '44px', 
+						minHeight: '44px',
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center'
+					}}
+				>
+					<IoMenu size={20} />
+				</button>
+			</div>
+
+			{/* Sidebar */}
+			<div className={`
+				${isOpen ? 'translate-x-0' : '-translate-x-full'} 
+				lg:translate-x-0
+				fixed lg:relative 
+				top-0 left-0 
+				w-80 h-full 
+				bg-gray-800 border-r border-gray-600 
+				p-4 lg:p-6 
+				flex flex-col 
+				transition-transform duration-300 ease-in-out 
+				z-40
+			`}>
+				{/* Close Button - Inside sidebar */}
+				<div className='lg:hidden flex justify-end mb-4'>
+					<button
+						onClick={() => setIsOpen(false)}
+						className='p-2 bg-gray-700 rounded-lg border border-gray-600 text-white hover:bg-gray-600 transition-colors'
+					>
+						<IoClose size={20} />
+					</button>
+				</div>
+
+				{/* Header */}
+				<div className='flex items-center gap-2 mb-4'>
+					<img src={logo} alt='EngageSphere Logo' className='h-8 w-8 object-contain' />
+					<h1 className='text-xl lg:text-2xl font-bold text-white'>EngageSphere</h1>
+				</div>
+				
+				<SearchInput />
+				<div className='divider my-4 border-white/20'></div>
+				<Conversations onConversationSelect={handleConversationSelect} />
+				
+				{/* Profile and Logout Section */}
+				<div className='mt-auto space-y-2'>
+					<ProfileButton />
+					<LogoutButton />
+				</div>
+			</div>
+
+			{/* Mobile Overlay - Less dimmed for better visibility */}
+			{isOpen && (
+				<div 
+					className='lg:hidden fixed inset-0 bg-black/20 z-30'
+					onClick={() => setIsOpen(false)}
+				/>
+			)}
+		</>
 	);
 };
 export default Sidebar;
