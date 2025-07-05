@@ -1,203 +1,247 @@
 # 🚀 EngageSphere Deployment Guide
 
-This guide will help you deploy EngageSphere to Render.com with a single command build system.
+This guide will help you deploy EngageSphere on Render.com with all features working properly.
 
 ## 📋 Prerequisites
 
-Before deploying, make sure you have:
+Before deploying, ensure you have:
 
-1. **GitHub Repository**: Your code pushed to GitHub
-2. **Render.com Account**: Sign up at [render.com](https://render.com)
-3. **External Services Setup**:
-   - MongoDB Atlas database
-   - Cloudinary account
-   - Agora.io account
-   - Gmail account (for email service)
+- ✅ GitHub repository with your code
+- ✅ MongoDB Atlas account
+- ✅ Cloudinary account
+- ✅ Agora.io account
+- ✅ Gmail account with App Password
+- ✅ Render.com account
 
-## 🔧 Quick Deployment
+## 🔧 Step 1: External Services Setup
 
-### Option 1: Using Deployment Scripts
+### MongoDB Atlas Setup
+1. Go to [MongoDB Atlas](https://www.mongodb.com/atlas)
+2. Create a free cluster
+3. Get your connection string
+4. Add `0.0.0.0/0` to IP whitelist for Render access
 
-**For Windows:**
-```bash
-deploy.bat
-```
+### Cloudinary Setup
+1. Sign up at [Cloudinary](https://cloudinary.com)
+2. Go to Dashboard → API Keys
+3. Copy your Cloud Name, API Key, and Secret Key
 
-**For Mac/Linux:**
-```bash
-chmod +x deploy.sh
-./deploy.sh
-```
+### Agora.io Setup
+1. Sign up at [Agora.io](https://agora.io)
+2. Create a new project
+3. Copy your App ID and App Certificate
 
-### Option 2: Manual Deployment
+### Gmail SMTP Setup
+1. Enable 2-factor authentication on your Gmail
+2. Go to Google Account → Security → App Passwords
+3. Generate an App Password for "Mail"
 
-1. **Install dependencies:**
-   ```bash
-   npm run install:all
-   ```
+## 🌐 Step 2: Deploy on Render
 
-2. **Build the application:**
-   ```bash
-   npm run build
-   ```
-
-3. **Push to GitHub:**
-   ```bash
-   git add .
-   git commit -m "Prepare for Render deployment"
-   git push origin NewVersion
-   ```
-
-## 🌐 Render.com Setup
-
-### Step 1: Create New Web Service
-
+### 2.1 Create New Web Service
 1. Go to [Render Dashboard](https://dashboard.render.com)
 2. Click "New +" → "Web Service"
 3. Connect your GitHub repository
-4. Select the `NewVersion` branch
+4. Select the repository
 
-### Step 2: Configure Build Settings
-
-**Service Name:** `engagesphere` (or your preferred name)
-
-**Build Command:**
-```bash
-npm run render-build
+### 2.2 Configure Service Settings
+```
+Name: engagesphere
+Environment: Node
+Region: Choose closest to your users
+Branch: main (or your default branch)
+Root Directory: (leave empty)
+Build Command: npm run render-build
+Start Command: npm run render-start
 ```
 
-**Start Command:**
-```bash
-npm run render-start
-```
-
-**Environment:** `Node`
-
-**Plan:** `Free` (or your preferred plan)
-
-### Step 3: Environment Variables
-
+### 2.3 Set Environment Variables
 Add these environment variables in the Render dashboard:
 
 #### Required Variables:
 ```
 NODE_ENV=production
 PORT=10000
-MONGODB_URI=your_mongodb_atlas_connection_string
-JWT_SECRET=your_jwt_secret_key
-```
-
-#### Email Configuration:
-```
-EMAIL_USER=your_gmail_address@gmail.com
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/engagesphere?retryWrites=true&w=majority
+JWT_SECRET=your_very_long_random_secret_key_at_least_32_characters
+JWT_EXPIRE=7d
+EMAIL_USER=your_gmail@gmail.com
 EMAIL_PASS=your_gmail_app_password
-```
-
-#### Cloudinary Configuration:
-```
 CLOUDINARY_NAME=your_cloudinary_cloud_name
 CLOUDINARY_API_KEY=your_cloudinary_api_key
 CLOUDINARY_SECRET_KEY=your_cloudinary_secret_key
-```
-
-#### Agora Configuration:
-```
 AGORA_APP_ID=your_agora_app_id
 AGORA_APP_CERTIFICATE=your_agora_app_certificate
+FRONTEND_URL=https://your-app-name.onrender.com
 ```
 
-#### Frontend URL:
+#### Optional Variables:
 ```
-CLIENT_URL=https://your-frontend-service-name.onrender.com
-```
-
-### Step 4: Deploy
-
-1. Click "Create Web Service"
-2. Wait for the build to complete (usually 5-10 minutes)
-3. Your app will be available at: `https://your-service-name.onrender.com`
-
-## 🔄 Automatic Deployments
-
-Once set up, Render will automatically deploy when you push to the `NewVersion` branch.
-
-## 🛠️ Build Commands Explained
-
-### `npm run install:all`
-Installs dependencies for root, backend, and frontend projects.
-
-### `npm run build:frontend`
-- Installs frontend dependencies
-- Builds the React app for production
-- Creates optimized files in `frontend/dist/`
-
-### `npm run build:backend`
-- Installs backend dependencies
-- Prepares the Node.js server for production
-
-### `npm run render-build`
-Combines frontend and backend builds for Render deployment.
-
-### `npm run render-start`
-Starts the production server.
-
-## 📁 Project Structure After Build
-
-```
-EngageSphere/
-├── frontend/
-│   ├── dist/           # Production build files
-│   └── ...
-├── backend/
-│   ├── node_modules/   # Backend dependencies
-│   └── ...
-└── ...
+NODE_ENV=production
 ```
 
-## 🔍 Troubleshooting
+### 2.4 Advanced Settings
+- **Auto-Deploy**: Yes
+- **Health Check Path**: `/api/health`
+- **Health Check Timeout**: 180 seconds
 
-### Build Failures
+## 🔍 Step 3: Verify Deployment
 
-1. **Check Node.js version**: Ensure you're using Node.js 16+ 
-2. **Check environment variables**: All required variables must be set
-3. **Check dependencies**: Ensure all packages are properly installed
+### 3.1 Check Health Endpoint
+Visit: `https://your-app-name.onrender.com/api/health`
 
-### Runtime Errors
+Expected response:
+```json
+{
+  "status": "OK",
+  "timestamp": "2024-01-01T00:00:00.000Z",
+  "uptime": 123.456,
+  "environment": "production",
+  "version": "1.0.0"
+}
+```
 
-1. **Database connection**: Verify MongoDB URI is correct
-2. **External services**: Check Cloudinary and Agora credentials
-3. **CORS issues**: Verify CLIENT_URL is set correctly
+### 3.2 Test Frontend
+Visit: `https://your-app-name.onrender.com`
 
-### Common Issues
+Should show the EngageSphere login page.
 
-**"Module not found" errors:**
-- Run `npm run install:all` to ensure all dependencies are installed
+## 👨‍💼 Step 4: Create Admin User
 
-**"Port already in use":**
-- Render automatically assigns ports, no action needed
+After successful deployment, create your first admin user:
 
-**"Build timeout":**
-- Free tier has 15-minute build limit
-- Consider upgrading to paid plan for larger builds
+### Method 1: Using cURL
+```bash
+curl -X POST https://your-app-name.onrender.com/api/admin/create-super-admin \
+-H "Content-Type: application/json" \
+-d '{
+  "email": "admin@yourdomain.com",
+  "password": "your_secure_password",
+  "fullName": "Super Admin"
+}'
+```
 
-## 📞 Support
+### Method 2: Using Postman
+- **URL**: `https://your-app-name.onrender.com/api/admin/create-super-admin`
+- **Method**: POST
+- **Headers**: `Content-Type: application/json`
+- **Body**:
+```json
+{
+  "email": "admin@yourdomain.com",
+  "password": "your_secure_password",
+  "fullName": "Super Admin"
+}
+```
 
-If you encounter issues:
+## 🔧 Step 5: Troubleshooting
 
-1. Check the Render build logs
-2. Verify all environment variables are set
-3. Ensure your external services are properly configured
-4. Check the [Render documentation](https://render.com/docs)
+### Common Issues:
 
-## 🎯 Next Steps
+#### 1. Build Fails
+**Error**: Build command fails
+**Solution**: 
+- Check if all dependencies are in package.json
+- Verify build scripts are correct
+- Check for syntax errors in code
 
-After successful deployment:
+#### 2. Environment Variables Missing
+**Error**: Application crashes on startup
+**Solution**:
+- Verify all required environment variables are set
+- Check variable names for typos
+- Ensure MongoDB URI is correct
 
-1. Test all features (signup, login, messaging, video calls)
-2. Set up custom domain (optional)
-3. Configure monitoring and alerts
-4. Set up automatic backups for your database
+#### 3. CORS Errors
+**Error**: Frontend can't connect to backend
+**Solution**:
+- Verify FRONTEND_URL is set correctly
+- Check CORS configuration in server.js
+- Ensure credentials are enabled
+
+#### 4. Database Connection Fails
+**Error**: Can't connect to MongoDB
+**Solution**:
+- Verify MongoDB URI is correct
+- Check if IP whitelist includes Render's IPs
+- Ensure database user has correct permissions
+
+#### 5. Email Not Working
+**Error**: Email notifications not sending
+**Solution**:
+- Verify Gmail credentials
+- Check if App Password is correct
+- Ensure 2FA is enabled on Gmail
+
+### Debug Commands:
+
+#### Check Logs
+```bash
+# In Render dashboard, go to your service
+# Click on "Logs" tab to see real-time logs
+```
+
+#### Test Database Connection
+```bash
+curl https://your-app-name.onrender.com/api/health
+```
+
+#### Test Email Service
+```bash
+# Try signing up a new user to test email
+```
+
+## 📊 Step 6: Monitoring
+
+### Health Monitoring
+- Render automatically monitors the `/api/health` endpoint
+- Service will restart if health check fails
+- Check logs for any errors
+
+### Performance Monitoring
+- Monitor response times in Render dashboard
+- Check MongoDB Atlas metrics
+- Monitor Cloudinary usage
+
+## 🔄 Step 7: Updates and Maintenance
+
+### Updating the Application
+1. Push changes to your GitHub repository
+2. Render will automatically redeploy
+3. Monitor the deployment logs
+4. Test the application after deployment
+
+### Database Backups
+- MongoDB Atlas provides automatic backups
+- Consider setting up manual backups for important data
+
+### Environment Variable Updates
+1. Go to Render dashboard
+2. Navigate to your service
+3. Go to "Environment" tab
+4. Update variables as needed
+5. Redeploy the service
+
+## 🎉 Success!
+
+Once all steps are completed, your EngageSphere application will be live at:
+`https://your-app-name.onrender.com`
+
+### Features Available:
+- ✅ Real-time messaging
+- ✅ Video calls
+- ✅ File sharing
+- ✅ Admin panel
+- ✅ User management
+- ✅ Email notifications
+- ✅ Custom backgrounds
+- ✅ Mobile optimization
+
+### Admin Access:
+- **URL**: `https://your-app-name.onrender.com/admin`
+- **Email**: The email you used in step 4
+- **Password**: The password you set in step 4
 
 ---
 
-**Happy Deploying! 🚀** 
+**Need Help?** Check the main README.md for more detailed information or create an issue in the repository. 

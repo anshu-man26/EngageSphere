@@ -74,6 +74,17 @@ const userSchema = new mongoose.Schema(
 			type: String,
 			default: "",
 		},
+		// Sound settings
+		soundSettings: {
+			messageSound: {
+				type: Boolean,
+				default: true,
+			},
+			ringtone: {
+				type: Boolean,
+				default: true,
+			},
+		},
 		// Delete account OTP fields
 		deleteAccountOtp: {
 			type: String,
@@ -83,6 +94,29 @@ const userSchema = new mongoose.Schema(
 			type: Date,
 			default: null,
 		},
+		// Login statistics
+		lastLogin: {
+			type: Date,
+			default: null,
+		},
+		loginCount: {
+			type: Number,
+			default: 0,
+		},
+		loginHistory: [{
+			loginTime: {
+				type: Date,
+				default: Date.now,
+			},
+			ipAddress: {
+				type: String,
+				default: "",
+			},
+			userAgent: {
+				type: String,
+				default: "",
+			}
+		}],
 		// createdAt, updatedAt => Member since <createdAt>
 	},
 	{ timestamps: true }

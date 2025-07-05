@@ -7,12 +7,17 @@ import VerifySignup from "./pages/verify-signup/VerifySignup";
 import Profile from "./pages/profile/Profile";
 import UserProfile from "./pages/user-profile/UserProfile";
 import ForgotPassword from "./pages/forgot-password/ForgotPassword";
+import AdminLogin from "./pages/admin/AdminLogin";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminProfile from "./pages/admin/AdminProfile";
+import AdminForgotPassword from "./pages/admin/AdminForgotPassword";
+import AdminVerifyOtp from "./pages/admin/AdminVerifyOtp";
 import PageTransition from "./components/PageTransition";
 import { Toaster } from "react-hot-toast";
 import { useAuthContext } from "./context/AuthContext";
 
 function App() {
-	const { authUser, loading } = useAuthContext();
+	const { authUser, admin, loading } = useAuthContext();
 
 	// Show loading screen while checking authentication
 	if (loading) {
@@ -34,6 +39,14 @@ function App() {
 		<div className='min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900'>
 			<PageTransition>
 				<Routes>
+					{/* Admin Routes */}
+					<Route path='/admin/login' element={admin ? <Navigate to="/admin/dashboard" replace /> : <AdminLogin />} />
+					<Route path='/admin/forgot-password' element={<AdminForgotPassword />} />
+					<Route path='/admin/verify-otp' element={<AdminVerifyOtp />} />
+					<Route path='/admin/dashboard' element={admin ? <AdminDashboard /> : <Navigate to="/admin/login" replace />} />
+					<Route path='/admin/profile' element={admin ? <AdminProfile /> : <Navigate to="/admin/login" replace />} />
+					
+					{/* User Routes */}
 					<Route path='/' element={authUser ? <Home /> : <Navigate to="/login" replace />} />
 					<Route path='/login' element={authUser ? <Navigate to="/" replace /> : <Login />} />
 					<Route path='/signup' element={authUser ? <Navigate to="/" replace /> : <SignUp />} />

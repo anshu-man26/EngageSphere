@@ -26,10 +26,12 @@ const Home = () => {
 	}
 
 	return (
-		<div className='flex h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900'>
+		<div className='flex h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 overflow-hidden'>
 			<div className='flex w-full h-full overflow-hidden'>
 				<Sidebar />
-				<MessageContainer />
+				<div className='flex-1 min-w-0 overflow-hidden'>
+					<MessageContainer />
+				</div>
 			</div>
 		</div>
 	);

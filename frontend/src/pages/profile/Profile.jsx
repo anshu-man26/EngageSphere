@@ -1,12 +1,13 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuthContext } from "../../context/AuthContext";
 import useUpdateProfile from "../../hooks/useUpdateProfile";
+import useUpdateSoundSettings from "../../hooks/useUpdateSoundSettings";
 import useUploadProfilePic from "../../hooks/useUploadProfilePic";
 import useChangePassword from "../../hooks/useChangePassword";
 import useChangeEmail from "../../hooks/useChangeEmail";
 import useRequestDeleteAccountOtp from "../../hooks/useRequestDeleteAccountOtp";
 import useDeleteAccount from "../../hooks/useDeleteAccount";
-import { FaUser, FaSave, FaArrowLeft, FaUpload, FaTimes, FaLock, FaEdit, FaEye, FaEyeSlash, FaShieldAlt, FaUnlock, FaTrash, FaImage } from "react-icons/fa";
+import { FaUser, FaSave, FaArrowLeft, FaUpload, FaTimes, FaLock, FaEdit, FaEye, FaEyeSlash, FaShieldAlt, FaUnlock, FaTrash, FaImage, FaVolumeUp, FaVolumeMute, FaVolumeOff } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import ChatBackgroundSelector from "../../components/chat-background/ChatBackgroundSelector";
@@ -16,6 +17,7 @@ import useChatBackground from "../../hooks/useChatBackground";
 const Profile = () => {
 	const { authUser, setAuthUser } = useAuthContext();
 	const { loading, updateProfile } = useUpdateProfile();
+	const { loading: soundSettingsLoading, updateSoundSettings } = useUpdateSoundSettings();
 	const { loading: uploadLoading, uploadProfilePic } = useUploadProfilePic();
 	const { loading: passwordLoading, changePassword } = useChangePassword();
 	const { loading: emailLoading, otpLoading, requestEmailChangeOtp, verifyOtp } = useChangeEmail();
@@ -78,6 +80,22 @@ const Profile = () => {
 	const [showDefaultBgSelector, setShowDefaultBgSelector] = useState(false);
 	const [showBackgroundManager, setShowBackgroundManager] = useState(false);
 	const [defaultChatBackground, setDefaultChatBackground] = useState(authUser?.defaultChatBackground || "");
+
+	// Sound settings state
+	const [soundSettings, setSoundSettings] = useState({
+		messageSound: authUser?.soundSettings?.messageSound !== false, // Default to true
+		ringtone: authUser?.soundSettings?.ringtone !== false, // Default to true
+	});
+
+	// Update sound settings when authUser changes
+	useEffect(() => {
+		if (authUser?.soundSettings) {
+			setSoundSettings({
+				messageSound: authUser.soundSettings.messageSound !== false,
+				ringtone: authUser.soundSettings.ringtone !== false,
+			});
+		}
+	}, [authUser?.soundSettings]);
 
 	const validateForm = () => {
 		const newErrors = {};
@@ -417,114 +435,133 @@ const Profile = () => {
 
 	const handleDefaultBgChange = async (bg) => {
 		setDefaultChatBackground(bg);
-		const res = await fetch("/api/users/default-chat-background", {
-			method: "PUT",
-			headers: { "Content-Type": "application/json" },
-			credentials: "include",
-			body: JSON.stringify({ defaultChatBackground: bg }),
-		});
-		const data = await res.json();
-		if (!data.error) {
-			toast.success("Default chat background updated!");
-			setAuthUser({ ...authUser, defaultChatBackground: bg });
-		} else {
-			toast.error(data.error);
+		const success = await updateChatBackground(bg);
+		if (success) {
+			setShowDefaultBgSelector(false);
 		}
-		setShowDefaultBgSelector(false);
+	};
+
+	// Handle sound settings update
+	const handleSoundSettingsChange = async (setting, value) => {
+		try {
+			const updatedSettings = { ...soundSettings, [setting]: value };
+			setSoundSettings(updatedSettings);
+			
+			// Update only the sound settings
+			const success = await updateSoundSettings(updatedSettings);
+			
+			if (success) {
+				toast.success(`${setting === 'messageSound' ? 'Message sound' : 'Ringtone'} ${value ? 'enabled' : 'disabled'}`);
+		} else {
+				// Revert the change if update fails
+				setSoundSettings(prev => ({ ...prev, [setting]: !value }));
+			}
+		} catch (error) {
+			// Revert the change if update fails
+			setSoundSettings(prev => ({ ...prev, [setting]: !value }));
+			toast.error('Failed to update sound settings');
+		}
 	};
 
 	return (
-		<div className='h-screen px-4 py-4 bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 overflow-hidden'>
+		<div className='h-screen px-2 sm:px-4 py-4 bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 overflow-hidden profile-responsive'>
 			<div className='w-full max-w-2xl mx-auto h-full flex flex-col'>
 				{/* Header */}
-				<div className='text-center mb-8'>
-					<div className='inline-flex items-center justify-center w-16 h-16 bg-purple-600 rounded-full mb-4 shadow-lg'>
-						<FaUser className='text-white text-2xl' />
+				<div className='text-center mb-4 sm:mb-8'>
+					<div className='inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-purple-600 rounded-full mb-3 sm:mb-4 shadow-lg'>
+						<FaUser className='text-white text-lg sm:text-2xl' />
 					</div>
-					<h1 className='text-4xl font-bold text-white mb-2'>
+					<h1 className='text-2xl sm:text-4xl font-bold text-white mb-2'>
 						Profile Settings
 					</h1>
-					<p className='text-gray-300 text-sm'>
+					<p className='text-gray-300 text-xs sm:text-sm'>
 						Manage your account settings
 					</p>
 				</div>
 
-				{/* Tab Navigation */}
-				<div className='flex mb-0 rounded-t-2xl overflow-hidden shadow-lg'>
+				{/* Tab Navigation - Responsive */}
+				<div className='flex flex-wrap sm:flex-nowrap mb-0 rounded-t-2xl overflow-hidden shadow-lg mobile-tabs profile-tabs'>
 					<button
 						onClick={() => setActiveTab("profile")}
-						className={`flex-1 py-3 px-4 text-sm font-medium rounded-t-2xl transition-all duration-200 ${activeTab === "profile" ? "bg-white/20 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"}`}
+						className={`flex-1 py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium rounded-t-2xl transition-all duration-200 ${activeTab === "profile" ? "bg-white/20 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"}`}
 					>
-						Profile
+						<span className="hidden sm:inline">Profile</span>
+						<span className="sm:hidden">Profile</span>
 					</button>
 					<button
 						onClick={() => setActiveTab("password")}
-						className={`flex-1 py-3 px-4 text-sm font-medium rounded-t-2xl transition-all duration-200 ${activeTab === "password" ? "bg-white/20 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"}`}
+						className={`flex-1 py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium rounded-t-2xl transition-all duration-200 ${activeTab === "password" ? "bg-white/20 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"}`}
 					>
-						Password
+						<span className="hidden sm:inline">Password</span>
+						<span className="sm:hidden">Pass</span>
 					</button>
 					<button
 						onClick={() => setActiveTab("email")}
-						className={`flex-1 py-3 px-4 text-sm font-medium rounded-t-2xl transition-all duration-200 ${activeTab === "email" ? "bg-white/20 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"}`}
+						className={`flex-1 py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium rounded-t-2xl transition-all duration-200 ${activeTab === "email" ? "bg-white/20 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"}`}
 					>
-						Email
+						<span className="hidden sm:inline">Email</span>
+						<span className="sm:hidden">Email</span>
 					</button>
 					<button
 						onClick={() => setActiveTab("2fa")}
-						className={`flex-1 py-3 px-4 text-sm font-medium rounded-t-2xl transition-all duration-200 ${activeTab === "2fa" ? "bg-white/20 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"}`}
+						className={`flex-1 py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium rounded-t-2xl transition-all duration-200 ${activeTab === "2fa" ? "bg-white/20 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"}`}
 					>
-						2FA
+						<span className="hidden sm:inline">2FA</span>
+						<span className="sm:hidden">2FA</span>
 					</button>
 					<button
 						onClick={() => setActiveTab("delete")}
-						className={`flex-1 py-3 px-4 text-sm font-medium rounded-t-2xl transition-all duration-200 ${activeTab === "delete" ? "bg-red-500/20 text-red-300" : "text-red-400 hover:text-red-300 hover:bg-red-500/5"}`}
+						className={`flex-1 py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium rounded-t-2xl transition-all duration-200 ${activeTab === "delete" ? "bg-red-500/20 text-red-300" : "text-red-400 hover:text-red-300 hover:bg-red-500/5"}`}
 					>
-						Delete Account
+						<span className="hidden sm:inline">Delete Account</span>
+						<span className="sm:hidden">Delete</span>
 					</button>
 					<button
 						onClick={() => setActiveTab("chat-settings")}
-						className={`flex-1 py-3 px-4 text-sm font-medium rounded-t-2xl transition-all duration-200 ${activeTab === "chat-settings" ? "bg-white/20 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"}`}
+						className={`flex-1 py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium rounded-t-2xl transition-all duration-200 ${activeTab === "chat-settings" ? "bg-white/20 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"}`}
 					>
-						Chat Settings
+						<span className="hidden sm:inline">Chat Settings</span>
+						<span className="sm:hidden">Chat</span>
 					</button>
 				</div>
 
 				{/* Content Container */}
-				<div className='bg-white/10 backdrop-blur-lg rounded-b-2xl shadow-2xl border border-white/20 p-8 relative flex-1 overflow-y-auto'>
+				<div className='bg-white/10 backdrop-blur-lg rounded-b-2xl shadow-2xl border border-white/20 p-4 sm:p-8 relative flex-1 overflow-y-auto profile-content content-area'>
 					{/* Back Button - Positioned at top right of form */}
-					<div className='absolute top-4 right-4 z-10'>
+					<div className='absolute top-2 sm:top-4 right-2 sm:right-4 z-10'>
 						<Link 
 							to="/" 
-							className='inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg transition-all duration-200 border border-white/20 hover:border-white/30 shadow-lg backdrop-blur-sm'
+							className='inline-flex items-center gap-1 sm:gap-2 bg-white/10 hover:bg-white/20 text-white px-2 sm:px-4 py-1 sm:py-2 rounded-lg transition-all duration-200 border border-white/20 hover:border-white/30 shadow-lg backdrop-blur-sm text-xs sm:text-sm'
 						>
-							<FaArrowLeft className='text-sm' />
-							Back to Chat
+							<FaArrowLeft className='text-xs sm:text-sm' />
+							<span className="hidden sm:inline">Back to Chat</span>
+							<span className="sm:hidden">Back</span>
 						</Link>
 					</div>
 
 					{/* Profile Tab */}
 					{activeTab === "profile" && (
-						<form onSubmit={handleSubmit} className='space-y-6'>
+						<form onSubmit={handleSubmit} className='space-y-4 sm:space-y-6 profile-form'>
 							{/* Profile Picture Section */}
-							<div className='space-y-4'>
+							<div className='space-y-3 sm:space-y-4'>
 								<label className='text-sm font-medium text-gray-200'>
 									Profile Picture
 								</label>
-								<div className='flex flex-col items-center space-y-4'>
+								<div className='flex flex-col items-center space-y-3 sm:space-y-4'>
 									{/* Image Preview */}
 									<div className='relative'>
-										<div className='w-24 h-24 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center overflow-hidden'>
+										<div className='w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center overflow-hidden'>
 											<img 
 												src={displayImage || 'https://cdn0.iconfinder.com/data/icons/communication-line-10/24/account_profile_user_contact_person_avatar_placeholder-512.png'} 
 												alt={`${inputs.fullName || 'User'} avatar`}
-												className='w-24 h-24 rounded-full object-cover'
+												className='w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover'
 												onError={(e) => {
 													e.target.src = 'https://cdn0.iconfinder.com/data/icons/communication-line-10/24/account_profile_user_contact_person_avatar_placeholder-512.png';
 												}}
 											/>
 										</div>
 										{selectedFile && (
-											<div className='absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center cursor-pointer hover:bg-red-600 transition-colors' onClick={handleRemoveFile}>
+											<div className='absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-red-500 rounded-full flex items-center justify-center cursor-pointer hover:bg-red-600 transition-colors' onClick={handleRemoveFile}>
 												<FaTimes className='text-white text-xs' />
 											</div>
 										)}
@@ -533,7 +570,7 @@ const Profile = () => {
 									{/* File Upload Area */}
 									<div className='w-full'>
 										<div 
-											className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
+											className={`border-2 border-dashed rounded-lg p-3 sm:p-4 text-center transition-colors ${
 												isDragOver 
 													? 'border-purple-500 bg-purple-500/10' 
 													: 'border-gray-600 hover:border-gray-500'
@@ -550,8 +587,8 @@ const Profile = () => {
 												onChange={handleFileInputChange}
 											/>
 											<div className='space-y-2'>
-												<FaUpload className='mx-auto text-gray-400 text-2xl' />
-												<p className='text-sm text-gray-300'>
+												<FaUpload className='mx-auto text-gray-400 text-xl sm:text-2xl' />
+												<p className='text-xs sm:text-sm text-gray-300'>
 													{selectedFile ? selectedFile.name : 'Drag & drop an image here, or click to select'}
 												</p>
 												<button
@@ -570,7 +607,7 @@ const Profile = () => {
 												type='button'
 												onClick={handleUpload}
 												disabled={uploadLoading}
-												className='w-full mt-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2'
+												className='w-full mt-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 text-sm'
 											>
 												{uploadLoading ? (
 													<div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white'></div>
@@ -593,12 +630,12 @@ const Profile = () => {
 								</label>
 								<div className='relative'>
 									<div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
-										<FaUser className='h-5 w-5 text-gray-400' />
+										<FaUser className='h-4 w-4 sm:h-5 sm:w-5 text-gray-400' />
 									</div>
 									<input
 										type='text'
 										placeholder='Enter your full name'
-										className={`w-full pl-10 pr-4 py-3 bg-white/10 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 ${
+										className={`w-full pl-9 sm:pl-10 pr-4 py-2.5 sm:py-3 bg-white/10 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 text-sm sm:text-base ${
 											errors.fullName ? 'border-red-500' : 'border-gray-600'
 										}`}
 										value={inputs.fullName}
@@ -857,9 +894,9 @@ const Profile = () => {
 
 					{/* Email Tab */}
 					{activeTab === "email" && (
-						<div>
+						<div className='space-y-4 sm:space-y-6 email-settings-container'>
 							{step === "form" && (
-								<form onSubmit={handleEmailSubmit} className='space-y-6'>
+								<form onSubmit={handleEmailSubmit} className='space-y-4 sm:space-y-6'>
 									<div className='space-y-2'>
 										<label className='text-sm font-medium text-gray-200'>
 											New Email Address
@@ -932,7 +969,7 @@ const Profile = () => {
 								</form>
 							)}
 							{step === "otp" && (
-								<form onSubmit={handleOtpSubmit} className='space-y-6'>
+								<form onSubmit={handleOtpSubmit} className='space-y-4 sm:space-y-6'>
 									<div className='space-y-2'>
 										<label className='text-sm font-medium text-gray-200'>
 											Enter OTP
@@ -967,20 +1004,11 @@ const Profile = () => {
 											<div className='animate-spin rounded-full h-5 w-5 border-b-2 border-white'></div>
 										) : (
 											<>
-												<FaLock className='text-lg' />
+												<FaEdit className='text-lg' />
 												Verify OTP
 											</>
 										)}
 									</button>
-									<div className='text-center'>
-										<button
-											type='button'
-											onClick={() => setStep("form")}
-											className='text-sm text-gray-400 hover:text-purple-400 transition-colors'
-										>
-											Use different email
-										</button>
-									</div>
 								</form>
 							)}
 						</div>
@@ -1257,33 +1285,121 @@ const Profile = () => {
 
 					{/* Chat Settings Tab */}
 					{activeTab === "chat-settings" && (
-						<div className="space-y-6">
-							<h2 className="text-xl font-bold text-white mb-4">Chat Settings</h2>
-							<div className="flex items-center gap-4">
-								<span className="text-white">Default Chat Background:</span>
+						<div className="space-y-4 sm:space-y-6 chat-settings-container">
+							<h2 className="text-lg sm:text-xl font-bold text-white mb-3 sm:mb-4">Chat Settings</h2>
+							
+							{/* Sound Settings Section */}
+							<div className="bg-white/5 rounded-lg p-4 sm:p-6 border border-white/10 chat-settings-section">
+								<h3 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4 flex items-center gap-2">
+									<FaVolumeUp className="text-purple-400 text-sm sm:text-base" />
+									Sound Settings
+								</h3>
+								
+								<div className="space-y-3 sm:space-y-4">
+									{/* Message Sound Toggle */}
+									<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-white/5 rounded-lg border border-white/10 gap-3 sm:gap-0 min-h-[60px] sm:min-h-[70px]">
+										<div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+											<div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+												{soundSettings.messageSound ? (
+													<FaVolumeUp className="text-purple-400 text-sm sm:text-lg" />
+												) : (
+													<FaVolumeMute className="text-gray-400 text-sm sm:text-lg" />
+												)}
+											</div>
+											<div className="flex-1 min-w-0">
+												<h4 className="text-white font-medium text-sm sm:text-base">Message Sound</h4>
+												<p className="text-gray-400 text-xs sm:text-sm truncate chat-settings-text">
+													{soundSettings.messageSound 
+														? "Play sound when receiving new messages" 
+														: "No sound for new messages"
+													}
+												</p>
+											</div>
+										</div>
+										<button
+											onClick={() => handleSoundSettingsChange('messageSound', !soundSettings.messageSound)}
+											disabled={soundSettingsLoading}
+											className={`relative inline-flex h-5 w-10 sm:h-6 sm:w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-900 flex-shrink-0 toggle-switch chat-settings-toggle ${
+												soundSettings.messageSound ? 'bg-purple-600' : 'bg-gray-600'
+											} ${soundSettingsLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+										>
+											<span
+												className={`inline-block h-3 w-3 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
+													soundSettings.messageSound ? 'translate-x-5 sm:translate-x-6' : 'translate-x-1'
+												}`}
+											/>
+										</button>
+									</div>
+
+									{/* Ringtone Toggle */}
+									<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-white/5 rounded-lg border border-white/10 gap-3 sm:gap-0 min-h-[60px] sm:min-h-[70px]">
+										<div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+											<div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+												{soundSettings.ringtone ? (
+													<FaVolumeUp className="text-blue-400 text-sm sm:text-lg" />
+												) : (
+													<FaVolumeOff className="text-gray-400 text-sm sm:text-lg" />
+												)}
+											</div>
+											<div className="flex-1 min-w-0">
+												<h4 className="text-white font-medium text-sm sm:text-base">Video Call Ringtone</h4>
+												<p className="text-gray-400 text-xs sm:text-sm truncate chat-settings-text">
+													{soundSettings.ringtone 
+														? "Play ringtone for incoming video calls" 
+														: "No ringtone for video calls"
+													}
+												</p>
+											</div>
+										</div>
+										<button
+											onClick={() => handleSoundSettingsChange('ringtone', !soundSettings.ringtone)}
+											disabled={soundSettingsLoading}
+											className={`relative inline-flex h-5 w-10 sm:h-6 sm:w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 flex-shrink-0 toggle-switch chat-settings-toggle ${
+												soundSettings.ringtone ? 'bg-blue-600' : 'bg-gray-600'
+											} ${soundSettingsLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+										>
+											<span
+												className={`inline-block h-3 w-3 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
+													soundSettings.ringtone ? 'translate-x-5 sm:translate-x-6' : 'translate-x-1'
+												}`}
+											/>
+										</button>
+									</div>
+								</div>
+							</div>
+
+							{/* Default Chat Background Section */}
+							<div className="bg-white/5 rounded-lg p-4 sm:p-6 border border-white/10 chat-settings-section min-h-[120px] sm:min-h-[140px]">
+								<h3 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">Default Chat Background</h3>
+								<div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+									<span className="text-gray-300 text-sm sm:text-base">Background:</span>
+									<div className="flex items-center gap-2 sm:gap-4">
 								<button
 									onClick={() => setShowDefaultBgSelector(true)}
-									className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition-all duration-200"
+											className="px-3 sm:px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition-all duration-200 text-sm sm:text-base whitespace-nowrap chat-settings-button interactive-element"
 								>
 									Change
 								</button>
 								{defaultChatBackground && (
-									<div className="w-16 h-8 rounded-lg border border-white/20" style={{ background: defaultChatBackground.startsWith('http') ? `url(${defaultChatBackground}) center/cover` : defaultChatBackground }} />
+											<div className="w-12 h-6 sm:w-16 sm:h-8 rounded-lg border border-white/20 flex-shrink-0" style={{ background: defaultChatBackground.startsWith('http') ? `url(${defaultChatBackground}) center/cover` : defaultChatBackground }} />
 								)}
+							</div>
+								</div>
 							</div>
 							
 							{/* Background Image Manager */}
-							<div className="border-t border-white/20 pt-6">
-								<h3 className="text-lg font-semibold text-white mb-4">Background Image Management</h3>
-								<p className="text-gray-300 text-sm mb-4">
+							<div className="bg-white/5 rounded-lg p-4 sm:p-6 border border-white/10 chat-settings-section min-h-[120px] sm:min-h-[140px]">
+								<h3 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">Background Image Management</h3>
+								<p className="text-gray-300 text-xs sm:text-sm mb-3 sm:mb-4 chat-settings-text text-wrap">
 									Manage all your uploaded background images, preview them, and delete unused ones.
 								</p>
 								<button
 									onClick={() => setShowBackgroundManager(true)}
-									className="px-6 py-3 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center gap-2"
+									className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center gap-2 text-sm sm:text-base chat-settings-button interactive-element"
 								>
-									<FaImage className="text-lg" />
-									Manage Background Images
+									<FaImage className="text-sm sm:text-lg" />
+									<span className="hidden sm:inline">Manage Background Images</span>
+									<span className="sm:hidden">Manage Images</span>
 								</button>
 							</div>
 							

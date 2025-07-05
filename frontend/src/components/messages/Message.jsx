@@ -199,11 +199,11 @@ const Message = ({ message, isUploading = false, isSelected = false, onSelect = 
 		const rect = messageBubbleRef.current.getBoundingClientRect();
 		const windowWidth = window.innerWidth;
 		const windowHeight = window.innerHeight;
-		const pickerWidth = 280;
-		const pickerHeight = 400;
-		
-		// Check if it's a mobile device
 		const isMobile = windowWidth <= 768;
+		
+		// Responsive picker dimensions
+		const pickerWidth = isMobile ? Math.min(240, windowWidth * 0.85) : 280;
+		const pickerHeight = isMobile ? Math.min(300, windowHeight * 0.6) : 400;
 		
 		// Default position above the message
 		let top = 'auto';
@@ -248,6 +248,16 @@ const Message = ({ message, isUploading = false, isSelected = false, onSelect = 
 				left = 'auto';
 				right = '10px';
 				transform = 'none';
+			}
+			
+			// Ensure vertical positioning works well on mobile
+			if (spaceAbove < pickerHeight + 20 && spaceBelow < pickerHeight + 20) {
+				// Not enough space above or below, position in the middle of the screen
+				top = '50%';
+				bottom = 'auto';
+				transform = 'translate(-50%, -50%)';
+				marginTop = '0';
+				marginBottom = '0';
 			}
 		} else {
 			// Desktop positioning - position emoji picker on the OPPOSITE side of the message
@@ -301,8 +311,8 @@ const Message = ({ message, isUploading = false, isSelected = false, onSelect = 
 			marginTop,
 			transform,
 			zIndex: 50,
-			maxWidth: '90vw',
-			maxHeight: '80vh',
+			maxWidth: isMobile ? '85vw' : '90vw',
+			maxHeight: isMobile ? '60vh' : '80vh',
 			marginRight,
 			marginLeft
 		};
@@ -375,8 +385,11 @@ const Message = ({ message, isUploading = false, isSelected = false, onSelect = 
 						</div>
 					)}
 				</div>
-				<div className='chat-footer opacity-50 text-xs'>
-					{formattedTime}
+				<div className={`chat-footer text-xs flex items-center justify-end gap-1 ${
+					fromMe ? 'opacity-70' : 'opacity-70'
+				}`}>
+					<span>{formattedTime}</span>
+					<MessageStatus status={message.status} fromMe={fromMe} />
 				</div>
 			</div>
 		);
@@ -404,11 +417,11 @@ const Message = ({ message, isUploading = false, isSelected = false, onSelect = 
 					className={`chat-bubble ${
 						fromMe 
 							? isSelected 
-								? 'bg-blue-600' 
-								: 'bg-blue-500'
+								? 'bg-slate-700' 
+								: 'bg-slate-600'
 							: isSelected 
-								? 'bg-gray-600' 
-								: 'bg-gray-700'
+								? 'bg-slate-800' 
+								: 'bg-slate-700'
 					} text-white ${shakeClass} max-w-xs lg:max-w-md relative select-none transition-all duration-200 group`}
 					ref={messageBubbleRef}
 					onMouseDown={handleBubbleMouseDown}
@@ -522,8 +535,11 @@ const Message = ({ message, isUploading = false, isSelected = false, onSelect = 
 							)}
 						</>
 					)}
-					<div className='chat-footer opacity-50 text-xs'>
-						{formattedTime}
+					<div className={`chat-footer text-xs flex items-center justify-end gap-1 ${
+						fromMe ? 'opacity-70' : 'opacity-70'
+					}`}>
+						<span>{formattedTime}</span>
+						<MessageStatus status={message.status} fromMe={fromMe} />
 					</div>
 				</div>
 				
@@ -555,4 +571,51 @@ const Message = ({ message, isUploading = false, isSelected = false, onSelect = 
 		</div>
 	);
 };
+
+// Message Status Component for WhatsApp-like ticks
+const MessageStatus = ({ status, fromMe }) => {
+	if (!fromMe) return null; // Only show status for sent messages
+
+	const getStatusIcon = () => {
+		switch (status) {
+			case "sent":
+				return (
+					<svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+						<path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+					</svg>
+				);
+			case "delivered":
+				return (
+					<div className="flex items-center">
+						<svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+							<path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+						</svg>
+						<svg className="w-4 h-4 text-white -ml-1" fill="currentColor" viewBox="0 0 20 20">
+							<path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+						</svg>
+					</div>
+				);
+			case "read":
+				return (
+					<div className="flex items-center">
+						<svg className="w-4 h-4 text-blue-400 drop-shadow-sm" fill="currentColor" viewBox="0 0 20 20">
+							<path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+						</svg>
+						<svg className="w-4 h-4 text-blue-400 drop-shadow-sm -ml-1" fill="currentColor" viewBox="0 0 20 20">
+							<path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+						</svg>
+					</div>
+				);
+			default:
+				return null;
+		}
+	};
+
+	return (
+		<div className="flex items-center gap-1 ml-2">
+			{getStatusIcon()}
+		</div>
+	);
+};
+
 export default Message;

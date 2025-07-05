@@ -33,7 +33,7 @@ const MessageContainer = () => {
 	const [isDarkBackground, setIsDarkBackground] = useState(false);
 	
 	// Check if the selected conversation user is online
-	const isOnline = selectedConversation ? onlineUsers.includes(selectedConversation._id) : false;
+	const isOnline = selectedConversation ? onlineUsers.includes(selectedConversation.participant?._id) : false;
 
 	useEffect(() => {
 		// cleanup function (unmounts)
@@ -153,7 +153,7 @@ const MessageContainer = () => {
 	return (
 		<div 
 			key={`${selectedConversation?._id}-${chatBackground}-${authUser?.defaultChatBackground}`}
-			className='flex-1 flex flex-col h-full relative bg-gray-900'
+			className='flex-1 flex flex-col h-full relative bg-gray-900 min-w-0 overflow-hidden'
 			style={{
 				background: chatBackground ? (chatBackground.startsWith('http') ? `url(${chatBackground})` : chatBackground) : (authUser?.defaultChatBackground ? (authUser.defaultChatBackground.startsWith('http') ? `url(${authUser.defaultChatBackground})` : authUser.defaultChatBackground) : ''),
 				backgroundSize: 'cover',
@@ -167,13 +167,13 @@ const MessageContainer = () => {
 				<>
 					{/* Mobile X button for selection mode - positioned to avoid overlap with sidebar button */}
 					{isSelectionMode && (
-						<div className='lg:hidden mobile-x-button'>
+						<div className='lg:hidden fixed top-4 right-4 z-50'>
 							<button
 								onClick={handleCancelSelection}
 								className='p-3 bg-white rounded-full border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors shadow-lg'
 								style={{ 
-									minWidth: '48px', 
-									minHeight: '48px',
+									minWidth: '44px', 
+									minHeight: '44px',
 									display: 'flex',
 									alignItems: 'center',
 									justifyContent: 'center'
@@ -185,16 +185,16 @@ const MessageContainer = () => {
 					)}
 					
 					{/* Fixed Header */}
-					<div className={`flex-shrink-0 backdrop-blur-sm px-4 py-3 border-b relative z-10 ${
+					<div className={`flex-shrink-0 backdrop-blur-sm px-3 sm:px-4 py-3 border-b relative z-10 mobile-header chat-header ${
 						isDarkBackground 
 							? 'bg-black/20 border-white/20' 
 							: 'bg-gray-800/90 border-gray-600'
 					} lg:pl-4 pl-16`}>
 						{/* Selection mode toolbar */}
 						{isSelectionMode ? (
-							<div className="flex items-center justify-between lg:pl-0 pl-12">
+							<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
 								{/* Left side - X button and message count */}
-								<div className="flex items-center gap-3">
+								<div className="flex items-center gap-2 sm:gap-3">
 									<button
 										onClick={handleCancelSelection}
 										className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
@@ -207,39 +207,42 @@ const MessageContainer = () => {
 								</div>
 								
 								{/* Right side - Select All and Delete buttons */}
-								<div className="flex items-center gap-2">
+								<div className="flex items-center gap-1 sm:gap-2 flex-wrap">
 									{/* Select All button - only show if not all messages are selected */}
 									{selectedMessages.size < (messages?.length || 0) && (
 										<button
 											onClick={handleSelectAll}
-											className="px-3 py-1.5 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors font-medium"
+											className="px-2 sm:px-3 py-1.5 bg-blue-500 text-white text-xs sm:text-sm rounded-lg hover:bg-blue-600 transition-colors font-medium whitespace-nowrap"
 										>
-											Select All
+											<span className="hidden sm:inline">Select All</span>
+											<span className="sm:hidden">All</span>
 										</button>
 									)}
 									<button
 										onClick={() => handleBulkDelete(false)}
 										disabled={deleteLoading || selectedMessages.size === 0}
-										className="px-3 py-1.5 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 font-medium"
+										className="px-2 sm:px-3 py-1.5 bg-red-500 text-white text-xs sm:text-sm rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 font-medium whitespace-nowrap"
 									>
-										Delete for me
+										<span className="hidden sm:inline">Delete for me</span>
+										<span className="sm:hidden">Me</span>
 									</button>
 									<button
 										onClick={() => handleBulkDelete(true)}
 										disabled={deleteLoading || selectedMessages.size === 0}
-										className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 font-medium"
+										className="px-2 sm:px-3 py-1.5 bg-red-600 text-white text-xs sm:text-sm rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 font-medium whitespace-nowrap"
 									>
-										Delete for all
+										<span className="hidden sm:inline">Delete for all</span>
+										<span className="sm:hidden">All</span>
 									</button>
 								</div>
 							</div>
-												) : (
-						<div className='flex items-center justify-between lg:pl-0 pl-12'>
+						) : (
+						<div className='flex items-center justify-between'>
 							{/* Left side - Profile and Info */}
-							<div className='flex items-center gap-3'>
+							<div className='flex items-center gap-2 sm:gap-3 min-w-0 flex-1'>
 								{/* Profile Picture */}
 								<div 
-									className='w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-90 transition-opacity'
+									className='w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-90 transition-opacity flex-shrink-0'
 									onClick={() => navigate(`/user/${selectedConversation.participant._id}`)}
 									title={`View ${selectedConversation.participant.fullName}'s profile`}
 								>
@@ -254,27 +257,27 @@ const MessageContainer = () => {
 											}}
 										/>
 									) : null}
-									<User className="w-5 h-5 text-gray-600" style={{ display: selectedConversation.participant?.profilePic ? 'none' : 'block' }} />
+									<User className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" style={{ display: selectedConversation.participant?.profilePic ? 'none' : 'block' }} />
 								</div>
 								
 								{/* User Info */}
 								<div className='min-w-0 flex-1'>
-									<h3 className="text-white font-semibold text-base truncate">{selectedConversation.participant?.fullName}</h3>
-									<p className="text-white/70 text-sm">
+									<h3 className="text-white font-semibold text-sm sm:text-base truncate">{selectedConversation.participant?.fullName}</h3>
+									<p className="text-white/70 text-xs sm:text-sm truncate">
 										{isOnline ? 'online' : 'last seen recently'}
 									</p>
 								</div>
 							</div>
 							
 							{/* Right side - Actions */}
-							<div className='flex items-center gap-1'>
+							<div className='flex items-center gap-1 sm:gap-2 flex-shrink-0'>
 								{/* Video Call Button */}
 								<button
 									onClick={handleStartVideoCall}
-									className="p-3 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+									className="p-2 sm:p-3 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
 									title="Start Video Call"
 								>
-									<VideoCameraIcon className="w-6 h-6" />
+									<VideoCameraIcon className="w-5 h-5 sm:w-6 sm:h-6" />
 								</button>
 								
 								{/* More Options Button */}
@@ -284,7 +287,7 @@ const MessageContainer = () => {
 										className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
 										title="More options"
 									>
-										<MoreVertical size={20} />
+										<MoreVertical size={18} className="sm:w-5 sm:h-5" />
 									</button>
 								)}
 							</div>

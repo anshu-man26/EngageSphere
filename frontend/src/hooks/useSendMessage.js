@@ -19,7 +19,9 @@ const useSendMessage = () => {
 		
 		setLoading(true);
 		try {
-			const res = await fetch(`/api/messages/send/${selectedConversation._id}`, {
+			const userToChatId = selectedConversation.participant?._id || selectedConversation._id;
+			
+			const res = await fetch(`/api/messages/send/${userToChatId}`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",

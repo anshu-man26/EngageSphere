@@ -13,10 +13,34 @@ export const SocketContextProvider = ({ children }) => {
 	const [socket, setSocket] = useState(null);
 	const [onlineUsers, setOnlineUsers] = useState([]);
 	const { authUser } = useAuthContext();
-	const { updateMessageReaction } = useConversation();
+	const { updateMessageReaction, updateMessageStatus, updateMultipleMessageStatuses } = useConversation();
+
+	// Play notification sound
+	const playNotificationSound = () => {
+		// Check if user has enabled message sounds
+		if (!authUser?.soundSettings?.messageSound) {
+			return;
+		}
+		
+		try {
+			const audio = new Audio('/sounds/notification.mp3');
+			audio.volume = 0.5;
+			audio.play().catch(error => {
+				console.log("Could not play notification sound:", error);
+			});
+		} catch (error) {
+			console.log("Error playing notification sound:", error);
+		}
+	};
 
 	useEffect(() => {
 		if (authUser) {
+			// Prevent duplicate socket connections
+			if (socket && socket.connected) {
+				console.log("Socket already connected, skipping new connection");
+				return;
+			}
+
 			const newSocket = io("/", {
 				query: {
 					userId: authUser._id,
@@ -44,6 +68,34 @@ export const SocketContextProvider = ({ children }) => {
 				setOnlineUsers(users);
 			});
 
+			// Listen for new message events
+			newSocket.on("newMessage", (newMessage) => {
+				// Only handle notification and conversation refresh, not message adding
+				// Message adding is handled by useListenMessages hook
+				if (newMessage.senderId && newMessage.receiverId) {
+					// This is a new message
+					if (newMessage.senderId !== authUser._id) {
+						// Play notification sound
+						playNotificationSound();
+					}
+				}
+				
+				// Update specific conversation instead of refreshing entire list
+				window.dispatchEvent(new CustomEvent('updateConversation', {
+					detail: {
+						senderId: newMessage.senderId,
+						receiverId: newMessage.receiverId,
+						message: newMessage
+					}
+				}));
+			});
+
+			// Listen for conversation updates
+			newSocket.on("conversationUpdated", (data) => {
+				console.log("Conversation updated via socket:", data);
+				// This will be handled by the conversation store
+			});
+
 			// Listen for reaction events
 			newSocket.on("messageReactionAdded", (data) => {
 				updateMessageReaction(data.messageId, 'add', data.reaction);
@@ -51,6 +103,22 @@ export const SocketContextProvider = ({ children }) => {
 
 			newSocket.on("messageReactionRemoved", (data) => {
 				updateMessageReaction(data.messageId, 'remove', data.reaction);
+			});
+
+			// Listen for message status events
+			newSocket.on("messageDelivered", (data) => {
+				// Update message status to delivered
+				updateMessageStatus(data.messageId, 'delivered', data.deliveredAt);
+			});
+
+			newSocket.on("messageRead", (data) => {
+				// Update message status to read
+				updateMessageStatus(data.messageId, 'read', data.readAt);
+			});
+
+			newSocket.on("messagesRead", (data) => {
+				// Update multiple messages status to read
+				updateMultipleMessageStatuses(data.messageIds, 'read', data.readAt);
 			});
 
 			setSocket(newSocket);

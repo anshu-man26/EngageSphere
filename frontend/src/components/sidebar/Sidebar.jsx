@@ -3,7 +3,7 @@ import Conversations from "./Conversations";
 import LogoutButton from "./LogoutButton";
 import SearchInput from "./SearchInput";
 import ProfileButton from "./ProfileButton";
-import { IoMenu, IoClose } from "react-icons/io5";
+import { IoMenu, IoClose, IoChevronBack } from "react-icons/io5";
 import useConversation from "../../zustand/useConversation";
 import useListenConversations from "../../hooks/useListenConversations";
 import logo from '../../assets/images/logo.png';
@@ -24,20 +24,16 @@ const Sidebar = () => {
 
 	return (
 		<>
-			{/* Mobile Menu Button - Outside sidebar */}
-			<div className='lg:hidden fixed top-4 left-4 z-50'>
+			{/* Mobile Menu Button - Modern circular design positioned at bottom of profile */}
+			<div className='lg:hidden'>
 				<button
 					onClick={() => setIsOpen(!isOpen)}
-					className='p-2 bg-gray-700 rounded-lg border border-gray-600 text-white hover:bg-gray-600 transition-colors shadow-lg'
-					style={{ 
-						minWidth: '44px', 
-						minHeight: '44px',
-						display: 'flex',
-						alignItems: 'center',
-						justifyContent: 'center'
-					}}
+					className={`sidebar-toggle-button ${isOpen ? 'sidebar-open' : ''}`}
 				>
-					<IoMenu size={20} />
+					<IoChevronBack 
+						size={20} 
+						className="arrow-icon"
+					/>
 				</button>
 			</div>
 
@@ -47,12 +43,14 @@ const Sidebar = () => {
 				lg:translate-x-0
 				fixed lg:relative 
 				top-0 left-0 
-				w-80 h-full 
+				w-80 sm:w-96 lg:w-80 xl:w-96 h-full 
 				bg-gray-800 border-r border-gray-600 
 				p-4 lg:p-6 
 				flex flex-col 
 				transition-transform duration-300 ease-in-out 
 				z-40
+				overflow-hidden
+				sidebar-mobile lg:sidebar-desktop
 			`}>
 				{/* Close Button - Inside sidebar */}
 				<div className='lg:hidden flex justify-end mb-4'>

@@ -173,8 +173,30 @@ export const login = async (req, res) => {
 			// Clear OTP after successful verification
 			user.otp = null;
 			user.otpExpires = null;
-			await user.save();
 		}
+
+		// Update login statistics
+		const now = new Date();
+		const ipAddress = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'Unknown';
+		const userAgent = req.headers['user-agent'] || 'Unknown';
+
+		// Update last login and increment login count
+		user.lastLogin = now;
+		user.loginCount += 1;
+
+		// Add to login history (keep last 10 logins)
+		user.loginHistory.push({
+			loginTime: now,
+			ipAddress: ipAddress,
+			userAgent: userAgent
+		});
+
+		// Keep only the last 10 login records
+		if (user.loginHistory.length > 10) {
+			user.loginHistory = user.loginHistory.slice(-10);
+		}
+
+		await user.save();
 
 		generateTokenAndSetCookie(user._id, res);
 

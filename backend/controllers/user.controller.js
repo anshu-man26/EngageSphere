@@ -68,6 +68,14 @@ export const getConversations = async (req, res) => {
 		})
 		.populate('participants', '-password')
 		.populate('lastMessage')
+		.populate({
+			path: 'messages',
+			match: { 
+				receiverId: loggedInUserId,
+				status: { $ne: 'read' },
+				deletedFor: { $ne: loggedInUserId }
+			}
+		})
 		.sort({ lastMessageTime: -1, createdAt: -1 }); // Sort by last message time, then creation time
 
 		console.log("Found conversations:", conversations.length);
@@ -105,8 +113,8 @@ export const getConversations = async (req, res) => {
 					return null;
 				}
 
-				// Get unread count for the logged-in user
-				const unreadCount = conversation.unreadCount.get(loggedInUserId.toString()) || 0;
+				// Calculate actual unread count based on messages that are not read
+				const actualUnreadCount = conversation.messages ? conversation.messages.length : 0;
 
 				// Get last message info
 				const lastMessage = conversation.lastMessage ? {
@@ -118,7 +126,7 @@ export const getConversations = async (req, res) => {
 				return {
 					_id: conversation._id,
 					participant: otherParticipant,
-					unreadCount,
+					unreadCount: actualUnreadCount,
 					lastMessage,
 					lastMessageTime: conversation.lastMessageTime,
 					createdAt: conversation.createdAt,
@@ -149,14 +157,17 @@ export const updateUserProfile = async (req, res) => {
 			return res.status(400).json({ error: "Bio must be 150 characters or less" });
 		}
 
+		// Prepare update object
+		const updateData = {
+			fullName: fullName.trim(),
+			profilePic: profilePic || "",
+			bio: bio ? bio.trim() : "",
+		};
+
 		// Update user profile
 		const updatedUser = await User.findByIdAndUpdate(
 			userId,
-			{
-				fullName: fullName.trim(),
-				profilePic: profilePic || "",
-				bio: bio ? bio.trim() : "",
-			},
+			updateData,
 			{ new: true, runValidators: true }
 		).select("-password");
 
@@ -174,6 +185,7 @@ export const updateUserProfile = async (req, res) => {
 				profilePic: updatedUser.profilePic,
 				bio: updatedUser.bio,
 				defaultChatBackground: updatedUser.defaultChatBackground,
+				soundSettings: updatedUser.soundSettings,
 			},
 		});
 	} catch (error) {
@@ -799,6 +811,46 @@ export const updateDefaultChatBackground = async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error in updateDefaultChatBackground: ", error.message);
+		res.status(500).json({ error: "Internal server error" });
+	}
+};
+
+export const updateSoundSettings = async (req, res) => {
+	try {
+		const { soundSettings } = req.body;
+		const userId = req.user._id;
+
+		// Validate sound settings
+		if (!soundSettings || typeof soundSettings !== 'object') {
+			return res.status(400).json({ error: "Invalid sound settings" });
+		}
+
+		// Update only sound settings
+		const updatedUser = await User.findByIdAndUpdate(
+			userId,
+			{ soundSettings },
+			{ new: true, runValidators: true }
+		).select("-password");
+
+		if (!updatedUser) {
+			return res.status(404).json({ error: "User not found" });
+		}
+
+		res.status(200).json({
+			message: "Sound settings updated successfully",
+			user: {
+				_id: updatedUser._id,
+				fullName: updatedUser.fullName,
+				email: updatedUser.email,
+				username: updatedUser.username,
+				profilePic: updatedUser.profilePic,
+				bio: updatedUser.bio,
+				defaultChatBackground: updatedUser.defaultChatBackground,
+				soundSettings: updatedUser.soundSettings,
+			},
+		});
+	} catch (error) {
+		console.error("Error in updateSoundSettings: ", error.message);
 		res.status(500).json({ error: "Internal server error" });
 	}
 };

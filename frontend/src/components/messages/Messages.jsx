@@ -5,18 +5,58 @@ import Message from "./Message";
 import useListenMessages from "../../hooks/useListenMessages";
 import { useAuthContext } from "../../context/AuthContext";
 import useConversation from "../../zustand/useConversation";
+import useMarkMessageAsDelivered from "../../hooks/useMarkMessageAsDelivered";
+import useMarkMessageAsRead from "../../hooks/useMarkMessageAsRead";
 
 const Messages = ({ isSelectionMode = false, selectedMessages = new Set(), onMessageSelect = null }) => {
 	const { messages, loading } = useGetMessages();
 	const { uploadingFiles } = useConversation();
 	const { authUser } = useAuthContext();
 	const { selectedConversation } = useConversation();
+	const { markAsDelivered } = useMarkMessageAsDelivered();
+	const { markAsRead } = useMarkMessageAsRead();
 	useListenMessages();
 	const lastMessageRef = useRef();
 	const [previousMessageCount, setPreviousMessageCount] = useState(0);
 
 	// Ensure messages is always an array
 	const messagesArray = Array.isArray(messages) ? messages : [];
+
+	// Mark messages as delivered and read when they are viewed
+	useEffect(() => {
+		if (!authUser || !selectedConversation || loading) return;
+
+		const markMessagesAsDeliveredAndRead = async () => {
+			const unreadMessages = messagesArray.filter(message => 
+				message.receiverId === authUser._id && 
+				message.status !== 'read'
+			);
+
+			for (const message of unreadMessages) {
+				// Mark as delivered first
+				if (message.status === 'sent') {
+					await markAsDelivered(message._id);
+				}
+				
+				// Mark as read
+				if (message.status !== 'read') {
+					await markAsRead(message._id);
+					
+					// Emit event to update conversation unread count
+					window.dispatchEvent(new CustomEvent('messageRead', {
+						detail: {
+							senderId: message.senderId,
+							receiverId: message.receiverId
+						}
+					}));
+				}
+			}
+		};
+
+		// Small delay to ensure messages are rendered
+		const timeoutId = setTimeout(markMessagesAsDeliveredAndRead, 500);
+		return () => clearTimeout(timeoutId);
+	}, [authUser, selectedConversation, loading, messagesArray, markAsDelivered, markAsRead]);
 
 	useEffect(() => {
 		// Only scroll to bottom when new messages are added (not when reactions are updated)

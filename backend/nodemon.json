@@ -1,0 +1,32 @@
+{
+  "watch": [
+    ".",
+    "server.js",
+    "routes/",
+    "controllers/",
+    "models/",
+    "middleware/",
+    "services/",
+    "config/",
+    "socket/",
+    "utils/"
+  ],
+  "ext": "js,json",
+  "ignore": [
+    "node_modules",
+    "dist",
+    "build",
+    ".git",
+    "*.log",
+    "../frontend"
+  ],
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "delay": "500",
+  "verbose": true,
+  "restartable": "rs",
+  "colours": true,
+  "legacyWatch": true,
+  "signal": "SIGTERM"
+} 

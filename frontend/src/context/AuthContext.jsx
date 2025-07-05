@@ -9,6 +9,7 @@ export const useAuthContext = () => {
 
 export const AuthContextProvider = ({ children }) => {
 	const [authUser, setAuthUser] = useState(null);
+	const [admin, setAdmin] = useState(null);
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
@@ -30,9 +31,26 @@ export const AuthContextProvider = ({ children }) => {
 			console.error("Error parsing user from localStorage:", error);
 			localStorage.removeItem("chat-user");
 			setAuthUser(null);
-		} finally {
-			setLoading(false);
 		}
+
+		// Check for admin session
+		const checkAdminSession = async () => {
+			try {
+				const res = await fetch("/api/admin/profile", {
+					credentials: "include",
+				});
+				if (res.ok) {
+					const adminData = await res.json();
+					setAdmin(adminData);
+				}
+			} catch (error) {
+				console.error("Error checking admin session:", error);
+			} finally {
+				setLoading(false);
+			}
+		};
+
+		checkAdminSession();
 	}, []);
 
 	const updateAuthUser = (user) => {
@@ -44,10 +62,16 @@ export const AuthContextProvider = ({ children }) => {
 		}
 	};
 
+	const updateAdmin = (adminData) => {
+		setAdmin(adminData);
+	};
+
 	return (
 		<AuthContext.Provider value={{ 
 			authUser, 
 			setAuthUser: updateAuthUser,
+			admin,
+			setAdmin: updateAdmin,
 			loading 
 		}}>
 			{children}

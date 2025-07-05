@@ -12,17 +12,22 @@ const useListenMessages = () => {
 	const { authUser } = useAuthContext();
 
 	useEffect(() => {
-		if (!socket) return;
+		if (!socket || !selectedConversation) return;
 
 		const handleNewMessage = (newMessage) => {
-			// Only add message if it belongs to the current conversation
-			// Check if the current user is involved in this message and if we have a selected conversation
-			if (selectedConversation && authUser && 
-				((newMessage.senderId === authUser._id && newMessage.receiverId === selectedConversation._id) ||
-				 (newMessage.senderId === selectedConversation._id && newMessage.receiverId === authUser._id))) {
+			// Check if this message belongs to the current conversation
+			const isCurrentConversation = 
+				((newMessage.senderId === authUser._id && newMessage.receiverId === selectedConversation.participant?._id) ||
+				(newMessage.senderId === selectedConversation.participant?._id && newMessage.receiverId === authUser._id));
+
+			if (isCurrentConversation) {
 				newMessage.shouldShake = true;
-				const sound = new Audio(notificationSound);
-				sound.play().catch(err => {});
+				
+				// Check if user has enabled message sounds
+				if (authUser?.soundSettings?.messageSound !== false) {
+					const sound = new Audio(notificationSound);
+					sound.play().catch(err => {});
+				}
 				
 				// Use the addMessage helper to safely add the new message
 				addMessage(newMessage);
@@ -72,6 +77,6 @@ const useListenMessages = () => {
 			socket.off("messageDeleted", handleMessageDeleted);
 			socket.off("messagesDeleted", handleMessagesDeleted);
 		};
-	}, [socket, addMessage, removeMessage, removeMessages, updateMessage, selectedConversation, authUser]);
+	}, [socket, selectedConversation, authUser._id, addMessage, removeMessage, removeMessages, updateMessage]);
 };
 export default useListenMessages;

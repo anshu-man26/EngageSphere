@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import useGetConversations from "../../hooks/useGetConversations";
 import useGetUsers from "../../hooks/useGetUsers";
 import useConversation from "../../zustand/useConversation";
 import { getRandomEmoji } from "../../utils/emojis";
@@ -6,17 +7,32 @@ import Conversation from "./Conversation";
 
 const Conversations = ({ onConversationSelect }) => {
 	const navigate = useNavigate();
+	const { conversations, loading } = useGetConversations();
 	const { users } = useGetUsers();
 	const { setSelectedConversation, searchTerm } = useConversation();
 
-	// Filter users based on search term
-	const filteredUsers = users.filter(user => {
+	// Filter conversations based on search term
+	const filteredConversations = conversations.filter(conversation => {
+		if (!searchTerm.trim()) return true;
+		const participantName = conversation.participant?.fullName || '';
+		return participantName.toLowerCase().includes(searchTerm.toLowerCase().trim());
+	});
+
+	// Filter users for new chat (exclude users already in conversations)
+	const existingConversationUserIds = conversations.map(conv => conv.participant._id);
+	const availableUsers = users.filter(user => !existingConversationUserIds.includes(user._id));
+	const filteredUsers = availableUsers.filter(user => {
 		if (!searchTerm.trim()) return true;
 		return user.fullName && user.fullName.toLowerCase().includes(searchTerm.toLowerCase().trim());
 	});
 
+	const handleConversationClick = (conversation) => {
+		setSelectedConversation(conversation);
+		if (onConversationSelect) onConversationSelect();
+	};
+
 	const handleUserClick = (user) => {
-		// Create a conversation object for this user
+		// Create a new conversation object for this user
 		const conversation = {
 			_id: user._id,
 			participant: user,
@@ -29,27 +45,53 @@ const Conversations = ({ onConversationSelect }) => {
 		if (onConversationSelect) onConversationSelect();
 	};
 
+	if (loading) {
+		return (
+			<div className='py-2 flex flex-col overflow-auto'>
+				<div className='text-center py-8 text-gray-400'>
+					<p>Loading conversations...</p>
+				</div>
+			</div>
+		);
+	}
+
 	return (
-		<div className='py-2 flex flex-col overflow-auto'>
+		<div className='py-2 flex flex-col overflow-auto min-w-0'>
 			{/* Search results indicator */}
 			{searchTerm.trim() && (
 				<div className='px-3 py-2 text-sm text-gray-400 border-b border-white/10 mb-2'>
-					{filteredUsers.length === 0 
-						? `No users found for "${searchTerm}"`
-						: `Found ${filteredUsers.length} user${filteredUsers.length === 1 ? '' : 's'} for "${searchTerm}"`
+					{filteredConversations.length === 0 && filteredUsers.length === 0
+						? `No results found for "${searchTerm}"`
+						: `Found ${filteredConversations.length + filteredUsers.length} result${filteredConversations.length + filteredUsers.length === 1 ? '' : 's'} for "${searchTerm}"`
 					}
 				</div>
 			)}
 
-			{/* Show all users */}
+			{/* Show existing conversations */}
+			{filteredConversations.length > 0 && (
+				<>
+					{filteredConversations.map((conversation, idx) => (
+						<Conversation 
+							key={conversation._id}
+							conversation={conversation}
+							lastIdx={idx === filteredConversations.length - 1 && filteredUsers.length === 0}
+							emoji={getRandomEmoji()}
+							onConversationSelect={onConversationSelect}
+						/>
+					))}
+					{filteredUsers.length > 0 && <div className='h-px bg-white/10 my-2'></div>}
+				</>
+			)}
+
+			{/* Show available users for new chats */}
 			{filteredUsers.map((user, idx) => (
 				<div
 					key={user._id}
-					className='flex items-center gap-3 p-3 hover:bg-white/10 cursor-pointer border-b border-white/10 last:border-b-0 transition-colors'
+					className='flex items-center gap-2 sm:gap-3 p-3 hover:bg-white/10 cursor-pointer border-b border-white/10 last:border-b-0 transition-colors'
 					onClick={() => handleUserClick(user)}
 				>
 					<div 
-						className='w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-semibold text-sm cursor-pointer hover:opacity-80 transition-opacity'
+						className='w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-semibold text-sm cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0'
 						onClick={(e) => {
 							e.stopPropagation();
 							navigate(`/user/${user._id}`);
@@ -67,15 +109,16 @@ const Conversations = ({ onConversationSelect }) => {
 						)}
 					</div>
 					<div className='flex-1 min-w-0'>
-						<p className='text-white font-medium truncate'>{user.fullName}</p>
-						<p className='text-gray-400 text-sm truncate'>{user.email}</p>
+						<p className='text-white font-medium truncate text-sm sm:text-base'>{user.fullName}</p>
+						<p className='text-gray-400 text-xs sm:text-sm truncate'>Click to start chat</p>
 					</div>
 				</div>
 			))}
 
-			{filteredUsers.length === 0 && !searchTerm.trim() && (
-				<div className='text-center py-8 text-gray-400'>
-					<p>No users found</p>
+			{filteredConversations.length === 0 && filteredUsers.length === 0 && !searchTerm.trim() && (
+				<div className='text-center py-8 text-gray-400 px-4'>
+					<p>No conversations yet</p>
+					<p className='text-sm mt-1'>Start a chat with someone to see conversations here</p>
 				</div>
 			)}
 		</div>

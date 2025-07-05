@@ -1,11 +1,12 @@
 services:
   # Backend API Service
   - type: web
-    name: engagesphere-backend
+    name: engagesphere
     env: node
     plan: free
-    buildCommand: npm run build
+    buildCommand: npm run render-build
     startCommand: npm run render-start
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
@@ -15,6 +16,8 @@ services:
         sync: false
       - key: JWT_SECRET
         sync: false
+      - key: JWT_EXPIRE
+        value: 7d
       - key: EMAIL_USER
         sync: false
       - key: EMAIL_PASS
@@ -26,8 +29,10 @@ services:
       - key: CLOUDINARY_SECRET_KEY
         sync: false
       - key: AGORA_APP_ID
-        value: a54ef74037d04dcb9e175550a7e05b0f
+        sync: false
       - key: AGORA_APP_CERTIFICATE
         sync: false
+      - key: FRONTEND_URL
+        value: https://engagesphere.onrender.com
 
  

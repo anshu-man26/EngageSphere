@@ -40,14 +40,9 @@ export const sendMessage = async (req, res) => {
 			conversation.messages.push(newMessage._id);
 		}
 
-		// Update conversation with last message info and increment unread count for receiver
+		// Update conversation with last message info
 		conversation.lastMessage = newMessage._id;
 		conversation.lastMessageTime = new Date();
-		
-		// Increment unread count for the receiver
-		const receiverIdStr = receiverId.toString();
-		const currentUnreadCount = conversation.unreadCount.get(receiverIdStr) || 0;
-		conversation.unreadCount.set(receiverIdStr, currentUnreadCount + 1);
 
 		// this will run in parallel
 		await Promise.all([conversation.save(), newMessage.save()]);
@@ -59,17 +54,7 @@ export const sendMessage = async (req, res) => {
 			io.to(receiverSocketId).emit("newMessage", newMessage);
 		}
 
-		// Return the message with proper formatting
-		const messageResponse = {
-			_id: newMessage._id,
-			senderId: newMessage.senderId,
-			receiverId: newMessage.receiverId,
-			message: newMessage.message,
-			createdAt: newMessage.createdAt,
-			updatedAt: newMessage.updatedAt,
-		};
-
-		res.status(201).json(messageResponse);
+		res.status(201).json(newMessage);
 	} catch (error) {
 		console.log("Error in sendMessage controller: ", error.message);
 		res.status(500).json({ error: "Internal server error" });
@@ -220,23 +205,6 @@ export const getMessages = async (req, res) => {
 			return res.status(200).json([]);
 		}
 
-		// Mark messages as read for the current user
-		const senderIdStr = senderId.toString();
-		const previousUnreadCount = conversation.unreadCount.get(senderIdStr) || 0;
-		conversation.unreadCount.set(senderIdStr, 0);
-		await conversation.save();
-
-		// Emit socket event to refresh conversation list if unread count changed
-		if (previousUnreadCount > 0) {
-			const senderSocketId = getReceiverSocketId(senderId);
-			if (senderSocketId) {
-				io.to(senderSocketId).emit("messagesRead", {
-					conversationId: conversation._id,
-					userId: senderId
-				});
-			}
-		}
-
 		const messages = conversation.messages || [];
 
 		// Filter out messages deleted for the current user
@@ -364,6 +332,141 @@ export const removeReaction = async (req, res) => {
 		});
 	} catch (error) {
 		console.log("Error in removeReaction controller: ", error.message);
+		res.status(500).json({ error: "Internal server error" });
+	}
+};
+
+// Mark message as delivered
+export const markMessageAsDelivered = async (req, res) => {
+	try {
+		const { messageId } = req.params;
+		const userId = req.user._id;
+
+		const message = await Message.findById(messageId);
+		if (!message) {
+			return res.status(404).json({ error: "Message not found" });
+		}
+
+		// Check if user is the receiver of this message
+		if (message.receiverId.toString() !== userId.toString()) {
+			return res.status(403).json({ error: "You can only mark messages sent to you as delivered" });
+		}
+
+		// Update message status to delivered
+		if (message.status === "sent") {
+			message.status = "delivered";
+			message.deliveredAt = new Date();
+			await message.save();
+
+			// Emit socket event to sender
+			const senderSocketId = getReceiverSocketId(message.senderId);
+			if (senderSocketId) {
+				io.to(senderSocketId).emit("messageDelivered", {
+					messageId: message._id,
+					deliveredAt: message.deliveredAt
+				});
+			}
+		}
+
+		res.status(200).json({ 
+			message: "Message marked as delivered",
+			status: message.status,
+			deliveredAt: message.deliveredAt
+		});
+	} catch (error) {
+		console.log("Error in markMessageAsDelivered controller: ", error.message);
+		res.status(500).json({ error: "Internal server error" });
+	}
+};
+
+// Mark message as read
+export const markMessageAsRead = async (req, res) => {
+	try {
+		const { messageId } = req.params;
+		const userId = req.user._id;
+
+		const message = await Message.findById(messageId);
+		if (!message) {
+			return res.status(404).json({ error: "Message not found" });
+		}
+
+		// Check if user is the receiver of this message
+		if (message.receiverId.toString() !== userId.toString()) {
+			return res.status(403).json({ error: "You can only mark messages sent to you as read" });
+		}
+
+		// Update message status to read
+		if (message.status !== "read") {
+			message.status = "read";
+			message.readAt = new Date();
+			await message.save();
+
+			// Emit socket event to sender
+			const senderSocketId = getReceiverSocketId(message.senderId);
+			if (senderSocketId) {
+				io.to(senderSocketId).emit("messageRead", {
+					messageId: message._id,
+					readAt: message.readAt
+				});
+			}
+		}
+
+		res.status(200).json({ 
+			message: "Message marked as read",
+			status: message.status,
+			readAt: message.readAt
+		});
+	} catch (error) {
+		console.log("Error in markMessageAsRead controller: ", error.message);
+		res.status(500).json({ error: "Internal server error" });
+	}
+};
+
+// Mark multiple messages as read
+export const markMessagesAsRead = async (req, res) => {
+	try {
+		const { messageIds } = req.body;
+		const userId = req.user._id;
+
+		if (!messageIds || !Array.isArray(messageIds) || messageIds.length === 0) {
+			return res.status(400).json({ error: "Message IDs are required" });
+		}
+
+		const messages = await Message.find({ 
+			_id: { $in: messageIds },
+			receiverId: userId,
+			status: { $ne: "read" }
+		});
+
+		const updatedMessages = [];
+		const affectedSenders = new Set();
+
+		for (const message of messages) {
+			message.status = "read";
+			message.readAt = new Date();
+			await message.save();
+			
+			updatedMessages.push(message);
+			affectedSenders.add(message.senderId.toString());
+		}
+
+		// Emit socket events to all affected senders
+		affectedSenders.forEach(senderId => {
+			const senderSocketId = getReceiverSocketId(senderId);
+			if (senderSocketId) {
+				io.to(senderSocketId).emit("messagesRead", {
+					messageIds: messages.map(m => m._id),
+					readAt: new Date()
+				});
+			}
+		});
+
+		res.status(200).json({ 
+			message: `${updatedMessages.length} messages marked as read`,
+			updatedCount: updatedMessages.length
+		});
+	} catch (error) {
+		console.log("Error in markMessagesAsRead controller: ", error.message);
 		res.status(500).json({ error: "Internal server error" });
 	}
 }; 

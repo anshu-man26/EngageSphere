@@ -7,23 +7,15 @@ const useListenConversations = () => {
 	useEffect(() => {
 		if (!socket) return;
 
-		// Listen for new messages to refresh conversations
-		const handleNewMessage = () => {
-			// Trigger a refresh of conversations
-			window.dispatchEvent(new CustomEvent('refreshConversations'));
-		};
-
 		// Listen for messages being read to refresh conversations
 		const handleMessagesRead = () => {
-			// Trigger a refresh of conversations
+			// For read status changes, we still need a full refresh since unread count changes
 			window.dispatchEvent(new CustomEvent('refreshConversations'));
 		};
 
-		socket.on("newMessage", handleNewMessage);
 		socket.on("messagesRead", handleMessagesRead);
 
 		return () => {
-			socket.off("newMessage", handleNewMessage);
 			socket.off("messagesRead", handleMessagesRead);
 		};
 	}, [socket]);

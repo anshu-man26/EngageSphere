@@ -197,6 +197,14 @@ const Login = () => {
 					<p className='text-gray-400 text-xs'>
 						© 2024 EngageSphere. All rights reserved.
 					</p>
+					<div className='mt-2'>
+						<Link 
+							to='/admin/login' 
+							className='text-xs text-gray-500 hover:text-red-400 transition-colors duration-200'
+						>
+							Admin Access
+						</Link>
+					</div>
 				</div>
 			</div>
 		</div>

@@ -52,23 +52,20 @@ export const VideoCallProvider = ({ children }) => {
         
         // Play notification sound (if supported)
         try {
-          const audio = new Audio('/src/assets/sounds/RINGTONE.mp3'); // Use custom ringtone for incoming call
-          audio.volume = 0.7;
-          audio.loop = true; // Loop the ringtone
-          audio.play().catch(e => {});
-          
-          // Store audio reference to stop it later
-          currentRingtoneRef.current = audio;
-          data.ringtoneAudio = audio;
+          // Check if user has enabled ringtone
+          if (authUser?.soundSettings?.ringtone !== false) {
+            const audio = new Audio('/src/assets/sounds/RINGTONE.mp3'); // Use custom ringtone for incoming call
+            audio.volume = 0.7;
+            audio.loop = true; // Loop the ringtone
+            audio.play().catch(e => {});
+            
+            // Store audio reference to stop it later
+            currentRingtoneRef.current = audio;
+            data.ringtoneAudio = audio;
+          }
         } catch (error) {
           // Audio not supported
         }
-        
-        // Show system notification
-        toast.success(`${data.callerName} is calling you!`, {
-          duration: 10000,
-          icon: '📹',
-        });
         
         // Auto-dismiss incoming call after 60 seconds
         setTimeout(() => {
