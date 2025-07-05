@@ -2,11 +2,18 @@
 
 A modern, feature-rich real-time chat application built with React, Node.js, and Socket.IO. EngageSphere offers a seamless messaging experience with video calls, file sharing, custom backgrounds, and advanced security features.
 
+## 🌐 Live Demo
+
+**Try the application live:** [https://engagesphere-mrjv.onrender.com/](https://engagesphere-mrjv.onrender.com/)
+
+*Experience real-time messaging, video calls, file sharing, and more!*
+
 ![EngageSphere](https://img.shields.io/badge/EngageSphere-Chat%20App-blue)
 ![React](https://img.shields.io/badge/React-18.2.0-61DAFB)
 ![Node.js](https://img.shields.io/badge/Node.js-Express-green)
 ![Socket.IO](https://img.shields.io/badge/Socket.IO-Real--time-orange)
 ![MongoDB](https://img.shields.io/badge/MongoDB-Database-47A248)
+![Live Demo](https://img.shields.io/badge/Live%20Demo-EngageSphere-green?style=for-the-badge&logo=render)
 
 ## ✨ Features
 
@@ -99,6 +106,16 @@ A modern, feature-rich real-time chat application built with React, Node.js, and
 - **MongoDB Atlas** - Cloud database (recommended)
 
 ## 🚀 Getting Started
+
+### 🌐 Live Application
+
+**EngageSphere is now live and ready to use!**
+
+- **Live Demo:** [https://engagesphere-mrjv.onrender.com/](https://engagesphere-mrjv.onrender.com/)
+- **Deployed on:** Render.com
+- **Status:** ✅ Production Ready
+
+*Note: The application may take a few seconds to wake up if it's been idle.*
 
 ### Prerequisites
 - Node.js (v16 or higher)

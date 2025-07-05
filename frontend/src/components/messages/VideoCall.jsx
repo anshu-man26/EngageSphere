@@ -7,10 +7,16 @@ import { useVideoCall } from '../../context/VideoCallContext';
 // Use environment variable or fallback to the provided App ID
 const AGORA_APP_ID = import.meta.env.VITE_AGORA_APP_ID || 'a54ef74037d04dcb9e175550a7e05b0f';
 
+// Log the App ID for debugging (remove in production)
+console.log('Agora App ID:', AGORA_APP_ID ? 'Set' : 'Not set');
+
 // Validate App ID format
 const isValidAppId = (appId) => {
   return appId && appId.length === 32 && /^[a-f0-9]+$/i.test(appId);
 };
+
+// Configure Agora to disable analytics to avoid ad blocker issues
+AgoraRTC.setLogLevel(4); // Only show errors
 
 
 
@@ -73,7 +79,12 @@ const VideoCall = ({ recipientId, socket, currentUser, isIncoming = false, chann
 
   // Initialize the AgoraRTC client
   const initializeClient = () => {
-    const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+    const client = AgoraRTC.createClient({ 
+      mode: "rtc", 
+      codec: "vp8",
+      // Disable analytics to avoid ad blocker issues
+      enableLogUpload: false
+    });
     clientRef.current = client;
     setupEventListeners(client);
     return client;

@@ -26,7 +26,7 @@ services:
       - key: CLOUDINARY_SECRET_KEY
         sync: false
       - key: AGORA_APP_ID
-        sync: false
+        value: a54ef74037d04dcb9e175550a7e05b0f
       - key: AGORA_APP_CERTIFICATE
         sync: false
 
