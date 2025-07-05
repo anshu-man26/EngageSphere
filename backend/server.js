@@ -47,10 +47,12 @@ app.use("/api/users", userRoutes);
 
 // Only serve static files and handle frontend routes in production
 if (process.env.NODE_ENV === 'production') {
-	app.use(express.static(path.join(__dirname, "/frontend/dist")));
+	// Serve static files from the frontend/dist directory
+	app.use(express.static(path.join(__dirname, "../frontend/dist")));
 
+	// Handle all other routes by serving the React app
 	app.get("*", (req, res) => {
-		res.sendFile(path.join(__dirname, "frontend", "dist", "index.html"));
+		res.sendFile(path.join(__dirname, "../frontend/dist/index.html"));
 	});
 }
 
