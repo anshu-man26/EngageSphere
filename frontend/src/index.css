@@ -10,39 +10,105 @@
 
 /* Custom scrollbar for messages */
 .messages-container::-webkit-scrollbar {
+	width: 4px;
+}
+
+/* Prevent gradient bleeding during loading */
+.messages-container {
+	background-clip: padding-box;
+	-webkit-background-clip: padding-box;
+	/* Smooth scrolling behavior */
+	scroll-behavior: smooth;
+}
+
+/* GIF Picker Modal Styles */
+.giphy-picker-content {
+	scrollbar-width: thin;
+	scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+}
+
+.giphy-picker-content::-webkit-scrollbar {
 	width: 6px;
 }
 
-.messages-container::-webkit-scrollbar-track {
-	background: rgba(255, 255, 255, 0.1);
+.giphy-picker-content::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.giphy-picker-content::-webkit-scrollbar-thumb {
+	background-color: rgba(156, 163, 175, 0.5);
 	border-radius: 3px;
+}
+
+.giphy-picker-content::-webkit-scrollbar-thumb:hover {
+	background-color: rgba(156, 163, 175, 0.7);
+}
+
+/* Modal Animations */
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes scaleIn {
+	from {
+		opacity: 0;
+		transform: scale(0.9);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+.animate-fadeIn {
+	animation: fadeIn 0.2s ease-out;
+}
+
+.animate-scaleIn {
+	animation: scaleIn 0.3s ease-out;
+}
+
+/* Improve skeleton loading appearance */
+.animate-pulse {
+	animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+	background-clip: padding-box;
+	-webkit-background-clip: padding-box;
+}
+
+.messages-container::-webkit-scrollbar-track {
+	background: transparent;
 }
 
 .messages-container::-webkit-scrollbar-thumb {
-	background: rgba(255, 255, 255, 0.3);
-	border-radius: 3px;
+	background: rgba(255, 255, 255, 0.2);
+	border-radius: 2px;
 }
 
 .messages-container::-webkit-scrollbar-thumb:hover {
-	background: rgba(255, 255, 255, 0.5);
+	background: rgba(255, 255, 255, 0.3);
 }
 
 /* Global scrollbar */
 ::-webkit-scrollbar {
-	width: 8px;
+	width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-	background: rgba(255, 255, 255, 0.1);
+	background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-	background: rgba(255, 255, 255, 0.3);
-	border-radius: 4px;
+	background: rgba(255, 255, 255, 0.2);
+	border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-	background: rgba(255, 255, 255, 0.5);
+	background: rgba(255, 255, 255, 0.3);
 }
 
 /* Shake animation for new messages */
@@ -132,7 +198,7 @@
 }
 
 .input-field:focus {
-	transform: scale(1.02);
+	/* Focus effect without scaling */
 }
 
 /* Card hover effects */
@@ -229,6 +295,140 @@ body {
 	.messages-container {
 		scroll-padding-bottom: 0.5rem;
 	}
+	
+	/* Reduce bottom padding for messages on mobile */
+	.messages-container .pb-4 {
+		padding-bottom: 0rem;
+	}
+	
+	/* Remove margins from chat components on mobile */
+	.messages-container .chat {
+		margin-bottom: 0;
+		/* Ensure proper spacing for chat components */
+		padding-left: 0.5rem;
+		padding-right: 0.5rem;
+	}
+	
+	/* Ensure chat-image (avatar) has proper spacing */
+	.messages-container .chat-image {
+		margin-right: 0.5rem;
+	}
+	
+	/* Remove all spacing from messages container on mobile */
+	.messages-container {
+		margin: 0 !important;
+		padding: 0 !important;
+		padding-bottom: 0px !important; /* No gap - messages can go below typing bar */
+	}
+	
+	/* Remove spacing from message input on mobile */
+	.mobile-input-container {
+		margin: 0 !important;
+		padding: 0.75rem !important;
+		overflow-x: hidden !important;
+		width: 100% !important;
+	}
+	
+	/* Prevent horizontal scrolling on mobile */
+	.mobile-chat-container {
+		overflow-x: hidden !important;
+		/* Better keyboard handling */
+		height: 100vh;
+		height: 100dvh;
+	}
+	
+	/* Better mobile keyboard handling */
+	@media (max-width: 768px) {
+		/* When keyboard is open, adjust layout */
+		.mobile-chat-container {
+			height: 100vh;
+			height: 100dvh;
+			overflow: hidden;
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+		}
+		
+		/* Ensure header stays visible when keyboard opens */
+		.mobile-header {
+			position: fixed !important;
+			top: 0 !important;
+			left: 0 !important;
+			right: 0 !important;
+			z-index: 100 !important;
+			background: rgba(17, 24, 39, 0.95) !important;
+			backdrop-filter: blur(10px) !important;
+			height: 60px !important;
+		}
+		
+		/* Ensure input stays at bottom even when keyboard opens */
+		.mobile-input-container {
+			position: fixed !important;
+			bottom: 0 !important;
+			left: 0 !important;
+			right: 0 !important;
+			z-index: 50 !important;
+			padding-bottom: env(safe-area-inset-bottom) !important;
+		}
+		
+		/* Adjust messages area when keyboard is open */
+		.mobile-messages-area {
+			padding-bottom: 0px !important; /* No gap - messages can go below typing bar */
+			padding-top: 60px !important; /* Space for fixed header */
+			overflow-y: auto !important;
+			overflow-x: hidden !important;
+			height: calc(100vh - 100px) !important;
+			height: calc(100dvh - 100px) !important;
+		}
+	}
+	
+	/* Mobile Chrome specific fixes */
+	@media (max-width: 768px) and (orientation: portrait) {
+		.mobile-chat-container {
+			height: 100vh !important;
+			height: 100dvh !important;
+		}
+		
+		.mobile-messages-area {
+			height: calc(100vh - 100px) !important;
+			height: calc(100dvh - 100px) !important;
+		}
+	}
+	
+	.mobile-messages-area {
+		overflow-x: hidden !important;
+	}
+	
+	.messages-container {
+		overflow-x: hidden !important;
+	}
+	
+	/* Remove extra bottom spacing on mobile */
+	@media (max-width: 768px) {
+		.messages-container {
+			padding-bottom: 0 !important;
+		}
+		
+		.messages-container > div {
+			padding-bottom: 0 !important;
+		}
+		
+		/* Remove all bottom margins from message elements */
+		.messages-container .chat,
+		.messages-container .chat-bubble,
+		.messages-container .chat-footer,
+		.messages-container .chat-image,
+		.messages-container > div > div {
+			margin-bottom: 0 !important;
+		}
+		
+		/* Remove bottom padding from message content */
+		.messages-container .chat-bubble {
+			padding-bottom: 0.5rem !important;
+		}
+	}
 }
 
 /* Flexbox layout improvements */
@@ -281,4 +481,1108 @@ body {
 	.mobile-x-button {
 		right: calc(100vw - 100px);
 	}
+}
+
+/* Mobile header improvements */
+@media (max-width: 640px) {
+	/* Ensure proper touch targets */
+	.mobile-header button {
+		min-width: 44px;
+		min-height: 44px;
+	}
+	
+	/* Prevent text overflow in header */
+	.mobile-header .truncate {
+		max-width: 120px;
+	}
+	
+	/* Improve header spacing on mobile */
+	.mobile-header {
+		padding-left: 0.75rem;
+		padding-right: 0.75rem;
+	}
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+	.mobile-header .truncate {
+		max-width: 100px;
+	}
+	
+	/* Further reduce padding on very small screens */
+	.mobile-header {
+		padding-left: 0.5rem;
+		padding-right: 0.5rem;
+	}
+}
+
+/* Ensure header stays above content */
+.chat-header {
+	position: sticky;
+	top: 0;
+	z-index: 40;
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
+}
+
+/* Professional header styling */
+.mobile-header {
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Smooth transitions for header elements */
+.mobile-header button {
+	transition: all 0.2s ease-in-out;
+}
+
+.mobile-header button:hover {
+	transform: scale(1.05);
+}
+
+/* Ensure proper text contrast */
+.mobile-header h3 {
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Professional button styling */
+.mobile-header .bg-blue-500,
+.mobile-header .bg-red-500,
+.mobile-header .bg-red-600 {
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+	transition: all 0.2s ease-in-out;
+}
+
+.mobile-header .bg-blue-500:hover,
+.mobile-header .bg-red-500:hover,
+.mobile-header .bg-red-600:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Dynamic sidebar improvements */
+@media (max-width: 1024px) {
+	/* Mobile sidebar improvements */
+	.sidebar-mobile {
+		width: 100vw;
+		max-width: 320px;
+	}
+}
+
+@media (min-width: 1024px) {
+	/* Desktop sidebar improvements */
+	.sidebar-desktop {
+		min-width: 280px;
+		max-width: 400px;
+	}
+}
+
+/* Prevent content overflow */
+.overflow-container {
+	overflow: hidden;
+}
+
+.overflow-container > * {
+	min-width: 0;
+}
+
+/* Responsive text handling */
+.responsive-text {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* Ensure proper flex behavior */
+.flex-dynamic {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+}
+
+/* Sidebar content improvements */
+.sidebar-content {
+	overflow-y: auto;
+	overflow-x: hidden;
+	scrollbar-width: thin;
+	scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.sidebar-content::-webkit-scrollbar {
+	width: 4px;
+}
+
+.sidebar-content::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.2);
+	border-radius: 2px;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb:hover {
+	background: rgba(255, 255, 255, 0.3);
+}
+
+/* Profile page mobile improvements */
+@media (max-width: 640px) {
+	/* Profile tabs mobile layout */
+	.profile-tabs {
+		flex-wrap: wrap;
+	}
+	
+	.profile-tabs button {
+		flex: 1 1 calc(50% - 0.25rem);
+		min-width: 0;
+	}
+	
+	/* Profile content mobile spacing */
+	.profile-content {
+		padding: 1rem;
+	}
+	
+	/* Form fields mobile optimization */
+	.profile-form input,
+	.profile-form textarea {
+		font-size: 16px; /* Prevents zoom on iOS */
+	}
+	
+	/* Button mobile optimization */
+	.profile-button {
+		min-height: 44px;
+		touch-action: manipulation;
+	}
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+	.profile-tabs button {
+		flex: 1 1 100%;
+	}
+	
+	.profile-content {
+		padding: 0.75rem;
+	}
+}
+
+/* Profile form improvements */
+.profile-form {
+	scroll-behavior: smooth;
+}
+
+.profile-form input:focus,
+.profile-form textarea:focus {
+	transform: scale(1.01);
+}
+
+/* Mobile-friendly tab navigation */
+.mobile-tabs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem;
+}
+
+.mobile-tabs button {
+	flex: 1;
+	min-width: 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* Responsive profile layout */
+.profile-responsive {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	overflow: hidden;
+}
+
+.profile-responsive .content-area {
+	flex: 1;
+	overflow-y: auto;
+	overflow-x: hidden;
+}
+
+/* Sidebar button improvements */
+.sidebar-button {
+	transition: all 0.2s ease-in-out;
+	touch-action: manipulation;
+}
+
+.sidebar-button:hover {
+	transform: scale(1.02);
+}
+
+/* Profile and logout button mobile optimization */
+@media (max-width: 640px) {
+	.sidebar-profile-button {
+		padding: 0.5rem;
+	}
+	
+	.sidebar-logout-button {
+		padding: 0.5rem 0.75rem;
+		font-size: 14px;
+	}
+	
+	.sidebar-profile-avatar {
+		width: 2.5rem;
+		height: 2.5rem;
+	}
+	
+	.sidebar-profile-icon {
+		width: 0.75rem;
+		height: 0.75rem;
+	}
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+	.sidebar-profile-button {
+		padding: 0.375rem;
+	}
+	
+	.sidebar-logout-button {
+		padding: 0.375rem 0.5rem;
+		font-size: 13px;
+	}
+	
+	.sidebar-profile-avatar {
+		width: 2.25rem;
+		height: 2.25rem;
+	}
+}
+
+/* Ensure proper text truncation */
+.sidebar-text-truncate {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* Button focus states for accessibility */
+.sidebar-button:focus {
+	outline: 2px solid rgba(59, 130, 246, 0.5);
+	outline-offset: 2px;
+}
+
+/* Loading state improvements */
+.sidebar-loading {
+	animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
+}
+
+/* Chat settings improvements */
+.chat-settings-container {
+	overflow-y: auto;
+	overflow-x: hidden;
+}
+
+.chat-settings-section {
+	transition: all 0.3s ease;
+}
+
+.chat-settings-section:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* Toggle switch improvements */
+.toggle-switch {
+	transition: all 0.2s ease-in-out;
+	touch-action: manipulation;
+}
+
+.toggle-switch:focus {
+	outline: 2px solid rgba(147, 51, 234, 0.5);
+	outline-offset: 2px;
+}
+
+/* Mobile chat settings optimization */
+@media (max-width: 640px) {
+	.chat-settings-toggle {
+		min-height: 44px;
+		min-width: 44px;
+	}
+	
+	.chat-settings-button {
+		min-height: 44px;
+		touch-action: manipulation;
+	}
+	
+	.chat-settings-text {
+		font-size: 14px;
+		line-height: 1.4;
+	}
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+	.chat-settings-container {
+		padding: 0.75rem;
+	}
+	
+	.chat-settings-section {
+		padding: 0.75rem;
+	}
+	
+	.chat-settings-button {
+		padding: 0.5rem 0.75rem;
+		font-size: 13px;
+	}
+}
+
+/* Flexible layout improvements */
+.flexible-layout {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.flexible-layout > * {
+	flex: 1;
+	min-width: 0;
+}
+
+/* Responsive button groups */
+.button-group {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+.button-group button {
+	flex: 1;
+	min-width: 0;
+	white-space: nowrap;
+}
+
+/* Ensure proper text wrapping */
+.text-wrap {
+	word-wrap: break-word;
+	overflow-wrap: break-word;
+}
+
+/* Improved focus states */
+.focus-visible {
+	outline: 2px solid rgba(59, 130, 246, 0.5);
+	outline-offset: 2px;
+}
+
+/* Smooth transitions for all interactive elements */
+.interactive-element {
+	transition: all 0.2s ease-in-out;
+}
+
+.interactive-element:hover {
+	transform: scale(1.02);
+}
+
+.interactive-element:active {
+	transform: scale(0.98);
+}
+
+/* Profile Settings Consistency */
+.profile-settings-section {
+	min-height: 120px;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
+
+.profile-settings-section.small {
+	min-height: 80px;
+}
+
+.profile-settings-section.medium {
+	min-height: 120px;
+}
+
+.profile-settings-section.large {
+	min-height: 160px;
+}
+
+/* Fix for blue screen issue */
+.profile-content {
+	background: rgba(255, 255, 255, 0.1) !important;
+	backdrop-filter: blur(10px) !important;
+}
+
+/* Ensure consistent form spacing */
+.profile-form > div {
+	margin-bottom: 1rem;
+}
+
+.profile-form > div:last-child {
+	margin-bottom: 0;
+}
+
+/* Fix for email settings spacing */
+.email-settings-container {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.email-settings-container form {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+/* Consistent toggle sizing */
+.settings-toggle-container {
+	min-height: 70px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 1rem;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 0.5rem;
+}
+
+/* Fix for any potential background issues */
+.profile-responsive {
+	background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%) !important;
+}
+
+.profile-responsive * {
+	background-color: transparent !important;
+}
+
+.profile-responsive .bg-white\/10 {
+	background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.profile-responsive .bg-white\/5 {
+	background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Emoji Picker Mobile Optimization */
+.reaction-picker {
+	animation: fadeIn 0.2s ease-in-out;
+}
+
+.reaction-picker .EmojiPickerReact {
+	border-radius: 12px !important;
+	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3) !important;
+	border: 1px solid rgba(255, 255, 255, 0.1) !important;
+	background: rgba(30, 41, 59, 0.95) !important;
+	backdrop-filter: blur(10px) !important;
+}
+
+/* Mobile-specific emoji picker styles */
+@media (max-width: 768px) {
+	.reaction-picker .EmojiPickerReact {
+		font-size: 14px !important;
+	}
+	
+	.reaction-picker .EmojiPickerReact .epr-emoji-category-label {
+		font-size: 12px !important;
+		padding: 8px 12px !important;
+	}
+	
+	.reaction-picker .EmojiPickerReact .epr-emoji {
+		font-size: 20px !important;
+		width: 32px !important;
+		height: 32px !important;
+	}
+	
+	.reaction-picker .EmojiPickerReact .epr-search-container {
+		padding: 8px 12px !important;
+	}
+	
+	.reaction-picker .EmojiPickerReact .epr-search {
+		font-size: 14px !important;
+		padding: 8px 12px !important;
+	}
+	
+	.reaction-picker .EmojiPickerReact .epr-body {
+		padding: 8px !important;
+	}
+	
+	.reaction-picker .EmojiPickerReact .epr-category-nav {
+		padding: 8px 12px !important;
+	}
+	
+	.reaction-picker .EmojiPickerReact .epr-category-nav button {
+		width: 28px !important;
+		height: 28px !important;
+		font-size: 16px !important;
+	}
+	
+	/* Ensure proper scrolling */
+	.reaction-picker .EmojiPickerReact .epr-emoji-list {
+		max-height: 200px !important;
+		overflow-y: auto !important;
+		scrollbar-width: thin !important;
+		scrollbar-color: rgba(255, 255, 255, 0.3) transparent !important;
+	}
+	
+	.reaction-picker .EmojiPickerReact .epr-emoji-list::-webkit-scrollbar {
+		width: 4px !important;
+	}
+	
+	.reaction-picker .EmojiPickerReact .epr-emoji-list::-webkit-scrollbar-track {
+		background: transparent !important;
+	}
+	
+	.reaction-picker .EmojiPickerReact .epr-emoji-list::-webkit-scrollbar-thumb {
+		background: rgba(255, 255, 255, 0.3) !important;
+		border-radius: 2px !important;
+	}
+	
+	.reaction-picker .EmojiPickerReact .epr-emoji-list::-webkit-scrollbar-thumb:hover {
+		background: rgba(255, 255, 255, 0.5) !important;
+	}
+}
+
+/* Ensure emoji picker doesn't interfere with other elements */
+.reaction-picker {
+	pointer-events: auto !important;
+}
+
+.reaction-picker * {
+	pointer-events: auto !important;
+}
+
+/* Animation for emoji picker appearance */
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+		transform: scale(0.95);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+/* Animation for conversation list updates */
+@keyframes slideInFromTop {
+	from {
+		opacity: 0;
+		transform: translateY(-20px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+/* Conversation list container for smooth animations */
+.conversation-list-container {
+	transition: all 0.3s ease-in-out;
+}
+
+.conversation-list-container > * {
+	transition: all 0.3s ease-in-out;
+}
+
+@keyframes highlightNewMessage {
+	0% {
+		background: rgba(59, 130, 246, 0.3);
+		transform: scale(1);
+	}
+	50% {
+		background: rgba(59, 130, 246, 0.5);
+		transform: scale(1.02);
+	}
+	100% {
+		background: rgba(59, 130, 246, 0.1);
+		transform: scale(1);
+	}
+}
+
+@keyframes pulseNotification {
+	0% {
+		transform: scale(1);
+		box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+	}
+	70% {
+		transform: scale(1.1);
+		box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+	}
+	100% {
+		transform: scale(1);
+		box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+	}
+}
+
+/* Modern Circular Sidebar Button - Top Position */
+.sidebar-toggle-button-top {
+	width: 3rem;
+	height: 3rem;
+	background: linear-gradient(135deg, rgba(107, 114, 128, 0.7) 0%, rgba(75, 85, 99, 0.7) 100%);
+	border-radius: 50%;
+	border: 2px solid rgba(255, 255, 255, 0.15);
+	color: white;
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	box-shadow: 
+		0 4px 16px rgba(0, 0, 0, 0.2),
+		0 0 0 1px rgba(255, 255, 255, 0.1),
+		inset 0 1px 0 rgba(255, 255, 255, 0.1);
+	backdrop-filter: blur(8px);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	pointer-events: auto;
+	/* Ensure button is above sidebar when sidebar is closed */
+	z-index: 70;
+}
+
+/* Ensure sidebar is always on top on mobile */
+@media (max-width: 1023px) {
+	.sidebar-mobile {
+		z-index: 9999 !important;
+		position: fixed !important;
+		top: 0 !important;
+		left: 0 !important;
+		height: 100vh !important;
+		width: 80vw !important;
+		max-width: 384px !important;
+	}
+}
+
+/* Hide the button when sidebar is open */
+.sidebar-toggle-button-top.sidebar-open {
+	display: none;
+}
+
+.sidebar-toggle-button-top:hover {
+	transform: scale(1.05);
+	box-shadow: 
+		0 6px 20px rgba(0, 0, 0, 0.3),
+		0 0 0 1px rgba(255, 255, 255, 0.2),
+		inset 0 1px 0 rgba(255, 255, 255, 0.2);
+	background: linear-gradient(135deg, rgba(91, 99, 104, 0.8) 0%, rgba(55, 65, 81, 0.8) 100%);
+}
+
+.sidebar-toggle-button-top:active {
+	transform: scale(0.95);
+}
+
+.sidebar-toggle-button-top .arrow-icon {
+	transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-toggle-button-top.sidebar-open .arrow-icon {
+	transform: rotate(180deg);
+}
+
+/* Modern Circular Sidebar Button - Bottom Position (Legacy) */
+.sidebar-toggle-button {
+	position: fixed;
+	bottom: 5rem;
+	left: 1rem;
+	z-index: 20;
+	width: 3rem;
+	height: 3rem;
+	background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+	border-radius: 50%;
+	border: 2px solid rgba(255, 255, 255, 0.2);
+	color: white;
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	box-shadow: 
+		0 8px 32px rgba(0, 0, 0, 0.3),
+		0 0 0 1px rgba(255, 255, 255, 0.1),
+		inset 0 1px 0 rgba(255, 255, 255, 0.2);
+	backdrop-filter: blur(10px);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+}
+
+.sidebar-toggle-button:hover {
+	transform: scale(1.1);
+	box-shadow: 
+		0 12px 40px rgba(0, 0, 0, 0.4),
+		0 0 0 1px rgba(255, 255, 255, 0.3),
+		inset 0 1px 0 rgba(255, 255, 255, 0.3);
+	background: linear-gradient(135deg, #5b6368 0%, #374151 100%);
+}
+
+.sidebar-toggle-button:active {
+	transform: scale(0.95);
+}
+
+.sidebar-toggle-button .arrow-icon {
+	transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-toggle-button.sidebar-open .arrow-icon {
+	transform: rotate(180deg);
+}
+
+/* Mobile-specific positioning */
+@media (max-width: 768px) {
+	.sidebar-toggle-button {
+		bottom: 5.5rem;
+		left: 1rem;
+		width: 3.5rem;
+		height: 3.5rem;
+	}
+	
+	/* Ensure messages can render in button area */
+	.mobile-messages-area {
+		position: relative;
+		z-index: 1;
+	}
+	
+	/* Allow messages to render behind the sidebar button */
+	.sidebar-toggle-button-top {
+		pointer-events: auto;
+	}
+}
+
+@media (max-width: 480px) {
+	.sidebar-toggle-button {
+		bottom: 6rem;
+		left: 0.75rem;
+		width: 3rem;
+		height: 3rem;
+	}
+}
+
+/* Ensure button doesn't interfere with other elements */
+.sidebar-toggle-button {
+	pointer-events: auto;
+}
+
+/* Animation for button appearance */
+@keyframes buttonFadeIn {
+	from {
+		opacity: 0;
+		transform: scale(0.8) translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1) translateY(0);
+	}
+}
+
+.sidebar-toggle-button {
+	animation: buttonFadeIn 0.3s ease-out;
+}
+
+/* Enhanced Profile Tab Buttons */
+.profile-tabs button {
+	position: relative;
+	overflow: hidden;
+}
+
+.profile-tabs button::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: -100%;
+	width: 100%;
+	height: 100%;
+	background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+	transition: left 0.5s;
+}
+
+.profile-tabs button:hover::before {
+	left: 100%;
+}
+
+.profile-tabs button.active {
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Profile page background animation */
+.profile-responsive {
+	background: linear-gradient(-45deg, #3b82f6, #8b5cf6, #ec4899, #06b6d4);
+	background-size: 400% 400%;
+	animation: gradientShift 15s ease infinite;
+}
+
+@keyframes gradientShift {
+	0% {
+		background-position: 0% 50%;
+	}
+	50% {
+		background-position: 100% 50%;
+	}
+	100% {
+		background-position: 0% 50%;
+	}
+}
+
+/* Enhanced button hover effects */
+.profile-tabs button:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.profile-tabs button:active {
+	transform: translateY(0px);
+}
+
+/* Glass morphism effect for content area */
+.profile-content {
+	background: rgba(255, 255, 255, 0.1) !important;
+	backdrop-filter: blur(20px) !important;
+	border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Enhanced form inputs */
+.profile-form input:focus {
+	box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3);
+	transform: scale(1.02);
+}
+
+/* Button pulse animation for active tabs */
+.profile-tabs button.active {
+	animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+	0%, 100% {
+		box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7);
+	}
+	50% {
+		box-shadow: 0 0 0 10px rgba(139, 92, 246, 0);
+	}
+}
+
+/* Enhanced Sound Toggle Buttons */
+.sound-toggle-container {
+	background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1));
+	border: 1px solid rgba(139, 92, 246, 0.2);
+	transition: all 0.3s ease;
+}
+
+.sound-toggle-container:hover {
+	background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(59, 130, 246, 0.15));
+	transform: translateY(-2px);
+	box-shadow: 0 8px 25px rgba(139, 92, 246, 0.2);
+}
+
+.sound-toggle-button {
+	position: relative;
+	overflow: hidden;
+}
+
+.sound-toggle-button::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: -100%;
+	width: 100%;
+	height: 100%;
+	background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+	transition: left 0.6s;
+}
+
+.sound-toggle-button:hover::before {
+	left: 100%;
+}
+
+.sound-toggle-button.active {
+	box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
+}
+
+/* Toggle switch animations */
+.toggle-switch {
+	position: relative;
+	overflow: hidden;
+}
+
+.toggle-switch::after {
+	content: '';
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 0;
+	height: 0;
+	background: rgba(255, 255, 255, 0.3);
+	border-radius: 50%;
+	transform: translate(-50%, -50%);
+	transition: width 0.3s, height 0.3s;
+}
+
+.toggle-switch:active::after {
+	width: 100px;
+	height: 100px;
+}
+
+/* Icon animations */
+.sound-icon {
+	transition: all 0.3s ease;
+}
+
+.sound-toggle-container:hover .sound-icon {
+	transform: scale(1.1);
+}
+
+/* Status indicator animations */
+.status-indicator {
+	animation: statusPulse 2s infinite;
+}
+
+@keyframes statusPulse {
+	0%, 100% {
+		opacity: 1;
+		transform: scale(1);
+	}
+	50% {
+		opacity: 0.7;
+		transform: scale(1.1);
+	}
+}
+
+/* Enhanced focus states */
+.sound-toggle-button:focus {
+	outline: none;
+	box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3);
+}
+
+/* Loading state */
+.sound-toggle-button.loading {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.sound-toggle-button.loading::before {
+	animation: loadingShimmer 1.5s infinite;
+}
+
+@keyframes loadingShimmer {
+	0% {
+		transform: translateX(-100%);
+	}
+	100% {
+		transform: translateX(100%);
+	}
+}
+
+/* Enhanced Sound Settings Buttons */
+.chat-settings-section {
+	transition: all 0.3s ease;
+}
+
+.chat-settings-section:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* Sound toggle button animations */
+.chat-settings-section button {
+	position: relative;
+	overflow: hidden;
+}
+
+.chat-settings-section button::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: -100%;
+	width: 100%;
+	height: 100%;
+	background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+	transition: left 0.6s;
+}
+
+.chat-settings-section button:hover::before {
+	left: 100%;
+}
+
+/* Icon container animations */
+.chat-settings-section .w-10,
+.chat-settings-section .w-12 {
+	transition: all 0.3s ease;
+}
+
+.chat-settings-section .w-10:hover,
+.chat-settings-section .w-12:hover {
+	transform: scale(1.1);
+}
+
+/* Loading state for buttons */
+.chat-settings-section button:disabled {
+	transform: none !important;
+}
+
+.chat-settings-section button:disabled::before {
+	display: none;
+}
+
+/* Enhanced hover effects for sound settings */
+.chat-settings-section .bg-white\/5:hover {
+	background: rgba(255, 255, 255, 0.08) !important;
+	border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Button text animations */
+.chat-settings-section button span {
+	transition: all 0.3s ease;
+}
+
+.chat-settings-section button:hover span {
+	transform: translateX(2px);
+}
+
+/* Icon animations in buttons */
+.chat-settings-section button svg {
+	transition: all 0.3s ease;
+}
+
+.chat-settings-section button:hover svg {
+	transform: scale(1.1);
+}
+
+/* Modal background fixes for chat background selector */
+.chat-background-modal {
+	background-color: rgba(0, 0, 0, 0.9) !important;
+	backdrop-filter: blur(8px) !important;
+	-webkit-backdrop-filter: blur(8px) !important;
+}
+
+.chat-background-modal .bg-gray-900 {
+	background-color: rgb(17, 24, 39) !important;
+	opacity: 1 !important;
+}
+
+.chat-background-modal .bg-black\/80 {
+	background-color: rgba(0, 0, 0, 0.9) !important;
+}
+
+/* Ensure modal content is not transparent */
+.chat-background-modal .bg-gray-900 > * {
+	background-color: rgb(17, 24, 39) !important;
+}
+
+@keyframes slideInFromTop {
+	from {
+		opacity: 0;
+		transform: translateY(-20px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes slideUp {
+	from {
+		opacity: 0;
+		transform: translateY(20px) scale(0.95);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+.animate-slideUp {
+	animation: slideUp 0.3s ease-out;
 }

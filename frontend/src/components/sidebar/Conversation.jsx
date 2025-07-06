@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useSocketContext } from "../../context/SocketContext";
 import useConversation from "../../zustand/useConversation";
 
-const Conversation = ({ conversation, lastIdx, emoji, onConversationSelect }) => {
+const Conversation = ({ conversation, lastIdx, emoji, onConversationSelect, isNewMessage = false }) => {
 	const navigate = useNavigate();
 	const { selectedConversation, setSelectedConversation } = useConversation();
 
@@ -30,8 +30,8 @@ const Conversation = ({ conversation, lastIdx, emoji, onConversationSelect }) =>
 	};
 
 	const handleClick = () => {
-		if (conversation && conversation.participant) {
-			setSelectedConversation(conversation.participant);
+		if (conversation) {
+			setSelectedConversation(conversation);
 			// Call the callback to close sidebar on mobile
 			if (onConversationSelect) {
 				onConversationSelect();
@@ -42,17 +42,19 @@ const Conversation = ({ conversation, lastIdx, emoji, onConversationSelect }) =>
 	return (
 		<>
 			<div
-				className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 hover:scale-105 ${
+				className={`flex items-center gap-2 sm:gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300 hover:scale-105 ${
 					isSelected 
 						? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30' 
-						: 'hover:bg-white/10 border border-transparent'
-				}`}
+						: conversation.unreadCount > 0
+							? 'hover:bg-white/10 border border-red-500/20 bg-red-500/5'
+							: 'hover:bg-white/10 border border-transparent'
+				} ${isNewMessage ? 'animate-[slideInFromTop_0.5s_ease-out]' : ''}`}
 				onClick={handleClick}
 			>
 				{/* Avatar */}
-				<div className='relative'>
+				<div className='relative flex-shrink-0'>
 					<div 
-						className='w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-80 transition-opacity'
+						className='w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-80 transition-opacity'
 						onClick={(e) => {
 							e.stopPropagation();
 							navigate(`/user/${conversation.participant._id}`);
@@ -62,7 +64,7 @@ const Conversation = ({ conversation, lastIdx, emoji, onConversationSelect }) =>
 						<img 
 							src={conversation.participant.profilePic || 'https://cdn0.iconfinder.com/data/icons/communication-line-10/24/account_profile_user_contact_person_avatar_placeholder-512.png'} 
 							alt={`${conversation.participant.fullName || 'User'} avatar`}
-							className='w-12 h-12 rounded-full object-cover'
+							className='w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover'
 							onError={(e) => {
 								e.target.src = 'https://cdn0.iconfinder.com/data/icons/communication-line-10/24/account_profile_user_contact_person_avatar_placeholder-512.png';
 							}}
@@ -70,12 +72,12 @@ const Conversation = ({ conversation, lastIdx, emoji, onConversationSelect }) =>
 					</div>
 					{/* Online indicator */}
 					{isOnline && (
-						<div className='absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full'></div>
+						<div className='absolute -bottom-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 bg-green-500 border-2 border-white rounded-full'></div>
 					)}
 					{/* Unread count badge */}
 					{conversation.unreadCount > 0 && !isSelected && (
-						<div className='absolute -top-1 -right-1 w-5 h-5 bg-red-500 border-2 border-white rounded-full flex items-center justify-center'>
-							<span className='text-xs text-white font-bold'>
+						<div className='absolute -top-1 -right-1 min-w-[18px] h-4 sm:min-w-[20px] sm:h-5 bg-red-500 border-2 border-white rounded-full flex items-center justify-center shadow-lg animate-[pulseNotification_1s_ease-in-out]'>
+							<span className='text-xs text-white font-bold px-1'>
 								{conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}
 							</span>
 						</div>
@@ -85,20 +87,24 @@ const Conversation = ({ conversation, lastIdx, emoji, onConversationSelect }) =>
 				{/* User info */}
 				<div className='flex-1 min-w-0'>
 					<div className='flex items-center justify-between'>
-						<h3 className={`font-semibold truncate ${conversation.unreadCount > 0 && !isSelected ? 'text-white' : 'text-gray-300'}`}>
+						<h3 className={`font-semibold truncate text-sm sm:text-base ${conversation.unreadCount > 0 && !isSelected ? 'text-white' : 'text-gray-300'}`}>
 							{conversation.participant.fullName || 'Unknown User'}
 						</h3>
-						<span className='text-lg flex-shrink-0 ml-2'>{emoji}</span>
+						<span className='text-base sm:text-lg flex-shrink-0 ml-2'>{emoji}</span>
 					</div>
 					<div className='flex items-center justify-between mt-1'>
-						<div className='flex items-center gap-2 flex-1 min-w-0'>
-							<div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-orange-500'}`}></div>
+						<div className='flex items-center gap-1 sm:gap-2 flex-1 min-w-0'>
+							<div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-orange-500'}`}></div>
 							<span className='text-xs text-gray-400 truncate'>
-								{conversation.lastMessage ? conversation.lastMessage.message : 'No messages yet'}
+								{conversation.lastMessage ? (
+									conversation.lastMessage.message && conversation.lastMessage.message.startsWith('[GIF]') 
+										? 'GIF' 
+										: conversation.lastMessage.message
+								) : 'No messages yet'}
 							</span>
 						</div>
 						{conversation.lastMessage && (
-							<span className='text-xs text-gray-500 ml-2 flex-shrink-0'>
+							<span className='text-xs text-gray-500 ml-1 sm:ml-2 flex-shrink-0'>
 								{formatLastMessageTime(conversation.lastMessage.createdAt)}
 							</span>
 						)}

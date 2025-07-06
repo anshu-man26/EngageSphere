@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import createTransporter from "../config/nodemailer.js";
+import welcomeEmailService from "../services/welcomeEmailService.js";
 
 const generateTokenAndSetCookie = (userId, res) => {
 	const token = jwt.sign({ userId }, process.env.JWT_SECRET, {
@@ -67,6 +68,11 @@ export const signup = async (req, res) => {
 
 		await tempUser.save();
 
+		// Send welcome email (non-blocking)
+		welcomeEmailService.sendWelcomeEmail(tempUser).catch(error => {
+			console.error("Failed to send welcome email:", error);
+		});
+
 		// Generate JWT token and set cookie
 		generateTokenAndSetCookie(tempUser._id, res);
 
@@ -89,12 +95,25 @@ export const signup = async (req, res) => {
 
 export const login = async (req, res) => {
 	try {
-		const { email, password, otp } = req.body;
-		const user = await User.findOne({ email });
+		const { email, username, password, otp } = req.body;
+		
+		// Check if either email or username is provided
+		if (!email && !username) {
+			return res.status(400).json({ error: "Email or username is required" });
+		}
+		
+		// Find user by email or username
+		let user;
+		if (email) {
+			user = await User.findOne({ email });
+		} else {
+			user = await User.findOne({ username });
+		}
+		
 		const isPasswordCorrect = await bcrypt.compare(password, user?.password || "");
 
 		if (!user || !isPasswordCorrect) {
-			return res.status(400).json({ error: "Invalid email or password" });
+			return res.status(400).json({ error: "Invalid email/username or password" });
 		}
 
 		// Check if user is verified
@@ -124,7 +143,7 @@ export const login = async (req, res) => {
 				if (transporter) {
 					const mailOptions = {
 						from: process.env.EMAIL_USER,
-						to: email,
+						to: user.email, // Always use the user's email for OTP
 						subject: "Login OTP - EngageSphere",
 						html: `<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
 							<div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;'>
@@ -173,8 +192,30 @@ export const login = async (req, res) => {
 			// Clear OTP after successful verification
 			user.otp = null;
 			user.otpExpires = null;
-			await user.save();
 		}
+
+		// Update login statistics
+		const now = new Date();
+		const ipAddress = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'Unknown';
+		const userAgent = req.headers['user-agent'] || 'Unknown';
+
+		// Update last login and increment login count
+		user.lastLogin = now;
+		user.loginCount += 1;
+
+		// Add to login history (keep last 10 logins)
+		user.loginHistory.push({
+			loginTime: now,
+			ipAddress: ipAddress,
+			userAgent: userAgent
+		});
+
+		// Keep only the last 10 login records
+		if (user.loginHistory.length > 10) {
+			user.loginHistory = user.loginHistory.slice(-10);
+		}
+
+		await user.save();
 
 		generateTokenAndSetCookie(user._id, res);
 

@@ -1,10 +1,12 @@
 import { Navigate } from "react-router-dom";
+import { useState } from "react";
 import MessageContainer from "../../components/messages/MessageContainer";
 import Sidebar from "../../components/sidebar/Sidebar";
 import { useAuthContext } from "../../context/AuthContext";
 
 const Home = () => {
 	const { authUser, loading } = useAuthContext();
+	const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
 	// Redirect to login if not authenticated
 	if (!loading && !authUser) {
@@ -26,10 +28,12 @@ const Home = () => {
 	}
 
 	return (
-		<div className='flex h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900'>
-			<div className='flex w-full h-full overflow-hidden'>
-				<Sidebar />
-				<MessageContainer />
+		<div className='flex h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-800 overflow-hidden mobile-chat-container'>
+			<div className='flex w-full h-full overflow-hidden mobile-chat-main'>
+				<Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+				<div className='flex-1 min-w-0 overflow-hidden'>
+					<MessageContainer isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
+				</div>
 			</div>
 		</div>
 	);

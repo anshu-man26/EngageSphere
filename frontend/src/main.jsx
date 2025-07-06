@@ -22,7 +22,8 @@ console.log = (...args) => {
        args[0].includes('browser info:') || 
        args[0].includes('browser compatibility:') || 
        args[0].includes('device-check') || 
-       args[0].includes('Loading global parameters'))) {
+       args[0].includes('Loading global parameters') ||
+       args[0].includes('Agora App ID:'))) {
     return;
   }
   

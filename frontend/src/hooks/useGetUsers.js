@@ -25,7 +25,7 @@ const useGetUsers = () => {
 
 	useEffect(() => {
 		getUsers();
-	}, [getUsers]);
+	}, []); // Only run once on mount, not on every getUsers change
 
 	return { loading, users, setUsers, getUsers };
 };

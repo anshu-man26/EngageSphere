@@ -3,18 +3,23 @@ import { useNavigate } from "react-router-dom";
 import useConversation from "../../zustand/useConversation";
 import MessageInput from "./MessageInput";
 import Messages from "./Messages";
+import GiphyPicker from "./GiphyPicker";
 import { TiMessages } from "react-icons/ti";
 import { FaTrash, FaTimes } from "react-icons/fa";
 import { Video, MoreVertical, User } from "lucide-react";
 import { VideoCameraIcon } from "@heroicons/react/24/outline";
+import { IoChevronBack } from "react-icons/io5";
 import { useAuthContext } from "../../context/AuthContext";
 import { useSocketContext } from "../../context/SocketContext";
 import { useVideoCall } from "../../context/VideoCallContext";
 import useDeleteMultipleMessages from "../../hooks/useDeleteMultipleMessages";
+import useSendGif from "../../hooks/useSendGif";
+import useVideoCallStatus from "../../hooks/useVideoCallStatus";
 import ChatBackgroundSelector from "../chat-background/ChatBackgroundSelector";
+import VideoCallMaintenanceNotice from "./VideoCallMaintenanceNotice";
 import toast from "react-hot-toast";
 
-const MessageContainer = () => {
+const MessageContainer = ({ isSidebarOpen, setIsSidebarOpen }) => {
 	const navigate = useNavigate();
 	const { selectedConversation, setSelectedConversation, messages, updateConversationBackground } = useConversation();
 	const { onlineUsers } = useSocketContext();
@@ -22,6 +27,11 @@ const MessageContainer = () => {
 	const { authUser } = useAuthContext();
 	const { socket } = useSocketContext();
 	const { startOutgoingCall } = useVideoCall();
+	const { sendGif } = useSendGif();
+	const { isVideoCallEnabled } = useVideoCallStatus();
+	
+	// GIF picker state
+	const [showGiphyPicker, setShowGiphyPicker] = useState(false);
 	
 	// Message selection state
 	const [selectedMessages, setSelectedMessages] = useState(new Set());
@@ -32,8 +42,11 @@ const MessageContainer = () => {
 	const [chatBackground, setChatBackground] = useState(selectedConversation?.chatBackground || authUser?.defaultChatBackground || "");
 	const [isDarkBackground, setIsDarkBackground] = useState(false);
 	
+	// Video call maintenance notice state
+	const [showVideoCallMaintenance, setShowVideoCallMaintenance] = useState(false);
+	
 	// Check if the selected conversation user is online
-	const isOnline = selectedConversation ? onlineUsers.includes(selectedConversation._id) : false;
+	const isOnline = selectedConversation ? onlineUsers.includes(selectedConversation.participant?._id) : false;
 
 	useEffect(() => {
 		// cleanup function (unmounts)
@@ -120,6 +133,12 @@ const MessageContainer = () => {
 
 	// Handle starting video call
 	const handleStartVideoCall = async () => {
+		// Check if video calling is enabled
+		if (!isVideoCallEnabled) {
+			setShowVideoCallMaintenance(true);
+			return;
+		}
+
 		try {
 			// Check if we have permissions first
 			const hasPermissions = await navigator.permissions.query({ name: 'camera' });
@@ -150,30 +169,56 @@ const MessageContainer = () => {
 		}
 	};
 
+	// Handle GIF picker toggle
+	const handleGifPickerToggle = (show) => {
+		setShowGiphyPicker(show);
+	};
+
+	// Handle GIF selection
+	const handleGifSelect = async (gifUrl, gifTitle) => {
+		await sendGif(gifUrl, gifTitle);
+		setShowGiphyPicker(false);
+	};
+
+	// Helper function to format background for CSS
+	const formatBackgroundForCSS = (background) => {
+		if (!background) return '';
+		
+		// If it's a URL (starts with http or https), wrap it in url()
+		if (background.startsWith('http://') || background.startsWith('https://')) {
+			return `url(${background})`;
+		}
+		
+		// If it's already a CSS value (like linear-gradient), return as is
+		return background;
+	};
+
 	return (
 		<div 
 			key={`${selectedConversation?._id}-${chatBackground}-${authUser?.defaultChatBackground}`}
-			className='flex-1 flex flex-col h-full relative bg-gray-900'
+			className='flex-1 flex flex-col h-full relative bg-gray-900 min-w-0 overflow-hidden'
 			style={{
-				background: chatBackground ? (chatBackground.startsWith('http') ? `url(${chatBackground})` : chatBackground) : (authUser?.defaultChatBackground ? (authUser.defaultChatBackground.startsWith('http') ? `url(${authUser.defaultChatBackground})` : authUser.defaultChatBackground) : ''),
+				background: formatBackgroundForCSS(chatBackground || authUser?.defaultChatBackground || ''),
 				backgroundSize: 'cover',
 				backgroundPosition: 'center',
 				backgroundRepeat: 'no-repeat',
 			}}
 		>
+
+
 			{!selectedConversation ? (
-				<NoChatSelected />
+				<NoChatSelected isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
 			) : (
 				<>
 					{/* Mobile X button for selection mode - positioned to avoid overlap with sidebar button */}
 					{isSelectionMode && (
-						<div className='lg:hidden mobile-x-button'>
+						<div className='lg:hidden fixed top-4 right-4 z-50'>
 							<button
 								onClick={handleCancelSelection}
 								className='p-3 bg-white rounded-full border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors shadow-lg'
 								style={{ 
-									minWidth: '48px', 
-									minHeight: '48px',
+									minWidth: '44px', 
+									minHeight: '44px',
 									display: 'flex',
 									alignItems: 'center',
 									justifyContent: 'center'
@@ -185,16 +230,16 @@ const MessageContainer = () => {
 					)}
 					
 					{/* Fixed Header */}
-					<div className={`flex-shrink-0 backdrop-blur-sm px-4 py-3 border-b relative z-10 ${
+					<div className={`flex-shrink-0 backdrop-blur-sm px-3 sm:px-4 py-3 border-b relative ${isSelectionMode ? 'z-40' : 'z-10'} mobile-header chat-header ${
 						isDarkBackground 
 							? 'bg-black/20 border-white/20' 
 							: 'bg-gray-800/90 border-gray-600'
 					} lg:pl-4 pl-16`}>
 						{/* Selection mode toolbar */}
 						{isSelectionMode ? (
-							<div className="flex items-center justify-between lg:pl-0 pl-12">
+							<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
 								{/* Left side - X button and message count */}
-								<div className="flex items-center gap-3">
+								<div className="flex items-center gap-2 sm:gap-3">
 									<button
 										onClick={handleCancelSelection}
 										className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
@@ -207,39 +252,51 @@ const MessageContainer = () => {
 								</div>
 								
 								{/* Right side - Select All and Delete buttons */}
-								<div className="flex items-center gap-2">
+								<div className="flex items-center gap-1 sm:gap-2 flex-wrap justify-end sm:justify-start">
 									{/* Select All button - only show if not all messages are selected */}
 									{selectedMessages.size < (messages?.length || 0) && (
 										<button
 											onClick={handleSelectAll}
-											className="px-3 py-1.5 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors font-medium"
+											className="px-2 sm:px-3 py-1.5 bg-blue-500 text-white text-xs sm:text-sm rounded-lg hover:bg-blue-600 transition-colors font-medium whitespace-nowrap"
 										>
-											Select All
+											<span className="hidden sm:inline">Select All</span>
+											<span className="sm:hidden">All</span>
 										</button>
 									)}
 									<button
 										onClick={() => handleBulkDelete(false)}
 										disabled={deleteLoading || selectedMessages.size === 0}
-										className="px-3 py-1.5 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 font-medium"
+										className="px-2 sm:px-3 py-1.5 bg-red-500 text-white text-xs sm:text-sm rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 font-medium whitespace-nowrap"
 									>
-										Delete for me
+										<span className="hidden sm:inline">Delete for me</span>
+										<span className="sm:hidden">Me</span>
 									</button>
 									<button
 										onClick={() => handleBulkDelete(true)}
 										disabled={deleteLoading || selectedMessages.size === 0}
-										className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 font-medium"
+										className="px-2 sm:px-3 py-1.5 bg-red-600 text-white text-xs sm:text-sm rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 font-medium whitespace-nowrap"
 									>
-										Delete for all
+										<span className="hidden sm:inline">Delete for all</span>
+										<span className="sm:hidden">All</span>
 									</button>
 								</div>
 							</div>
-												) : (
-						<div className='flex items-center justify-between lg:pl-0 pl-12'>
+						) : (
+						<div className='flex items-center justify-between'>
 							{/* Left side - Profile and Info */}
-							<div className='flex items-center gap-3'>
+							<div className='flex items-center gap-2 sm:gap-3 min-w-0 flex-1'>
+								{/* Mobile Sidebar Toggle Button - Only visible on mobile */}
+								<button
+									onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+									className='lg:hidden p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors'
+									title="Toggle sidebar"
+								>
+									<IoChevronBack size={18} />
+								</button>
+								
 								{/* Profile Picture */}
 								<div 
-									className='w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-90 transition-opacity'
+									className='w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-90 transition-opacity flex-shrink-0'
 									onClick={() => navigate(`/user/${selectedConversation.participant._id}`)}
 									title={`View ${selectedConversation.participant.fullName}'s profile`}
 								>
@@ -254,27 +311,31 @@ const MessageContainer = () => {
 											}}
 										/>
 									) : null}
-									<User className="w-5 h-5 text-gray-600" style={{ display: selectedConversation.participant?.profilePic ? 'none' : 'block' }} />
+									<User className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" style={{ display: selectedConversation.participant?.profilePic ? 'none' : 'block' }} />
 								</div>
 								
 								{/* User Info */}
 								<div className='min-w-0 flex-1'>
-									<h3 className="text-white font-semibold text-base truncate">{selectedConversation.participant?.fullName}</h3>
-									<p className="text-white/70 text-sm">
+									<h3 className="text-white font-semibold text-sm sm:text-base truncate">{selectedConversation.participant?.fullName}</h3>
+									<p className="text-white/70 text-xs sm:text-sm truncate">
 										{isOnline ? 'online' : 'last seen recently'}
 									</p>
 								</div>
 							</div>
 							
 							{/* Right side - Actions */}
-							<div className='flex items-center gap-1'>
+							<div className='flex items-center gap-1 sm:gap-2 flex-shrink-0'>
 								{/* Video Call Button */}
 								<button
 									onClick={handleStartVideoCall}
-									className="p-3 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
-									title="Start Video Call"
+									className={`p-2 sm:p-3 rounded-full transition-colors ${
+										isVideoCallEnabled 
+											? 'text-white/80 hover:text-white hover:bg-white/10' 
+											: 'text-gray-400 hover:text-gray-300 hover:bg-white/10 opacity-70'
+									}`}
+									title={isVideoCallEnabled ? "Start Video Call" : "Video calling is under maintenance"}
 								>
-									<VideoCameraIcon className="w-6 h-6" />
+									<VideoCameraIcon className="w-5 h-5 sm:w-6 sm:h-6" />
 								</button>
 								
 								{/* More Options Button */}
@@ -284,7 +345,7 @@ const MessageContainer = () => {
 										className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
 										title="More options"
 									>
-										<MoreVertical size={20} />
+										<MoreVertical size={18} className="sm:w-5 sm:h-5" />
 									</button>
 								)}
 							</div>
@@ -293,7 +354,7 @@ const MessageContainer = () => {
 					</div>
 					
 					{/* Messages Area - Takes remaining space */}
-					<div className='flex-1 min-h-0'>
+					<div className='flex-1 min-h-0 mobile-messages-area'>
 						<Messages 
 							isSelectionMode={isSelectionMode}
 							selectedMessages={selectedMessages}
@@ -303,7 +364,7 @@ const MessageContainer = () => {
 					
 					{/* Fixed Input */}
 					<div className='flex-shrink-0'>
-						<MessageInput />
+						<MessageInput onGifPickerToggle={handleGifPickerToggle} />
 					</div>
 				</>
 			)}
@@ -317,15 +378,44 @@ const MessageContainer = () => {
 					onBackgroundChange={handleBackgroundChange}
 				/>
 			)}
+
+			{/* GIF Picker Modal */}
+			{showGiphyPicker && (
+				<div className="absolute inset-0 z-[10000] flex items-center justify-center">
+					<GiphyPicker
+						onGifSelect={handleGifSelect}
+						onClose={() => setShowGiphyPicker(false)}
+					/>
+				</div>
+			)}
+
+			{/* Video Call Maintenance Notice */}
+			{showVideoCallMaintenance && (
+				<VideoCallMaintenanceNotice
+					onClose={() => setShowVideoCallMaintenance(false)}
+				/>
+			)}
 		</div>
 	);
 };
 export default MessageContainer;
 
-const NoChatSelected = () => {
+const NoChatSelected = ({ isSidebarOpen, setIsSidebarOpen }) => {
 	const { authUser } = useAuthContext();
 	return (
-		<div className='flex items-center justify-center w-full h-full bg-gradient-to-br from-white/5 to-white/10 px-4'>
+		<div className='flex items-center justify-center w-full h-full bg-gradient-to-br from-white/5 to-white/10 px-4 relative'>
+			{/* Mobile Sidebar Toggle Button - positioned in top-left corner, only visible on mobile */}
+			<div className='lg:hidden absolute top-4 left-4 z-30'>
+				<button
+					onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+					className={`sidebar-toggle-button-top ${isSidebarOpen ? 'sidebar-open' : ''}`}
+				>
+					<IoChevronBack 
+						size={20} 
+						className="arrow-icon"
+					/>
+				</button>
+			</div>
 			<div className='text-center'>
 				<div className='w-16 h-16 lg:w-24 lg:h-24 mx-auto mb-4 lg:mb-6 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center'>
 					<TiMessages className='text-white text-2xl lg:text-4xl' />
@@ -334,6 +424,7 @@ const NoChatSelected = () => {
 					Welcome back, {authUser?.fullName || 'User'}! 👋
 				</h2>
 				<p className='text-gray-300 mb-4 text-sm lg:text-base'>Select a conversation to start messaging</p>
+				
 				<div className='flex items-center justify-center gap-2 text-gray-400'>
 					<div className='w-2 h-2 bg-blue-500 rounded-full animate-pulse'></div>
 					<span className='text-xs lg:text-sm'>Ready to connect</span>

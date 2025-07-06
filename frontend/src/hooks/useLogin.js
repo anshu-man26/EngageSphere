@@ -8,16 +8,29 @@ const useLogin = () => {
 	const { setAuthUser } = useAuthContext();
 	const navigate = useNavigate();
 
-	const login = async (email, password, otp = null) => {
-		const success = handleInputErrors(email, password);
+	const login = async (identifier, password, otp = null) => {
+		const success = handleInputErrors(identifier, password);
 		if (!success) return;
 		setLoading(true);
 		try {
+			// Determine if identifier is email or username
+			const isEmail = identifier.includes('@');
+			const requestBody = {
+				password,
+				otp
+			};
+			
+			if (isEmail) {
+				requestBody.email = identifier;
+			} else {
+				requestBody.username = identifier;
+			}
+
 			const res = await fetch("/api/auth/login", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				credentials: "include",
-				body: JSON.stringify({ email, password, otp }),
+				body: JSON.stringify(requestBody),
 			});
 
 			const data = await res.json();
@@ -25,7 +38,7 @@ const useLogin = () => {
 				// Check if user needs email verification
 				if (data.needsVerification) {
 					toast.error(data.error);
-					navigate("/verify-signup", { state: { email } });
+					navigate("/verify-signup", { state: { email: data.email } });
 					return;
 				}
 				throw new Error(data.error);
@@ -49,8 +62,8 @@ const useLogin = () => {
 };
 export default useLogin;
 
-function handleInputErrors(email, password) {
-	if (!email || !password) {
+function handleInputErrors(identifier, password) {
+	if (!identifier || !password) {
 		toast.error("Please fill in all fields");
 		return false;
 	}

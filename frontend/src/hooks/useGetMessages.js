@@ -15,7 +15,9 @@ const useGetMessages = () => {
 
 			setLoading(true);
 			try {
-				const res = await fetch(`/api/messages/${selectedConversation._id}`, {
+				const userToChatId = selectedConversation.participant?._id || selectedConversation._id;
+				
+				const res = await fetch(`/api/messages/${userToChatId}`, {
 					credentials: "include"
 				});
 				
@@ -40,7 +42,7 @@ const useGetMessages = () => {
 		};
 
 		getMessages();
-	}, [selectedConversation?._id, setMessages]);
+	}, [selectedConversation?._id, selectedConversation?.participant?._id, setMessages]);
 
 	// Ensure we always return an array
 	const safeMessages = Array.isArray(messages) ? messages : [];

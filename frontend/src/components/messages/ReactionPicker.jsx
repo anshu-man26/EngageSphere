@@ -30,10 +30,16 @@ const ReactionPicker = ({ onReactionSelect, onClose, isOpen = false, messageId }
 	// Calculate responsive dimensions
 	const windowWidth = window.innerWidth;
 	const windowHeight = window.innerHeight;
+	const isMobile = windowWidth <= 768;
 	
-	// Responsive width and height - made smaller
-	const pickerWidth = Math.min(280, windowWidth * 0.8);
-	const pickerHeight = Math.min(400, windowHeight * 0.8);
+	// Responsive width and height - much smaller on mobile
+	const pickerWidth = isMobile 
+		? Math.min(240, windowWidth * 0.85)  // Smaller on mobile
+		: Math.min(280, windowWidth * 0.8);
+	
+	const pickerHeight = isMobile 
+		? Math.min(300, windowHeight * 0.6)  // Smaller height on mobile
+		: Math.min(400, windowHeight * 0.8);
 
 	return (
 		<div className="reaction-picker z-20 animate-fadeIn">
@@ -45,6 +51,18 @@ const ReactionPicker = ({ onReactionSelect, onClose, isOpen = false, messageId }
 				width={pickerWidth}
 				height={pickerHeight}
 				lazyLoadEmojis={true}
+				previewConfig={{
+					showPreview: false // Hide preview on mobile to save space
+				}}
+				searchPlaceHolder="Search emoji..."
+				emojiStyle="native"
+				// Mobile-specific settings
+				{...(isMobile && {
+					searchPlaceHolder: "Search...",
+					previewConfig: {
+						showPreview: false
+					}
+				})}
 			/>
 		</div>
 	);

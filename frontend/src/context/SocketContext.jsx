@@ -13,10 +13,34 @@ export const SocketContextProvider = ({ children }) => {
 	const [socket, setSocket] = useState(null);
 	const [onlineUsers, setOnlineUsers] = useState([]);
 	const { authUser } = useAuthContext();
-	const { updateMessageReaction } = useConversation();
+	const { updateMessageReaction, updateMessageStatus, updateMultipleMessageStatuses } = useConversation();
+
+	// Play notification sound
+	const playNotificationSound = () => {
+		// Check if user has enabled message sounds
+		if (!authUser?.soundSettings?.messageSound) {
+			return;
+		}
+		
+		try {
+			const audio = new Audio('/sounds/notification.mp3');
+			audio.volume = 0.5;
+			audio.play().catch(error => {
+				console.log("Could not play notification sound:", error);
+			});
+		} catch (error) {
+			console.log("Error playing notification sound:", error);
+		}
+	};
 
 	useEffect(() => {
 		if (authUser) {
+			// Prevent duplicate socket connections
+			if (socket && socket.connected) {
+				console.log("Socket already connected, skipping new connection");
+				return;
+			}
+
 			const newSocket = io("/", {
 				query: {
 					userId: authUser._id,
@@ -28,6 +52,7 @@ export const SocketContextProvider = ({ children }) => {
 			});
 
 			newSocket.on("connect", () => {
+				console.log("🔌 Socket connected for user:", authUser._id);
 				setOnlineUsers(prev => [...prev, authUser._id]);
 			});
 
@@ -36,12 +61,44 @@ export const SocketContextProvider = ({ children }) => {
 			});
 
 			newSocket.on("disconnect", (reason) => {
+				console.log("🔌 Socket disconnected for user:", authUser._id, "Reason:", reason);
 				setOnlineUsers(prev => prev.filter(id => id !== authUser._id));
 			});
 
 			// socket.on() is used to listen to the events. can be used both on client and server side
 			newSocket.on("getOnlineUsers", (users) => {
+				console.log("👥 Received online users from server:", users);
+				console.log("👤 Current user ID:", authUser._id);
+				console.log("👤 Is current user in online list?", users.includes(authUser._id));
 				setOnlineUsers(users);
+			});
+
+			// Listen for new message events
+			newSocket.on("newMessage", (newMessage) => {
+				// Only handle notification and conversation refresh, not message adding
+				// Message adding is handled by useListenMessages hook
+				if (newMessage.senderId && newMessage.receiverId) {
+					// This is a new message
+					if (newMessage.senderId !== authUser._id) {
+						// Play notification sound
+						playNotificationSound();
+					}
+				}
+				
+				// Update specific conversation instead of refreshing entire list
+				window.dispatchEvent(new CustomEvent('updateConversation', {
+					detail: {
+						senderId: newMessage.senderId,
+						receiverId: newMessage.receiverId,
+						message: newMessage
+					}
+				}));
+			});
+
+			// Listen for conversation updates
+			newSocket.on("conversationUpdated", (data) => {
+				console.log("Conversation updated via socket:", data);
+				// This will be handled by the conversation store
 			});
 
 			// Listen for reaction events
@@ -51,6 +108,31 @@ export const SocketContextProvider = ({ children }) => {
 
 			newSocket.on("messageReactionRemoved", (data) => {
 				updateMessageReaction(data.messageId, 'remove', data.reaction);
+			});
+
+			// Listen for message status events
+			newSocket.on("messageDelivered", (data) => {
+				// Update message status to delivered
+				updateMessageStatus(data.messageId, 'delivered', data.deliveredAt);
+			});
+
+			newSocket.on("messageRead", (data) => {
+				// Update message status to read
+				updateMessageStatus(data.messageId, 'read', data.readAt);
+			});
+
+			newSocket.on("messagesRead", (data) => {
+				// Update multiple messages status to read
+				updateMultipleMessageStatuses(data.messageIds, 'read', data.readAt);
+			});
+
+			// Listen for system settings updates
+			newSocket.on("systemSettingsUpdated", (data) => {
+				console.log("🔄 System settings updated via socket:", data);
+				// Dispatch a custom event to notify all components using system settings
+				window.dispatchEvent(new CustomEvent('systemSettingsUpdated', {
+					detail: data
+				}));
 			});
 
 			setSocket(newSocket);

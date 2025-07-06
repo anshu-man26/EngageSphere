@@ -57,6 +57,20 @@ const messageSchema = new mongoose.Schema(
 				default: Date.now,
 			}
 		}],
+		// Message status (WhatsApp-like)
+		status: {
+			type: String,
+			enum: ["sent", "delivered", "read"],
+			default: "sent",
+		},
+		deliveredAt: {
+			type: Date,
+			default: null,
+		},
+		readAt: {
+			type: Date,
+			default: null,
+		},
 		// createdAt, updatedAt
 	},
 	{ timestamps: true }

@@ -43,7 +43,10 @@ const useUploadFile = () => {
 				formData.append('message', message);
 			}
 
-			const res = await fetch(`/api/messages/upload/${selectedConversation._id}`, {
+			// Use the participant's user ID instead of conversation ID
+			const userToChatId = selectedConversation.participant?._id || selectedConversation._id;
+			
+			const res = await fetch(`/api/messages/upload/${userToChatId}`, {
 				method: "POST",
 				credentials: "include",
 				body: formData,

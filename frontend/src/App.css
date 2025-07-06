@@ -191,7 +191,6 @@ html {
 
 /* Enhanced focus states */
 input:focus, textarea:focus, select:focus {
-  transform: scale(1.02);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -256,4 +255,139 @@ input:focus, textarea:focus, select:focus {
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
+}
+
+/* Fix horizontal scroll in sidebar */
+.sidebar-content {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+.sidebar-content * {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Giphy picker improvements */
+.giphy-picker-content {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.giphy-picker-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.giphy-picker-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.giphy-picker-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+.giphy-picker-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Mobile-specific styles for chat layout */
+@media (max-width: 1024px) {
+	/* Ensure the main container uses viewport height properly on mobile */
+	.mobile-chat-container {
+		height: 100vh;
+		height: 100dvh; /* Use dynamic viewport height for mobile */
+		overflow: hidden;
+		position: relative;
+	}
+	
+	/* Fixed header that stays at top */
+	.mobile-header {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		z-index: 50;
+		height: 60px; /* Fixed height for mobile header */
+		/* Ensure header stays visible when keyboard opens */
+		background: rgba(17, 24, 39, 0.95);
+		backdrop-filter: blur(10px);
+	}
+	
+	/* Fixed input bar that stays at bottom */
+	.mobile-input-container {
+		position: fixed;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		z-index: 50;
+		padding-bottom: env(safe-area-inset-bottom); /* For devices with home indicator */
+		background: rgba(17, 24, 39, 0.95); /* Ensure background covers content */
+		backdrop-filter: blur(10px);
+	}
+	
+	/* Messages area that scrolls between fixed header and input */
+	.mobile-messages-area {
+		overflow-y: auto;
+		-webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+		padding-bottom: 0px; /* No gap - messages can go below typing bar */
+		padding-top: 60px; /* Space for fixed header */
+		/* Dynamic height that adapts to keyboard - mobile Chrome specific */
+		height: calc(100vh - 60px);
+		height: calc(100dvh - 60px); /* Dynamic viewport height */
+		height: calc(100vh - 60px - env(safe-area-inset-bottom));
+		min-height: 200px; /* Minimum height to ensure usability */
+		position: relative;
+	}
+	
+	/* Ensure the main chat container doesn't overflow */
+	.mobile-chat-main {
+		height: 100vh;
+		height: 100dvh;
+		overflow: hidden;
+	}
+	
+	/* Add padding to the last message to prevent overlap */
+	.mobile-messages-area .messages-container {
+		padding-bottom: 0px;
+	}
+}
+
+/* Additional mobile optimizations */
+@media (max-width: 768px) {
+	/* Prevent zoom on input focus */
+	input[type="text"], 
+	input[type="email"], 
+	input[type="password"],
+	textarea {
+		font-size: 16px !important;
+	}
+	
+	/* Ensure proper touch targets */
+	button, 
+	[role="button"] {
+		min-height: 44px;
+		min-width: 44px;
+	}
+}
+
+/* iOS Safari specific fixes */
+@supports (-webkit-touch-callout: none) {
+	.mobile-chat-container {
+		height: -webkit-fill-available;
+	}
+	
+	.mobile-messages-area {
+		max-height: calc(-webkit-fill-available - 120px);
+	}
+}
+
+/* Real mobile device specific fixes */
+@media (max-width: 768px) and (orientation: portrait) {
+	.mobile-messages-area {
+		max-height: calc(100vh - 60px);
+		max-height: calc(100dvh - 60px);
+		overflow-y: auto;
+		-webkit-overflow-scrolling: touch;
+	}
 }

@@ -2,14 +2,35 @@ import { create } from "zustand";
 
 const useConversation = create((set, get) => ({
 	selectedConversation: null,
+	// Flag to prevent conversation refresh during message operations
+	isPerformingMessageOperation: false,
 	setSelectedConversation: (selectedConversation) => {
-		// Only clear messages if we're actually switching to a different conversation
+		// Always clear messages when switching conversations to ensure clean state
 		const currentConversation = get().selectedConversation;
 		
 		if (!currentConversation || currentConversation._id !== selectedConversation?._id) {
-			set({ selectedConversation, messages: [], uploadingFiles: [] });
+			// Clear messages and uploading files when switching to a different conversation
+			set({ 
+				selectedConversation, 
+				messages: [], 
+				uploadingFiles: [],
+				activeEmojiPicker: null // Close any open emoji picker
+			});
+			
+			// Reset unread count for the selected conversation
+			if (selectedConversation && selectedConversation._id) {
+				// Dispatch event to reset unread count
+				window.dispatchEvent(new CustomEvent('resetConversationUnreadCount', {
+					detail: { conversationId: selectedConversation._id }
+				}));
+			}
+			
+			// Removed automatic conversation refresh - this was causing the sidebar to refresh
+			// when clicking on conversations. The conversation data is already available
+			// and doesn't need to be refreshed just for selection.
 		} else {
 			// If it's the same conversation, just update the conversation object
+			// Don't trigger refresh for same conversation updates
 			set({ selectedConversation });
 		}
 	},
@@ -32,30 +53,47 @@ const useConversation = create((set, get) => ({
 	addMessage: (newMessage) => {
 		const { messages } = get();
 		const messagesArray = Array.isArray(messages) ? messages : [];
+		
+		// Check if message already exists to prevent duplicates
+		const messageExists = messagesArray.some(msg => msg._id === newMessage._id);
+		if (messageExists) {
+			console.log("Message already exists, skipping duplicate:", newMessage._id);
+			return;
+		}
+		
 		set({ messages: [...messagesArray, newMessage] });
 	},
 	// Helper function to remove a single message
 	removeMessage: (messageId) => {
+		set({ isPerformingMessageOperation: true });
 		const { messages } = get();
 		const messagesArray = Array.isArray(messages) ? messages : [];
 		const filteredMessages = messagesArray.filter(msg => msg._id !== messageId);
 		set({ messages: filteredMessages });
+		// Reset flag after a short delay to allow other operations to complete
+		setTimeout(() => set({ isPerformingMessageOperation: false }), 100);
 	},
 	// Helper function to remove multiple messages
 	removeMessages: (messageIds) => {
+		set({ isPerformingMessageOperation: true });
 		const { messages } = get();
 		const messagesArray = Array.isArray(messages) ? messages : [];
 		const filteredMessages = messagesArray.filter(msg => !messageIds.includes(msg._id));
 		set({ messages: filteredMessages });
+		// Reset flag after a short delay to allow other operations to complete
+		setTimeout(() => set({ isPerformingMessageOperation: false }), 100);
 	},
 	// Helper function to update a message (for marking as deleted)
 	updateMessage: (messageId, updates) => {
+		set({ isPerformingMessageOperation: true });
 		const { messages } = get();
 		const messagesArray = Array.isArray(messages) ? messages : [];
 		const updatedMessages = messagesArray.map(msg => 
 			msg._id === messageId ? { ...msg, ...updates } : msg
 		);
 		set({ messages: updatedMessages });
+		// Reset flag after a short delay to allow other operations to complete
+		setTimeout(() => set({ isPerformingMessageOperation: false }), 100);
 	},
 	// Helper function to update message reactions
 	updateMessageReaction: (messageId, action, reaction) => {
@@ -88,6 +126,47 @@ const useConversation = create((set, get) => ({
 			return msg;
 		});
 		set({ messages: updatedMessages });
+	},
+	// Helper function to update message status
+	updateMessageStatus: (messageId, status, timestamp) => {
+		const { messages } = get();
+		const messagesArray = Array.isArray(messages) ? messages : [];
+		const updatedMessages = messagesArray.map(msg => {
+			if (msg._id === messageId) {
+				const updatedMessage = { ...msg, status };
+				if (status === 'delivered' && timestamp) {
+					updatedMessage.deliveredAt = timestamp;
+				} else if (status === 'read' && timestamp) {
+					updatedMessage.readAt = timestamp;
+				}
+				return updatedMessage;
+			}
+			return msg;
+		});
+		set({ messages: updatedMessages });
+	},
+	// Helper function to update multiple message statuses
+	updateMultipleMessageStatuses: (messageIds, status, timestamp) => {
+		const { messages } = get();
+		const messagesArray = Array.isArray(messages) ? messages : [];
+		const updatedMessages = messagesArray.map(msg => {
+			if (messageIds.includes(msg._id)) {
+				const updatedMessage = { ...msg, status };
+				if (status === 'delivered' && timestamp) {
+					updatedMessage.deliveredAt = timestamp;
+				} else if (status === 'read' && timestamp) {
+					updatedMessage.readAt = timestamp;
+				}
+				return updatedMessage;
+			}
+			return msg;
+		});
+		set({ messages: updatedMessages });
+	},
+	// Helper function to refresh conversations
+	refreshConversations: () => {
+		// Trigger conversation refresh
+		window.dispatchEvent(new Event('refreshConversations'));
 	},
 	// Helper function to clear messages
 	clearMessages: () => {

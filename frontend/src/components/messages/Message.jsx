@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuthContext } from "../../context/AuthContext";
-import { extractTime } from "../../utils/extractTime";
+import { formatMessageTime } from "../../utils/dateUtils";
 import useConversation from "../../zustand/useConversation";
 import { FaDownload, FaImage, FaFile } from "react-icons/fa";
 import useAddReaction from "../../hooks/useAddReaction";
@@ -29,8 +29,17 @@ const Message = ({ message, isUploading = false, isSelected = false, onSelect = 
 	}
 	
 	const fromMe = message.senderId === authUser?._id;
-	const formattedTime = extractTime(message.createdAt);
+	const formattedTime = formatMessageTime(message.createdAt);
 	const profilePic = fromMe ? authUser?.profilePic : selectedConversation?.participant?.profilePic;
+
+	// Check if message is a GIF message
+	const isGifMessage = message.message && message.message.startsWith('[GIF]');
+	const gifData = isGifMessage ? (() => {
+		const lines = message.message.split('\n');
+		const title = lines[0].replace('[GIF] ', '');
+		const url = lines[1];
+		return { title, url };
+	})() : null;
 
 
 
@@ -199,11 +208,11 @@ const Message = ({ message, isUploading = false, isSelected = false, onSelect = 
 		const rect = messageBubbleRef.current.getBoundingClientRect();
 		const windowWidth = window.innerWidth;
 		const windowHeight = window.innerHeight;
-		const pickerWidth = 280;
-		const pickerHeight = 400;
-		
-		// Check if it's a mobile device
 		const isMobile = windowWidth <= 768;
+		
+		// Responsive picker dimensions
+		const pickerWidth = isMobile ? Math.min(240, windowWidth * 0.85) : 280;
+		const pickerHeight = isMobile ? Math.min(300, windowHeight * 0.6) : 400;
 		
 		// Default position above the message
 		let top = 'auto';
@@ -248,6 +257,16 @@ const Message = ({ message, isUploading = false, isSelected = false, onSelect = 
 				left = 'auto';
 				right = '10px';
 				transform = 'none';
+			}
+			
+			// Ensure vertical positioning works well on mobile
+			if (spaceAbove < pickerHeight + 20 && spaceBelow < pickerHeight + 20) {
+				// Not enough space above or below, position in the middle of the screen
+				top = '50%';
+				bottom = 'auto';
+				transform = 'translate(-50%, -50%)';
+				marginTop = '0';
+				marginBottom = '0';
 			}
 		} else {
 			// Desktop positioning - position emoji picker on the OPPOSITE side of the message
@@ -301,8 +320,8 @@ const Message = ({ message, isUploading = false, isSelected = false, onSelect = 
 			marginTop,
 			transform,
 			zIndex: 50,
-			maxWidth: '90vw',
-			maxHeight: '80vh',
+			maxWidth: isMobile ? '85vw' : '90vw',
+			maxHeight: isMobile ? '60vh' : '80vh',
 			marginRight,
 			marginLeft
 		};
@@ -375,8 +394,11 @@ const Message = ({ message, isUploading = false, isSelected = false, onSelect = 
 						</div>
 					)}
 				</div>
-				<div className='chat-footer opacity-50 text-xs'>
-					{formattedTime}
+				<div className={`chat-footer text-xs flex items-center justify-end gap-1 ${
+					fromMe ? 'opacity-70' : 'opacity-70'
+				}`}>
+					<span>{formattedTime}</span>
+					<MessageStatus status={message.status} fromMe={fromMe} />
 				</div>
 			</div>
 		);
@@ -404,11 +426,11 @@ const Message = ({ message, isUploading = false, isSelected = false, onSelect = 
 					className={`chat-bubble ${
 						fromMe 
 							? isSelected 
-								? 'bg-blue-600' 
-								: 'bg-blue-500'
+								? 'bg-slate-700' 
+								: 'bg-slate-600'
 							: isSelected 
-								? 'bg-gray-600' 
-								: 'bg-gray-700'
+								? 'bg-slate-800' 
+								: 'bg-slate-700'
 					} text-white ${shakeClass} max-w-xs lg:max-w-md relative select-none transition-all duration-200 group`}
 					ref={messageBubbleRef}
 					onMouseDown={handleBubbleMouseDown}
@@ -449,40 +471,44 @@ const Message = ({ message, isUploading = false, isSelected = false, onSelect = 
 							
 							{/* File message display */}
 							{message.messageType === 'image' && (
-								<div className="flex flex-col space-y-2">
+								<div className="flex flex-col space-y-3">
 									{message.message && <p className="text-sm lg:text-base select-none">{message.message}</p>}
-									<div className="max-w-full relative">
-										<img 
-											ref={imageRef}
-											src={message.fileUrl} 
-											alt={message.fileName || "Image"} 
-											className="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-80 transition-opacity message-image"
-											onClick={() => window.open(message.fileUrl, '_blank')}
-											onMouseDown={handleImageMouseDown}
-											onMouseUp={handleImageMouseUp}
-											onMouseLeave={handleImageMouseLeave}
-											onTouchStart={handleImageTouchStart}
-											onTouchEnd={handleImageTouchEnd}
-											onContextMenu={handleImageContextMenu}
-										/>
+									<div className="max-w-full relative group message-image">
+										<div className="relative overflow-hidden rounded-2xl shadow-lg border border-white/10 bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm">
+											<img 
+												ref={imageRef}
+												src={message.fileUrl} 
+												alt={message.fileName || "Image"} 
+												className="w-full h-auto cursor-pointer transition-all duration-300 group-hover:scale-[1.02] group-hover:brightness-110"
+												onClick={() => window.open(message.fileUrl, '_blank')}
+												onMouseDown={handleImageMouseDown}
+												onMouseUp={handleImageMouseUp}
+												onMouseLeave={handleImageMouseLeave}
+												onTouchStart={handleImageTouchStart}
+												onTouchEnd={handleImageTouchEnd}
+												onContextMenu={handleImageContextMenu}
+											/>
+											{/* Hover overlay */}
+											<div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+										</div>
 										
 										{/* Image menu */}
 										{showImageMenu && (
-											<div className="absolute top-2 right-2 bg-gray-800/95 backdrop-blur-lg border border-gray-600/50 rounded-lg shadow-2xl p-1 min-w-[120px] z-20 animate-fadeIn image-menu">
+											<div className="absolute top-3 right-3 bg-gray-900/95 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl p-2 min-w-[130px] z-20 animate-fadeIn image-menu">
 												<button
 													onClick={() => {
 														handleFileDownload(message.fileUrl, message.fileName || "image.jpg");
 														setShowImageMenu(false);
 													}}
-													className="w-full flex items-center gap-2 px-3 py-2 text-white hover:bg-blue-500/20 rounded-md transition-all duration-200 text-xs font-medium group"
+													className="w-full flex items-center gap-2 px-3 py-2 text-white hover:bg-blue-500/20 rounded-lg transition-all duration-200 text-xs font-medium group"
 												>
 													<FaDownload size={12} className="text-blue-400 group-hover:text-blue-300 transition-colors" />
 													Download
 												</button>
-												<div className="h-px bg-gray-600/50 my-1"></div>
+												<div className="h-px bg-white/10 my-1.5"></div>
 												<button
 													onClick={handleImageReact}
-													className="w-full flex items-center gap-2 px-3 py-2 text-white hover:bg-green-500/20 rounded-md transition-all duration-200 text-xs font-medium group"
+													className="w-full flex items-center gap-2 px-3 py-2 text-white hover:bg-green-500/20 rounded-lg transition-all duration-200 text-xs font-medium group"
 												>
 													<span className="text-green-400 group-hover:text-green-300 transition-colors">😊</span>
 													React
@@ -492,6 +518,8 @@ const Message = ({ message, isUploading = false, isSelected = false, onSelect = 
 									</div>
 								</div>
 							)}
+
+
 							
 							{message.messageType === 'document' && (
 								<div className="flex flex-col space-y-2">
@@ -516,14 +544,71 @@ const Message = ({ message, isUploading = false, isSelected = false, onSelect = 
 								</div>
 							)}
 							
+							{/* GIF message display */}
+							{isGifMessage && gifData && (
+								<div className="flex flex-col space-y-3">
+									<div className="max-w-full relative group gif-message">
+										<div className="relative overflow-hidden rounded-2xl shadow-lg border border-white/10 bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm">
+											<img 
+												ref={imageRef}
+												src={gifData.url} 
+												alt={gifData.title || "GIF"} 
+												className="w-full h-auto cursor-pointer transition-all duration-300 group-hover:scale-[1.02] group-hover:brightness-110"
+												onClick={() => window.open(gifData.url, '_blank')}
+												onMouseDown={handleImageMouseDown}
+												onMouseUp={handleImageMouseUp}
+												onMouseLeave={handleImageMouseLeave}
+												onTouchStart={handleImageTouchStart}
+												onTouchEnd={handleImageTouchEnd}
+												onContextMenu={handleImageContextMenu}
+											/>
+											{/* Hover overlay */}
+											<div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+											
+											{/* GIF badge */}
+											<div className="absolute top-3 left-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs px-3 py-1.5 rounded-full font-semibold shadow-lg backdrop-blur-sm border border-white/20">
+												GIF
+											</div>
+										</div>
+										
+										{/* Image menu */}
+										{showImageMenu && (
+											<div className="absolute top-3 right-3 bg-gray-900/95 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl p-2 min-w-[130px] z-20 animate-fadeIn image-menu">
+												<button
+													onClick={() => {
+														handleFileDownload(gifData.url, gifData.title || "gif.gif");
+														setShowImageMenu(false);
+													}}
+													className="w-full flex items-center gap-2 px-3 py-2 text-white hover:bg-blue-500/20 rounded-lg transition-all duration-200 text-xs font-medium group"
+												>
+													<FaDownload size={12} className="text-blue-400 group-hover:text-blue-300 transition-colors" />
+													Download
+												</button>
+												<div className="h-px bg-white/10 my-1.5"></div>
+												<button
+													onClick={handleImageReact}
+													className="w-full flex items-center gap-2 px-3 py-2 text-white hover:bg-green-500/20 rounded-lg transition-all duration-200 text-xs font-medium group"
+												>
+													<span className="text-green-400 group-hover:text-green-300 transition-colors">😊</span>
+													React
+												</button>
+											</div>
+										)}
+									</div>
+								</div>
+							)}
+
 							{/* Regular text message */}
-							{(!message.messageType || message.messageType === 'text') && (
+							{(!message.messageType || message.messageType === 'text') && !isGifMessage && (
 								<p className="text-sm lg:text-base select-none">{message.message}</p>
 							)}
 						</>
 					)}
-					<div className='chat-footer opacity-50 text-xs'>
-						{formattedTime}
+					<div className={`chat-footer text-xs flex items-center justify-end gap-1 ${
+						fromMe ? 'opacity-70' : 'opacity-70'
+					}`}>
+						<span>{formattedTime}</span>
+						<MessageStatus status={message.status} fromMe={fromMe} />
 					</div>
 				</div>
 				
@@ -555,4 +640,51 @@ const Message = ({ message, isUploading = false, isSelected = false, onSelect = 
 		</div>
 	);
 };
+
+// Message Status Component for WhatsApp-like ticks
+const MessageStatus = ({ status, fromMe }) => {
+	if (!fromMe) return null; // Only show status for sent messages
+
+	const getStatusIcon = () => {
+		switch (status) {
+			case "sent":
+				return (
+					<svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+						<path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+					</svg>
+				);
+			case "delivered":
+				return (
+					<div className="flex items-center">
+						<svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+							<path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+						</svg>
+						<svg className="w-4 h-4 text-white -ml-1" fill="currentColor" viewBox="0 0 20 20">
+							<path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+						</svg>
+					</div>
+				);
+			case "read":
+				return (
+					<div className="flex items-center">
+						<svg className="w-4 h-4 text-blue-400 drop-shadow-sm" fill="currentColor" viewBox="0 0 20 20">
+							<path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+						</svg>
+						<svg className="w-4 h-4 text-blue-400 drop-shadow-sm -ml-1" fill="currentColor" viewBox="0 0 20 20">
+							<path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+						</svg>
+					</div>
+				);
+			default:
+				return null;
+		}
+	};
+
+	return (
+		<div className="flex items-center gap-1 ml-2">
+			{getStatusIcon()}
+		</div>
+	);
+};
+
 export default Message;
