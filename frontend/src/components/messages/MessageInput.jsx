@@ -59,10 +59,10 @@ const MessageInput = ({ onGifPickerToggle }) => {
 	};
 
 	return (
-		<div className='p-2 lg:p-4 bg-white/10 backdrop-blur-lg border-t border-white/20 shadow-lg'>
+		<div className='p-3 lg:p-4 bg-white/10 backdrop-blur-lg lg:border-t lg:border-white/20 shadow-lg mobile-input-container'>
 
 			
-			<form onSubmit={handleSubmit} className='flex gap-2'>
+			<form onSubmit={handleSubmit} className='flex gap-1'>
 				{/* File Upload Button */}
 				<div className='relative'>
 					<button

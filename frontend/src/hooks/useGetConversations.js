@@ -60,7 +60,7 @@ const useGetConversations = () => {
 				conversation.unreadCount = (conversation.unreadCount || 0) + 1;
 			}
 
-			// Move this conversation to the top
+			// Move this conversation to the top with smooth animation
 			updatedConversations.splice(conversationIndex, 1);
 			updatedConversations.unshift(conversation);
 

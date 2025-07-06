@@ -167,6 +167,12 @@ const UserProfile = () => {
 								<span>Username: @{user.username}</span>
 							</div>
 						)}
+						{user?.email && (
+							<div className='flex items-center gap-3 text-gray-300'>
+								<FaEnvelope className='text-gray-400' />
+								<span>Email: {user.email}</span>
+							</div>
+						)}
 						<div className='flex items-center gap-3 text-gray-300'>
 							<FaCalendar className='text-gray-400' />
 							<span>Joined: {formatDate(user?.createdAt)}</span>

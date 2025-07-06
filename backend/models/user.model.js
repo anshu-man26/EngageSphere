@@ -36,6 +36,13 @@ const userSchema = new mongoose.Schema(
 			required: true,
 			unique: true,
 		},
+		// Privacy settings
+		privacySettings: {
+			emailVisible: {
+				type: Boolean,
+				default: false, // Default to hidden
+			},
+		},
 		// Password reset fields
 		resetPasswordToken: {
 			type: String,

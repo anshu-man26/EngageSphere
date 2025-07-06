@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import useGetMessages from "../../hooks/useGetMessages";
 import MessageSkeleton from "../skeletons/MessageSkeleton";
 import Message from "./Message";
+import DateSeparator from "./DateSeparator";
 import useListenMessages from "../../hooks/useListenMessages";
 import { useAuthContext } from "../../context/AuthContext";
 import useConversation from "../../zustand/useConversation";
 import useMarkMessageAsDelivered from "../../hooks/useMarkMessageAsDelivered";
 import useMarkMessageAsRead from "../../hooks/useMarkMessageAsRead";
 import useScrollToBottom from "../../hooks/useScrollToBottom";
+import { isDifferentDay } from "../../utils/dateUtils";
 
 const Messages = ({ isSelectionMode = false, selectedMessages = new Set(), onMessageSelect = null }) => {
 	const { messages, loading } = useGetMessages();
@@ -134,9 +136,9 @@ const Messages = ({ isSelectionMode = false, selectedMessages = new Set(), onMes
 	return (
 		<div className='h-full flex flex-col'>
 			{/* Messages container with proper spacing */}
-			<div className='px-2 sm:px-4 flex-1 overflow-auto messages-container'>
+			<div className='px-4 sm:px-4 flex-1 overflow-auto messages-container'>
 				{/* Messages content */}
-				<div className="pb-4">
+				<div className="pb-0">
 					{/* Regular messages */}
 					{!loading &&
 						messagesArray.length > 0 &&
@@ -147,17 +149,29 @@ const Messages = ({ isSelectionMode = false, selectedMessages = new Set(), onMes
 								return null;
 							}
 							
+							// Check if we need to add a date separator
+							const showDateSeparator = index === 0 || 
+								(messagesArray[index - 1] && 
+								 isDifferentDay(messagesArray[index - 1].createdAt, message.createdAt));
+							
 							return (
-								<div 
-									key={message._id} 
-									ref={index === messagesArray.length - 1 && uploadingFiles.length === 0 ? lastMessageRef : null}
-								>
-									<Message 
-										message={message} 
-										isSelected={selectedMessages.has(message._id)}
-										onSelect={isSelectionMode ? onMessageSelect : null}
-										isSelectionMode={isSelectionMode}
-									/>
+								<div key={message._id}>
+									{/* Date separator */}
+									{showDateSeparator && (
+										<DateSeparator date={message.createdAt} />
+									)}
+									
+									{/* Message */}
+									<div 
+										ref={index === messagesArray.length - 1 && uploadingFiles.length === 0 ? lastMessageRef : null}
+									>
+										<Message 
+											message={message} 
+											isSelected={selectedMessages.has(message._id)}
+											onSelect={isSelectionMode ? onMessageSelect : null}
+											isSelectionMode={isSelectionMode}
+										/>
+									</div>
 								</div>
 							);
 						})}
@@ -170,12 +184,22 @@ const Messages = ({ isSelectionMode = false, selectedMessages = new Set(), onMes
 							receiverId: selectedConversation?._id,
 						};
 						
+						// Check if we need to add a date separator for uploading files
+						const showDateSeparator = messagesArray.length === 0 && index === 0;
+						
 						return (
-							<div 
-								key={uploadingFile.id} 
-								ref={index === uploadingFiles.length - 1 ? lastMessageRef : null}
-							>
-								<Message message={messageWithContext} isUploading={true} />
+							<div key={uploadingFile.id}>
+								{/* Date separator for first uploading file if no messages exist */}
+								{showDateSeparator && (
+									<DateSeparator date={uploadingFile.createdAt} />
+								)}
+								
+								{/* Uploading message */}
+								<div 
+									ref={index === uploadingFiles.length - 1 ? lastMessageRef : null}
+								>
+									<Message message={messageWithContext} isUploading={true} />
+								</div>
 							</div>
 						);
 					})}

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuthContext } from "../../context/AuthContext";
-import { extractTime } from "../../utils/extractTime";
+import { formatMessageTime } from "../../utils/dateUtils";
 import useConversation from "../../zustand/useConversation";
 import { FaDownload, FaImage, FaFile } from "react-icons/fa";
 import useAddReaction from "../../hooks/useAddReaction";
@@ -29,7 +29,7 @@ const Message = ({ message, isUploading = false, isSelected = false, onSelect = 
 	}
 	
 	const fromMe = message.senderId === authUser?._id;
-	const formattedTime = extractTime(message.createdAt);
+	const formattedTime = formatMessageTime(message.createdAt);
 	const profilePic = fromMe ? authUser?.profilePic : selectedConversation?.participant?.profilePic;
 
 	// Check if message is a GIF message

@@ -14,7 +14,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 	// Listen for conversation updates
 	useListenConversations();
 
-	// Auto-close sidebar on mobile when conversation is selected
+	// Auto-close sidebar when conversation is selected on mobile
 	const handleConversationSelect = () => {
 		if (window.innerWidth < 1024) {
 			setIsOpen(false);
@@ -35,7 +35,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 				pt-20 lg:pt-6 p-4 lg:p-6 
 				flex flex-col 
 				transition-transform duration-300 ease-in-out 
-				z-40
+				z-[9999]
 				overflow-hidden
 				sidebar-mobile lg:sidebar-desktop
 				min-w-0
@@ -69,7 +69,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 			{/* Mobile Overlay - Less dimmed for better visibility */}
 			{isOpen && (
 				<div 
-					className='lg:hidden fixed inset-0 bg-black/20 z-30'
+					className='lg:hidden fixed inset-0 bg-black/20 z-[9998]'
 					onClick={() => setIsOpen(false)}
 				/>
 			)}

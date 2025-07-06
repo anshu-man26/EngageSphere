@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useAuthContext } from "../../context/AuthContext";
 import useUpdateProfile from "../../hooks/useUpdateProfile";
 import useUpdateSoundSettings from "../../hooks/useUpdateSoundSettings";
+import usePrivacySettings from "../../hooks/usePrivacySettings";
 import useUploadProfilePic from "../../hooks/useUploadProfilePic";
 import useChangePassword from "../../hooks/useChangePassword";
 import useChangeEmail from "../../hooks/useChangeEmail";
@@ -19,6 +20,7 @@ const Profile = () => {
 	const { authUser, setAuthUser } = useAuthContext();
 	const { loading, updateProfile } = useUpdateProfile();
 	const { loading: soundSettingsLoading, updateSoundSettings } = useUpdateSoundSettings();
+	const { loading: privacyLoading, updateEmailVisibility } = usePrivacySettings();
 	const { loading: uploadLoading, uploadProfilePic } = useUploadProfilePic();
 	const { loading: passwordLoading, changePassword } = useChangePassword();
 	const { loading: emailLoading, otpLoading, requestEmailChangeOtp, verifyOtp } = useChangeEmail();
@@ -97,6 +99,11 @@ const Profile = () => {
 		ringtone: authUser?.soundSettings?.ringtone !== false, // Default to true
 	});
 
+	// Privacy settings state
+	const [privacySettings, setPrivacySettings] = useState({
+		emailVisible: authUser?.privacySettings?.emailVisible || false, // Default to hidden
+	});
+
 	// Separate loading states for each sound setting
 	const [messageSoundLoading, setMessageSoundLoading] = useState(false);
 	const [ringtoneLoading, setRingtoneLoading] = useState(false);
@@ -110,6 +117,15 @@ const Profile = () => {
 			});
 		}
 	}, [authUser?.soundSettings]);
+
+	// Update privacy settings when authUser changes
+	useEffect(() => {
+		if (authUser?.privacySettings) {
+			setPrivacySettings({
+				emailVisible: authUser.privacySettings.emailVisible || false,
+			});
+		}
+	}, [authUser?.privacySettings]);
 
 	// Update username input when authUser changes
 	useEffect(() => {
@@ -580,6 +596,29 @@ const Profile = () => {
 		}
 	};
 
+	// Handle privacy settings update
+	const handlePrivacySettingsChange = async (setting, value) => {
+		// Optimistically update UI
+		const updatedSettings = { ...privacySettings, [setting]: value };
+		setPrivacySettings(updatedSettings);
+
+		try {
+			// Update privacy settings
+			const updatedUser = await updateEmailVisibility(value);
+			if (!updatedUser) {
+				// Revert on failure
+				setPrivacySettings(prev => ({ ...prev, [setting]: !value }));
+			} else {
+				// Update auth context with new user data
+				setAuthUser(updatedUser);
+			}
+		} catch (error) {
+			// Revert on error
+			setPrivacySettings(prev => ({ ...prev, [setting]: !value }));
+			toast.error('Failed to update privacy settings');
+		}
+	};
+
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-blue-900'>
 			{/* Header */}
@@ -619,7 +658,8 @@ const Profile = () => {
 									{ id: "password", label: "Password", icon: FaLock, color: "from-blue-500 to-cyan-500" },
 									{ id: "email", label: "Email", icon: FaEdit, color: "from-cyan-500 to-teal-500" },
 									{ id: "2fa", label: "Two-Factor Auth", icon: FaShieldAlt, color: "from-teal-500 to-green-500" },
-									{ id: "chat-settings", label: "Chat Settings", icon: FaVolumeUp, color: "from-green-500 to-emerald-500" },
+									{ id: "privacy", label: "Privacy", icon: FaEye, color: "from-green-500 to-emerald-500" },
+									{ id: "chat-settings", label: "Chat Settings", icon: FaVolumeUp, color: "from-emerald-500 to-teal-500" },
 									{ id: "delete", label: "Delete Account", icon: FaTrash, color: "from-red-500 to-pink-500" }
 								].map(({ id, label, icon: Icon, color }) => (
 									<button
@@ -654,7 +694,8 @@ const Profile = () => {
 											{ id: "password", label: "Password", icon: FaLock, color: "from-blue-500 to-cyan-500" },
 											{ id: "email", label: "Email", icon: FaEdit, color: "from-cyan-500 to-teal-500" },
 											{ id: "2fa", label: "Two-Factor Auth", icon: FaShieldAlt, color: "from-teal-500 to-green-500" },
-											{ id: "chat-settings", label: "Chat Settings", icon: FaVolumeUp, color: "from-green-500 to-emerald-500" },
+											{ id: "privacy", label: "Privacy", icon: FaEye, color: "from-green-500 to-emerald-500" },
+											{ id: "chat-settings", label: "Chat Settings", icon: FaVolumeUp, color: "from-emerald-500 to-teal-500" },
 											{ id: "delete", label: "Delete Account", icon: FaTrash, color: "from-red-500 to-pink-500" }
 										].find(tab => tab.id === activeTab);
 										
@@ -681,7 +722,8 @@ const Profile = () => {
 											{ id: "password", label: "Password", icon: FaLock, color: "from-blue-500 to-cyan-500" },
 											{ id: "email", label: "Email", icon: FaEdit, color: "from-cyan-500 to-teal-500" },
 											{ id: "2fa", label: "Two-Factor Auth", icon: FaShieldAlt, color: "from-teal-500 to-green-500" },
-											{ id: "chat-settings", label: "Chat Settings", icon: FaVolumeUp, color: "from-green-500 to-emerald-500" },
+											{ id: "privacy", label: "Privacy", icon: FaEye, color: "from-green-500 to-emerald-500" },
+											{ id: "chat-settings", label: "Chat Settings", icon: FaVolumeUp, color: "from-emerald-500 to-teal-500" },
 											{ id: "delete", label: "Delete Account", icon: FaTrash, color: "from-red-500 to-pink-500" }
 										].map(({ id, label, icon: Icon, color }) => (
 											<button
@@ -1548,6 +1590,69 @@ const Profile = () => {
 									</div>
 								</form>
 							)}
+						</div>
+					)}
+
+					{/* Privacy Tab */}
+					{activeTab === "privacy" && (
+						<div className="space-y-6">
+							<h2 className="text-xl font-bold text-white mb-4">Privacy Settings</h2>
+							
+							{/* Email Visibility Section */}
+							<div className="bg-gray-800 rounded-lg p-6 border border-gray-600">
+								<h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+									<FaEye className="text-gray-300" />
+									Email Visibility
+								</h3>
+								
+								<div className="space-y-4">
+									<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-gray-700 rounded-lg border border-gray-600 gap-4">
+										<div className="flex items-center gap-3 flex-1 min-w-0">
+											<div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+												privacySettings.emailVisible 
+													? 'bg-green-600' 
+													: 'bg-gray-600'
+											}`}>
+												{privacySettings.emailVisible ? (
+													<FaEye className="text-white" />
+												) : (
+													<FaEyeSlash className="text-white" />
+												)}
+											</div>
+											<div className="flex-1 min-w-0">
+												<h4 className="text-white font-medium">Show Email in Profile</h4>
+												<p className="text-gray-300 text-sm">
+													{privacySettings.emailVisible 
+														? "Other users can see your email address in your profile" 
+														: "Your email address is hidden from other users"
+													}
+												</p>
+											</div>
+										</div>
+										<button
+											onClick={() => handlePrivacySettingsChange('emailVisible', !privacySettings.emailVisible)}
+											disabled={privacyLoading}
+											className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
+												privacySettings.emailVisible 
+													? 'bg-green-500' 
+													: 'bg-gray-300'
+											} ${privacyLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+										>
+											{privacyLoading ? (
+												<div className="absolute inset-0 flex items-center justify-center">
+													<div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+												</div>
+											) : (
+												<span
+													className={`inline-block h-5 w-5 transform rounded-full bg-white transition duration-200 ease-in-out ${
+														privacySettings.emailVisible ? 'translate-x-6' : 'translate-x-1'
+													}`}
+												/>
+											)}
+										</button>
+									</div>
+								</div>
+							</div>
 						</div>
 					)}
 

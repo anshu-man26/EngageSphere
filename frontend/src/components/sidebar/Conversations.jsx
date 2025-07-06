@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect, useState } from "react";
 import useGetConversations from "../../hooks/useGetConversations";
 import useGetUsers from "../../hooks/useGetUsers";
 import useConversation from "../../zustand/useConversation";
@@ -11,6 +11,43 @@ const Conversations = ({ onConversationSelect }) => {
 	const { conversations, loading } = useGetConversations();
 	const { users } = useGetUsers();
 	const { setSelectedConversation, searchTerm } = useConversation();
+	const previousConversationsRef = useRef([]);
+	const [animatedConversations, setAnimatedConversations] = useState(new Set());
+
+	// Track conversations that should be animated (new messages)
+	useEffect(() => {
+		if (conversations.length > 0 && previousConversationsRef.current.length > 0) {
+			const newAnimatedConversations = new Set();
+			
+			conversations.forEach(conversation => {
+				const previousConversation = previousConversationsRef.current.find(
+					prev => prev._id === conversation._id
+				);
+				
+				// Check if this conversation moved to top (not just new messages)
+				if (previousConversation) {
+					const movedToTop = conversations.indexOf(conversation) === 0 && 
+						previousConversationsRef.current.indexOf(previousConversation) !== 0;
+					
+					// Only animate if conversation moved to top, not just for new messages
+					if (movedToTop) {
+						newAnimatedConversations.add(conversation._id);
+					}
+				}
+			});
+			
+			if (newAnimatedConversations.size > 0) {
+				setAnimatedConversations(newAnimatedConversations);
+				
+				// Clear animation after 1 second
+				setTimeout(() => {
+					setAnimatedConversations(new Set());
+				}, 1000);
+			}
+		}
+		
+		previousConversationsRef.current = conversations;
+	}, [conversations]);
 
 	// Memoize filtered conversations and users to prevent unnecessary re-renders
 	const filteredConversations = useMemo(() => {
@@ -61,7 +98,7 @@ const Conversations = ({ onConversationSelect }) => {
 	}
 
 	return (
-		<div className='py-2 flex flex-col overflow-auto min-w-0 w-full sidebar-content'>
+		<div className='py-2 flex flex-col overflow-auto min-w-0 w-full sidebar-content conversation-list-container'>
 			{/* Search results indicator */}
 			{searchTerm.trim() && (
 				<div className='px-3 py-2 text-sm text-gray-400 border-b border-white/10 mb-2 overflow-hidden'>
@@ -84,6 +121,7 @@ const Conversations = ({ onConversationSelect }) => {
 							lastIdx={idx === filteredConversations.length - 1 && filteredUsers.length === 0}
 							emoji={getRandomEmoji()}
 							onConversationSelect={onConversationSelect}
+							isNewMessage={animatedConversations.has(conversation._id)}
 						/>
 					))}
 					{filteredUsers.length > 0 && <div className='h-px bg-white/10 my-2'></div>}

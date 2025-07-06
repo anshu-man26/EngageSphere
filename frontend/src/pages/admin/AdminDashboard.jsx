@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useAuthContext } from "../../context/AuthContext.jsx";
 import { useSocketContext } from "../../context/SocketContext.jsx";
 import SecureDeleteModal from "../../components/admin/SecureDeleteModal.jsx";
+import SystemHealthPanel from "../../components/admin/SystemHealthPanel.jsx";
+import SystemSettingsPanel from "../../components/admin/SystemSettingsPanel.jsx";
 
 const AdminDashboard = () => {
 	const [users, setUsers] = useState([]);
@@ -347,6 +349,16 @@ const AdminDashboard = () => {
 							</div>
 						</div>
 					)}
+				</div>
+
+				{/* System Health Panel */}
+				<div className="mb-8">
+					<SystemHealthPanel />
+				</div>
+
+				{/* System Settings Panel */}
+				<div className="mb-8">
+					<SystemSettingsPanel />
 				</div>
 
 				{/* User Management */}

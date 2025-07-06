@@ -1,6 +1,6 @@
 const MessageSkeleton = () => {
 	return (
-		<div className='flex gap-2 mb-4'>
+		<div className='flex gap-2 mb-0'>
 			{/* Avatar skeleton */}
 			<div className='w-8 h-8 bg-gray-700 rounded-full animate-pulse'></div>
 			

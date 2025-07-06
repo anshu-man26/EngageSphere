@@ -28,8 +28,8 @@ const Home = () => {
 	}
 
 	return (
-		<div className='flex h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-800 overflow-hidden'>
-			<div className='flex w-full h-full overflow-hidden'>
+		<div className='flex h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-800 overflow-hidden mobile-chat-container'>
+			<div className='flex w-full h-full overflow-hidden mobile-chat-main'>
 				<Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 				<div className='flex-1 min-w-0 overflow-hidden'>
 					<MessageContainer isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />

@@ -192,21 +192,10 @@ const MessageContainer = ({ isSidebarOpen, setIsSidebarOpen }) => {
 				backgroundRepeat: 'no-repeat',
 			}}
 		>
-			{/* Mobile Sidebar Toggle Button - positioned below header */}
-			<div className='lg:hidden absolute top-20 left-4 z-20'>
-				<button
-					onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-					className={`sidebar-toggle-button-top ${isSidebarOpen ? 'sidebar-open' : ''}`}
-				>
-					<IoChevronBack 
-						size={20} 
-						className="arrow-icon"
-					/>
-				</button>
-			</div>
+
 
 			{!selectedConversation ? (
-				<NoChatSelected />
+				<NoChatSelected isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
 			) : (
 				<>
 					{/* Mobile X button for selection mode - positioned to avoid overlap with sidebar button */}
@@ -229,7 +218,7 @@ const MessageContainer = ({ isSidebarOpen, setIsSidebarOpen }) => {
 					)}
 					
 					{/* Fixed Header */}
-					<div className={`flex-shrink-0 backdrop-blur-sm px-3 sm:px-4 py-3 border-b relative z-10 mobile-header chat-header ${
+					<div className={`flex-shrink-0 backdrop-blur-sm px-3 sm:px-4 py-3 border-b relative ${isSelectionMode ? 'z-40' : 'z-10'} mobile-header chat-header ${
 						isDarkBackground 
 							? 'bg-black/20 border-white/20' 
 							: 'bg-gray-800/90 border-gray-600'
@@ -251,7 +240,7 @@ const MessageContainer = ({ isSidebarOpen, setIsSidebarOpen }) => {
 								</div>
 								
 								{/* Right side - Select All and Delete buttons */}
-								<div className="flex items-center gap-1 sm:gap-2 flex-wrap">
+								<div className="flex items-center gap-1 sm:gap-2 flex-wrap justify-end sm:justify-start">
 									{/* Select All button - only show if not all messages are selected */}
 									{selectedMessages.size < (messages?.length || 0) && (
 										<button
@@ -284,6 +273,15 @@ const MessageContainer = ({ isSidebarOpen, setIsSidebarOpen }) => {
 						<div className='flex items-center justify-between'>
 							{/* Left side - Profile and Info */}
 							<div className='flex items-center gap-2 sm:gap-3 min-w-0 flex-1'>
+								{/* Mobile Sidebar Toggle Button - Only visible on mobile */}
+								<button
+									onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+									className='lg:hidden p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors'
+									title="Toggle sidebar"
+								>
+									<IoChevronBack size={18} />
+								</button>
+								
 								{/* Profile Picture */}
 								<div 
 									className='w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-90 transition-opacity flex-shrink-0'
@@ -340,7 +338,7 @@ const MessageContainer = ({ isSidebarOpen, setIsSidebarOpen }) => {
 					</div>
 					
 					{/* Messages Area - Takes remaining space */}
-					<div className='flex-1 min-h-0'>
+					<div className='flex-1 min-h-0 mobile-messages-area'>
 						<Messages 
 							isSelectionMode={isSelectionMode}
 							selectedMessages={selectedMessages}
@@ -379,10 +377,22 @@ const MessageContainer = ({ isSidebarOpen, setIsSidebarOpen }) => {
 };
 export default MessageContainer;
 
-const NoChatSelected = () => {
+const NoChatSelected = ({ isSidebarOpen, setIsSidebarOpen }) => {
 	const { authUser } = useAuthContext();
 	return (
-		<div className='flex items-center justify-center w-full h-full bg-gradient-to-br from-white/5 to-white/10 px-4'>
+		<div className='flex items-center justify-center w-full h-full bg-gradient-to-br from-white/5 to-white/10 px-4 relative'>
+			{/* Mobile Sidebar Toggle Button - positioned in top-left corner, only visible on mobile */}
+			<div className='lg:hidden absolute top-4 left-4 z-30'>
+				<button
+					onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+					className={`sidebar-toggle-button-top ${isSidebarOpen ? 'sidebar-open' : ''}`}
+				>
+					<IoChevronBack 
+						size={20} 
+						className="arrow-icon"
+					/>
+				</button>
+			</div>
 			<div className='text-center'>
 				<div className='w-16 h-16 lg:w-24 lg:h-24 mx-auto mb-4 lg:mb-6 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center'>
 					<TiMessages className='text-white text-2xl lg:text-4xl' />
@@ -391,6 +401,7 @@ const NoChatSelected = () => {
 					Welcome back, {authUser?.fullName || 'User'}! 👋
 				</h2>
 				<p className='text-gray-300 mb-4 text-sm lg:text-base'>Select a conversation to start messaging</p>
+				
 				<div className='flex items-center justify-center gap-2 text-gray-400'>
 					<div className='w-2 h-2 bg-blue-500 rounded-full animate-pulse'></div>
 					<span className='text-xs lg:text-sm'>Ready to connect</span>

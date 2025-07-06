@@ -147,7 +147,8 @@ export const deleteMessage = async (req, res) => {
 			if (receiverSocketId) {
 				io.to(receiverSocketId).emit("messageDeleted", {
 					messageId: message._id,
-					deleteForEveryone: deleteForEveryone
+					deleteForEveryone: deleteForEveryone,
+					deletedBy: userId.toString() // Include who deleted the message
 				});
 			}
 		}
@@ -214,7 +215,8 @@ export const deleteMultipleMessages = async (req, res) => {
 				if (receiverSocketId) {
 					io.to(receiverSocketId).emit("messagesDeleted", {
 						messageIds: messageIds,
-						deleteForEveryone: deleteForEveryone
+						deleteForEveryone: deleteForEveryone,
+						deletedBy: req.user._id.toString() // Include who deleted the messages
 					});
 				}
 			});

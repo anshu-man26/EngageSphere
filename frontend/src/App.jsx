@@ -12,6 +12,8 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminProfile from "./pages/admin/AdminProfile";
 import AdminForgotPassword from "./pages/admin/AdminForgotPassword";
 import AdminVerifyOtp from "./pages/admin/AdminVerifyOtp";
+import MobileAvailabilityNotice from "./components/MobileAvailabilityNotice";
+import SystemMaintenanceNotice from "./components/SystemMaintenanceNotice";
 
 import { Toaster } from "react-hot-toast";
 import { useAuthContext } from "./context/AuthContext";
@@ -37,6 +39,10 @@ function App() {
 
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900'>
+			{/* System Notices */}
+			<SystemMaintenanceNotice />
+			<MobileAvailabilityNotice />
+			
 			<Routes>
 					{/* Admin Routes */}
 					<Route path='/admin/login' element={admin ? <Navigate to="/admin/dashboard" replace /> : <AdminLogin />} />

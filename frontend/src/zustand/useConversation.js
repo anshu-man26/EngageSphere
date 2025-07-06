@@ -2,6 +2,8 @@ import { create } from "zustand";
 
 const useConversation = create((set, get) => ({
 	selectedConversation: null,
+	// Flag to prevent conversation refresh during message operations
+	isPerformingMessageOperation: false,
 	setSelectedConversation: (selectedConversation) => {
 		// Always clear messages when switching conversations to ensure clean state
 		const currentConversation = get().selectedConversation;
@@ -23,16 +25,12 @@ const useConversation = create((set, get) => ({
 				}));
 			}
 			
-			// Only refresh conversations if we're switching to an existing conversation
-			// Don't refresh when creating a new conversation from user list
-			if (selectedConversation && selectedConversation._id && selectedConversation.participant) {
-				// This is an existing conversation, refresh to get latest data
-				setTimeout(() => {
-					window.dispatchEvent(new Event('refreshConversations'));
-				}, 100);
-			}
+			// Removed automatic conversation refresh - this was causing the sidebar to refresh
+			// when clicking on conversations. The conversation data is already available
+			// and doesn't need to be refreshed just for selection.
 		} else {
 			// If it's the same conversation, just update the conversation object
+			// Don't trigger refresh for same conversation updates
 			set({ selectedConversation });
 		}
 	},
@@ -67,26 +65,35 @@ const useConversation = create((set, get) => ({
 	},
 	// Helper function to remove a single message
 	removeMessage: (messageId) => {
+		set({ isPerformingMessageOperation: true });
 		const { messages } = get();
 		const messagesArray = Array.isArray(messages) ? messages : [];
 		const filteredMessages = messagesArray.filter(msg => msg._id !== messageId);
 		set({ messages: filteredMessages });
+		// Reset flag after a short delay to allow other operations to complete
+		setTimeout(() => set({ isPerformingMessageOperation: false }), 100);
 	},
 	// Helper function to remove multiple messages
 	removeMessages: (messageIds) => {
+		set({ isPerformingMessageOperation: true });
 		const { messages } = get();
 		const messagesArray = Array.isArray(messages) ? messages : [];
 		const filteredMessages = messagesArray.filter(msg => !messageIds.includes(msg._id));
 		set({ messages: filteredMessages });
+		// Reset flag after a short delay to allow other operations to complete
+		setTimeout(() => set({ isPerformingMessageOperation: false }), 100);
 	},
 	// Helper function to update a message (for marking as deleted)
 	updateMessage: (messageId, updates) => {
+		set({ isPerformingMessageOperation: true });
 		const { messages } = get();
 		const messagesArray = Array.isArray(messages) ? messages : [];
 		const updatedMessages = messagesArray.map(msg => 
 			msg._id === messageId ? { ...msg, ...updates } : msg
 		);
 		set({ messages: updatedMessages });
+		// Reset flag after a short delay to allow other operations to complete
+		setTimeout(() => set({ isPerformingMessageOperation: false }), 100);
 	},
 	// Helper function to update message reactions
 	updateMessageReaction: (messageId, action, reaction) => {

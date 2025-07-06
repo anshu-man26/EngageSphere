@@ -41,16 +41,24 @@ export const getUserProfile = async (req, res) => {
 			return res.status(403).json({ error: "Use your own profile page to view your profile" });
 		}
 
+		// Build user object based on privacy settings
+		const userObject = {
+			_id: user._id,
+			fullName: user.fullName,
+			username: user.username,
+			profilePic: user.profilePic,
+			bio: user.bio,
+			createdAt: user.createdAt,
+			defaultChatBackground: user.defaultChatBackground,
+		};
+
+		// Only include email if user has made it visible
+		if (user.privacySettings?.emailVisible) {
+			userObject.email = user.email;
+		}
+
 		res.status(200).json({
-			user: {
-				_id: user._id,
-				fullName: user.fullName,
-				username: user.username,
-				profilePic: user.profilePic,
-				bio: user.bio,
-				createdAt: user.createdAt,
-				defaultChatBackground: user.defaultChatBackground,
-			}
+			user: userObject
 		});
 	} catch (error) {
 		console.error("Error in getUserProfile: ", error.message);
@@ -1003,6 +1011,49 @@ export const deleteBackgroundImage = async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error in deleteBackgroundImage: ", error.message);
+		res.status(500).json({ error: "Internal server error" });
+	}
+};
+
+export const updatePrivacySettings = async (req, res) => {
+	try {
+		const { emailVisible } = req.body;
+		const userId = req.user._id;
+
+		// Validate input
+		if (typeof emailVisible !== 'boolean') {
+			return res.status(400).json({ error: "emailVisible must be a boolean value" });
+		}
+
+		// Update privacy settings
+		const updatedUser = await User.findByIdAndUpdate(
+			userId,
+			{ 
+				'privacySettings.emailVisible': emailVisible 
+			},
+			{ new: true, runValidators: true }
+		).select("-password");
+
+		if (!updatedUser) {
+			return res.status(404).json({ error: "User not found" });
+		}
+
+		res.status(200).json({
+			message: "Privacy settings updated successfully",
+			user: {
+				_id: updatedUser._id,
+				fullName: updatedUser.fullName,
+				email: updatedUser.email,
+				username: updatedUser.username,
+				profilePic: updatedUser.profilePic,
+				bio: updatedUser.bio,
+				defaultChatBackground: updatedUser.defaultChatBackground,
+				soundSettings: updatedUser.soundSettings,
+				privacySettings: updatedUser.privacySettings,
+			},
+		});
+	} catch (error) {
+		console.error("Error in updatePrivacySettings: ", error.message);
 		res.status(500).json({ error: "Internal server error" });
 	}
 };

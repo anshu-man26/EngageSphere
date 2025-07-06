@@ -35,8 +35,9 @@ const useListenMessages = () => {
 		};
 
 		const handleMessageDeleted = (data) => {
-			// Update the message to show "This message was deleted" for everyone
-			if (data.deleteForEveryone) {
+			// Only show "This message was deleted" if someone else deleted it
+			// Don't show it if the current user deleted their own message
+			if (data.deleteForEveryone && data.deletedBy !== authUser._id) {
 				updateMessage(data.messageId, {
 					deletedForEveryone: true,
 					message: "This message was deleted",
@@ -44,6 +45,9 @@ const useListenMessages = () => {
 					fileName: "",
 					fileSize: 0
 				});
+			} else if (data.deleteForEveryone && data.deletedBy === authUser._id) {
+				// If current user deleted the message, just remove it from view
+				removeMessage(data.messageId);
 			} else {
 				// Remove the message if it's deleted for me only
 				removeMessage(data.messageId);
@@ -51,8 +55,9 @@ const useListenMessages = () => {
 		};
 
 		const handleMessagesDeleted = (data) => {
-			// Update multiple messages to show "This message was deleted" for everyone
-			if (data.deleteForEveryone) {
+			// Only show "This message was deleted" if someone else deleted the messages
+			// Don't show it if the current user deleted their own messages
+			if (data.deleteForEveryone && data.deletedBy !== authUser._id) {
 				data.messageIds.forEach(messageId => {
 					updateMessage(messageId, {
 						deletedForEveryone: true,
@@ -62,6 +67,9 @@ const useListenMessages = () => {
 						fileSize: 0
 					});
 				});
+			} else if (data.deleteForEveryone && data.deletedBy === authUser._id) {
+				// If current user deleted the messages, just remove them from view
+				removeMessages(data.messageIds);
 			} else {
 				// Remove the messages if they're deleted for me only
 				removeMessages(data.messageIds);

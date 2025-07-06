@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useSocketContext } from "../../context/SocketContext";
 import useConversation from "../../zustand/useConversation";
 
-const Conversation = ({ conversation, lastIdx, emoji, onConversationSelect }) => {
+const Conversation = ({ conversation, lastIdx, emoji, onConversationSelect, isNewMessage = false }) => {
 	const navigate = useNavigate();
 	const { selectedConversation, setSelectedConversation } = useConversation();
 
@@ -42,13 +42,13 @@ const Conversation = ({ conversation, lastIdx, emoji, onConversationSelect }) =>
 	return (
 		<>
 			<div
-				className={`flex items-center gap-2 sm:gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 hover:scale-105 ${
+				className={`flex items-center gap-2 sm:gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300 hover:scale-105 ${
 					isSelected 
 						? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30' 
 						: conversation.unreadCount > 0
 							? 'hover:bg-white/10 border border-red-500/20 bg-red-500/5'
 							: 'hover:bg-white/10 border border-transparent'
-				}`}
+				} ${isNewMessage ? 'animate-[slideInFromTop_0.5s_ease-out]' : ''}`}
 				onClick={handleClick}
 			>
 				{/* Avatar */}
@@ -76,7 +76,7 @@ const Conversation = ({ conversation, lastIdx, emoji, onConversationSelect }) =>
 					)}
 					{/* Unread count badge */}
 					{conversation.unreadCount > 0 && !isSelected && (
-						<div className='absolute -top-1 -right-1 min-w-[18px] h-4 sm:min-w-[20px] sm:h-5 bg-red-500 border-2 border-white rounded-full flex items-center justify-center animate-pulse shadow-lg'>
+						<div className='absolute -top-1 -right-1 min-w-[18px] h-4 sm:min-w-[20px] sm:h-5 bg-red-500 border-2 border-white rounded-full flex items-center justify-center shadow-lg animate-[pulseNotification_1s_ease-in-out]'>
 							<span className='text-xs text-white font-bold px-1'>
 								{conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}
 							</span>

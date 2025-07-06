@@ -121,6 +121,15 @@ export const SocketContextProvider = ({ children }) => {
 				updateMultipleMessageStatuses(data.messageIds, 'read', data.readAt);
 			});
 
+			// Listen for system settings updates
+			newSocket.on("systemSettingsUpdated", (data) => {
+				console.log("🔄 System settings updated via socket:", data);
+				// Dispatch a custom event to notify all components using system settings
+				window.dispatchEvent(new CustomEvent('systemSettingsUpdated', {
+					detail: data
+				}));
+			});
+
 			setSocket(newSocket);
 
 			// Set up heartbeat interval

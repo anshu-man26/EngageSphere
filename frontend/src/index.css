@@ -198,7 +198,7 @@
 }
 
 .input-field:focus {
-	transform: scale(1.02);
+	/* Focus effect without scaling */
 }
 
 /* Card hover effects */
@@ -294,6 +294,140 @@ body {
 	/* Additional mobile spacing for messages */
 	.messages-container {
 		scroll-padding-bottom: 0.5rem;
+	}
+	
+	/* Reduce bottom padding for messages on mobile */
+	.messages-container .pb-4 {
+		padding-bottom: 0rem;
+	}
+	
+	/* Remove margins from chat components on mobile */
+	.messages-container .chat {
+		margin-bottom: 0;
+		/* Ensure proper spacing for chat components */
+		padding-left: 0.5rem;
+		padding-right: 0.5rem;
+	}
+	
+	/* Ensure chat-image (avatar) has proper spacing */
+	.messages-container .chat-image {
+		margin-right: 0.5rem;
+	}
+	
+	/* Remove all spacing from messages container on mobile */
+	.messages-container {
+		margin: 0 !important;
+		padding: 0 !important;
+		padding-bottom: 0px !important; /* No gap - messages can go below typing bar */
+	}
+	
+	/* Remove spacing from message input on mobile */
+	.mobile-input-container {
+		margin: 0 !important;
+		padding: 0.75rem !important;
+		overflow-x: hidden !important;
+		width: 100% !important;
+	}
+	
+	/* Prevent horizontal scrolling on mobile */
+	.mobile-chat-container {
+		overflow-x: hidden !important;
+		/* Better keyboard handling */
+		height: 100vh;
+		height: 100dvh;
+	}
+	
+	/* Better mobile keyboard handling */
+	@media (max-width: 768px) {
+		/* When keyboard is open, adjust layout */
+		.mobile-chat-container {
+			height: 100vh;
+			height: 100dvh;
+			overflow: hidden;
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+		}
+		
+		/* Ensure header stays visible when keyboard opens */
+		.mobile-header {
+			position: fixed !important;
+			top: 0 !important;
+			left: 0 !important;
+			right: 0 !important;
+			z-index: 100 !important;
+			background: rgba(17, 24, 39, 0.95) !important;
+			backdrop-filter: blur(10px) !important;
+			height: 60px !important;
+		}
+		
+		/* Ensure input stays at bottom even when keyboard opens */
+		.mobile-input-container {
+			position: fixed !important;
+			bottom: 0 !important;
+			left: 0 !important;
+			right: 0 !important;
+			z-index: 50 !important;
+			padding-bottom: env(safe-area-inset-bottom) !important;
+		}
+		
+		/* Adjust messages area when keyboard is open */
+		.mobile-messages-area {
+			padding-bottom: 0px !important; /* No gap - messages can go below typing bar */
+			padding-top: 60px !important; /* Space for fixed header */
+			overflow-y: auto !important;
+			overflow-x: hidden !important;
+			height: calc(100vh - 100px) !important;
+			height: calc(100dvh - 100px) !important;
+		}
+	}
+	
+	/* Mobile Chrome specific fixes */
+	@media (max-width: 768px) and (orientation: portrait) {
+		.mobile-chat-container {
+			height: 100vh !important;
+			height: 100dvh !important;
+		}
+		
+		.mobile-messages-area {
+			height: calc(100vh - 100px) !important;
+			height: calc(100dvh - 100px) !important;
+		}
+	}
+	
+	.mobile-messages-area {
+		overflow-x: hidden !important;
+	}
+	
+	.messages-container {
+		overflow-x: hidden !important;
+	}
+	
+	/* Remove extra bottom spacing on mobile */
+	@media (max-width: 768px) {
+		.messages-container {
+			padding-bottom: 0 !important;
+		}
+		
+		.messages-container > div {
+			padding-bottom: 0 !important;
+		}
+		
+		/* Remove all bottom margins from message elements */
+		.messages-container .chat,
+		.messages-container .chat-bubble,
+		.messages-container .chat-footer,
+		.messages-container .chat-image,
+		.messages-container > div > div {
+			margin-bottom: 0 !important;
+		}
+		
+		/* Remove bottom padding from message content */
+		.messages-container .chat-bubble {
+			padding-bottom: 0.5rem !important;
+		}
 	}
 }
 
@@ -930,6 +1064,57 @@ body {
 	}
 }
 
+/* Animation for conversation list updates */
+@keyframes slideInFromTop {
+	from {
+		opacity: 0;
+		transform: translateY(-20px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+/* Conversation list container for smooth animations */
+.conversation-list-container {
+	transition: all 0.3s ease-in-out;
+}
+
+.conversation-list-container > * {
+	transition: all 0.3s ease-in-out;
+}
+
+@keyframes highlightNewMessage {
+	0% {
+		background: rgba(59, 130, 246, 0.3);
+		transform: scale(1);
+	}
+	50% {
+		background: rgba(59, 130, 246, 0.5);
+		transform: scale(1.02);
+	}
+	100% {
+		background: rgba(59, 130, 246, 0.1);
+		transform: scale(1);
+	}
+}
+
+@keyframes pulseNotification {
+	0% {
+		transform: scale(1);
+		box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+	}
+	70% {
+		transform: scale(1.1);
+		box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+	}
+	100% {
+		transform: scale(1);
+		box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+	}
+}
+
 /* Modern Circular Sidebar Button - Top Position */
 .sidebar-toggle-button-top {
 	width: 3rem;
@@ -949,6 +1134,26 @@ body {
 	justify-content: center;
 	cursor: pointer;
 	pointer-events: auto;
+	/* Ensure button is above sidebar when sidebar is closed */
+	z-index: 70;
+}
+
+/* Ensure sidebar is always on top on mobile */
+@media (max-width: 1023px) {
+	.sidebar-mobile {
+		z-index: 9999 !important;
+		position: fixed !important;
+		top: 0 !important;
+		left: 0 !important;
+		height: 100vh !important;
+		width: 80vw !important;
+		max-width: 384px !important;
+	}
+}
+
+/* Hide the button when sidebar is open */
+.sidebar-toggle-button-top.sidebar-open {
+	display: none;
 }
 
 .sidebar-toggle-button-top:hover {
@@ -977,7 +1182,7 @@ body {
 	position: fixed;
 	bottom: 5rem;
 	left: 1rem;
-	z-index: 40;
+	z-index: 20;
 	width: 3rem;
 	height: 3rem;
 	background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
@@ -1024,6 +1229,17 @@ body {
 		left: 1rem;
 		width: 3.5rem;
 		height: 3.5rem;
+	}
+	
+	/* Ensure messages can render in button area */
+	.mobile-messages-area {
+		position: relative;
+		z-index: 1;
+	}
+	
+	/* Allow messages to render behind the sidebar button */
+	.sidebar-toggle-button-top {
+		pointer-events: auto;
 	}
 }
 

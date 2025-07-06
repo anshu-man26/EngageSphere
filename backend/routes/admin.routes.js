@@ -15,9 +15,13 @@ import {
 	deleteUser,
 	deleteMultipleUsers,
 	getSystemStats,
-	clearOnlineUsers
+	clearOnlineUsers,
+	getSystemHealth,
+	getSystemSettings,
+	updateSystemSettings
 } from "../controllers/admin.controller.js";
 import { protectAdminRoute, requirePermission } from "../middleware/protectAdminRoute.js";
+import SystemSettings from "../models/systemSettings.model.js";
 
 const router = express.Router();
 
@@ -30,11 +34,28 @@ router.post("/forgot-password", requestAdminPasswordReset);
 router.post("/verify-otp", verifyAdminPasswordResetOtp);
 router.post("/reset-password", resetAdminPassword);
 
+// Public system settings route (for mobile availability check)
+router.get("/settings/public", async (req, res) => {
+	try {
+		const settings = await SystemSettings.getInstance();
+		res.status(200).json({
+			mobileAvailability: settings.mobileAvailability,
+			maintenanceMode: settings.maintenanceMode
+		});
+	} catch (error) {
+		console.log("Error in public settings route", error.message);
+		res.status(500).json({ error: "Internal Server Error" });
+	}
+});
+
 // Protected admin routes
 router.get("/profile", protectAdminRoute, getAdminProfile);
 router.put("/profile", protectAdminRoute, updateAdminProfile);
 router.put("/password", protectAdminRoute, changeAdminPassword);
 router.get("/stats", protectAdminRoute, requirePermission("viewAnalytics"), getSystemStats);
+router.get("/health", protectAdminRoute, getSystemHealth);
+router.get("/settings", protectAdminRoute, getSystemSettings);
+router.put("/settings", protectAdminRoute, updateSystemSettings);
 
 // User management routes (require specific permissions)
 router.get("/users", protectAdminRoute, requirePermission("viewAllUsers"), getAllUsers);
