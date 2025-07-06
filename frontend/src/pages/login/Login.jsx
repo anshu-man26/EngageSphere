@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import useLogin from "../../hooks/useLogin";
-import { FaUser, FaLock, FaEye, FaEyeSlash, FaShieldAlt } from "react-icons/fa";
+import { FaUser, FaLock, FaEye, FaEyeSlash, FaShieldAlt, FaAt } from "react-icons/fa";
 import logo from '../../assets/images/logo.png';
 
 const Login = () => {
-	const [email, setEmail] = useState("");
+	const [identifier, setIdentifier] = useState("");
 	const [password, setPassword] = useState("");
 	const [otp, setOtp] = useState("");
 	const [showPassword, setShowPassword] = useState(false);
@@ -17,9 +17,9 @@ const Login = () => {
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		if (needsOTP) {
-			await login(email, password, otp);
+			await login(identifier, password, otp);
 		} else {
-			const result = await login(email, password);
+			const result = await login(identifier, password);
 			if (result && result.needsOTP) {
 				setNeedsOTP(true);
 				setOtpSent(true);
@@ -33,7 +33,11 @@ const Login = () => {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				credentials: "include",
-				body: JSON.stringify({ email, password }),
+				body: JSON.stringify({ 
+					email: identifier.includes('@') ? identifier : undefined,
+					username: identifier.includes('@') ? undefined : identifier,
+					password 
+				}),
 			});
 
 			const data = await res.json();
@@ -44,6 +48,9 @@ const Login = () => {
 			console.error("Error resending OTP:", error);
 		}
 	};
+
+	// Determine if identifier looks like an email
+	const isEmail = identifier.includes('@');
 
 	return (
 		<div className='flex flex-col items-center justify-center min-h-screen px-4 bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 auth-page'>
@@ -60,27 +67,30 @@ const Login = () => {
 				{/* Login Form */}
 				<div className='bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/20 p-8'>
 					<form onSubmit={handleSubmit} className='space-y-6' autoComplete='on' method='post'>
-						{/* Email Field */}
+						{/* Email/Username Field */}
 						<div className='space-y-2'>
 							<label className='text-sm font-medium text-gray-200'>
-								Email Address
+								{isEmail ? 'Email Address' : 'Username'}
 							</label>
 							<div className='relative'>
 								<div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
-									<FaUser className='h-5 w-5 text-gray-400' />
+									{isEmail ? <FaUser className='h-5 w-5 text-gray-400' /> : <FaAt className='h-5 w-5 text-gray-400' />}
 								</div>
 								<input
-									type='email'
-									id='email'
-									placeholder='Enter your email address'
+									type={isEmail ? 'email' : 'text'}
+									id='identifier'
+									placeholder={isEmail ? 'Enter your email address' : 'Enter your username'}
 									className='w-full pl-10 pr-4 py-3 bg-white/10 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200'
-									value={email}
-									onChange={(e) => setEmail(e.target.value)}
+									value={identifier}
+									onChange={(e) => setIdentifier(e.target.value)}
 									required
 									autoComplete='email'
-									name='email'
+									name='identifier'
 								/>
 							</div>
+							<p className='text-xs text-gray-400 mt-1'>
+								You can login with your email address or username
+							</p>
 						</div>
 
 						{/* Password Field */}
@@ -177,8 +187,6 @@ const Login = () => {
 								needsOTP ? 'Verify & Sign In' : 'Sign In'
 							)}
 						</button>
-
-
 
 						{/* Sign Up Link */}
 						<div className='text-center'>

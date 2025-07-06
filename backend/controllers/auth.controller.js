@@ -89,12 +89,25 @@ export const signup = async (req, res) => {
 
 export const login = async (req, res) => {
 	try {
-		const { email, password, otp } = req.body;
-		const user = await User.findOne({ email });
+		const { email, username, password, otp } = req.body;
+		
+		// Check if either email or username is provided
+		if (!email && !username) {
+			return res.status(400).json({ error: "Email or username is required" });
+		}
+		
+		// Find user by email or username
+		let user;
+		if (email) {
+			user = await User.findOne({ email });
+		} else {
+			user = await User.findOne({ username });
+		}
+		
 		const isPasswordCorrect = await bcrypt.compare(password, user?.password || "");
 
 		if (!user || !isPasswordCorrect) {
-			return res.status(400).json({ error: "Invalid email or password" });
+			return res.status(400).json({ error: "Invalid email/username or password" });
 		}
 
 		// Check if user is verified
@@ -124,7 +137,7 @@ export const login = async (req, res) => {
 				if (transporter) {
 					const mailOptions = {
 						from: process.env.EMAIL_USER,
-						to: email,
+						to: user.email, // Always use the user's email for OTP
 						subject: "Login OTP - EngageSphere",
 						html: `<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
 							<div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;'>
