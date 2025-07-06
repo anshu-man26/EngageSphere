@@ -37,8 +37,12 @@ const ProfileButton = () => {
 				<div className='flex items-center gap-1 sm:gap-2 mt-1'>
 					<div className='w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full'></div>
 					<span className='text-xs text-gray-400 truncate sidebar-text-truncate'>
-						<span className="hidden sm:inline">Edit Profile</span>
-						<span className="sm:hidden">Profile</span>
+						{authUser?.username ? `@${authUser.username}` : (
+							<>
+								<span className="hidden sm:inline">Edit Profile</span>
+								<span className="sm:hidden">Profile</span>
+							</>
+						)}
 					</span>
 				</div>
 			</div>

@@ -18,8 +18,6 @@ const isValidAppId = (appId) => {
 // Configure Agora to disable analytics to avoid ad blocker issues
 AgoraRTC.setLogLevel(4); // Only show errors
 
-
-
 // Helper to force stop all media tracks (browser-level)
 function forceStopAllMediaTracks() {
   // Stop all tracks from all video elements
@@ -42,20 +40,27 @@ function forceStopAllMediaTracks() {
     window.localStream = null;
   }
   
-  // Force stop all getUserMedia streams
-  navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-    .then(stream => {
-      stream.getTracks().forEach(track => {
-        track.stop();
-        track.enabled = false;
-      });
-    })
-    .catch(() => {
-      // Ignore errors if no active streams
-    });
+  // Force stop any remaining active media streams
+  // This is a more direct approach that doesn't create new streams
+  if (navigator.mediaDevices) {
+    // Try to access the media devices to force release
+    // This is a workaround for browsers that don't properly release camera/microphone
+    try {
+      // Force the browser to reconsider media device access
+      navigator.mediaDevices.enumerateDevices()
+        .then(() => {
+          // This should trigger the browser to release any held devices
+        })
+        .catch(() => {
+          // Ignore errors
+        });
+    } catch (error) {
+      // Ignore any errors
+    }
+  }
 }
 
-const VideoCall = ({ recipientId, socket, currentUser, isIncoming = false, channelName }) => {
+const VideoCall = ({ recipientId, socket, currentUser, isIncoming = false, channelName, onCallEnded }) => {
   const { endCall } = useVideoCall();
   
   const [joined, setJoined] = useState(false);
@@ -76,6 +81,7 @@ const VideoCall = ({ recipientId, socket, currentUser, isIncoming = false, chann
   const abortControllerRef = useRef(null);
   const isJoiningRef = useRef(false);
   const ringingAudioRef = useRef(null);
+  const createdStreamsRef = useRef([]); // Track all created streams for proper cleanup
 
   // Initialize the AgoraRTC client
   const initializeClient = () => {
@@ -163,6 +169,7 @@ const VideoCall = ({ recipientId, socket, currentUser, isIncoming = false, chann
   // Create local media tracks
   const createLocalMediaTracks = async () => {
     try {
+      console.log('🎥 Creating local media tracks...');
       const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
       
       const videoTrack = await AgoraRTC.createCameraVideoTrack({
@@ -170,13 +177,26 @@ const VideoCall = ({ recipientId, socket, currentUser, isIncoming = false, chann
         facingMode: "user" // Use front camera by default
       });
       
-      // Verify the video track is working
+      console.log('✅ Local media tracks created successfully');
+      
+      // Track the streams for proper cleanup
+      if (audioTrack.getMediaStreamTrack) {
+        const audioStream = new MediaStream([audioTrack.getMediaStreamTrack()]);
+        createdStreamsRef.current.push(audioStream);
+        console.log('📝 Tracked audio stream for cleanup');
+      }
+      if (videoTrack.getMediaStreamTrack) {
+        const videoStream = new MediaStream([videoTrack.getMediaStreamTrack()]);
+        createdStreamsRef.current.push(videoStream);
+        console.log('📝 Tracked video stream for cleanup');
+      }
       
       setLocalAudioTrack(audioTrack);
       setLocalVideoTrack(videoTrack);
       
       return { audioTrack, videoTrack };
     } catch (error) {
+      console.error('❌ Error creating local media tracks:', error);
       throw error;
     }
   };
@@ -310,32 +330,98 @@ const VideoCall = ({ recipientId, socket, currentUser, isIncoming = false, chann
 
   // Helper function to stop ringing sound
   const stopRingingSound = () => {
+    console.log('🔇 Stopping ringing sound...');
+    
+    // Stop the audio referenced by the ref
     if (ringingAudioRef.current) {
-      ringingAudioRef.current.pause();
-      ringingAudioRef.current.currentTime = 0;
+      try {
+        ringingAudioRef.current.pause();
+        ringingAudioRef.current.currentTime = 0;
+        ringingAudioRef.current.src = ''; // Clear the source
+        ringingAudioRef.current.load(); // Force reload to stop
+        console.log('✅ Stopped ringing audio from ref');
+      } catch (error) {
+        console.error('❌ Error stopping ringing audio from ref:', error);
+      }
       ringingAudioRef.current = null;
+    }
+    
+    // Also stop the audio from state
+    if (ringingAudio) {
+      try {
+        ringingAudio.pause();
+        ringingAudio.currentTime = 0;
+        ringingAudio.src = ''; // Clear the source
+        ringingAudio.load(); // Force reload to stop
+        console.log('✅ Stopped ringing audio from state');
+      } catch (error) {
+        console.error('❌ Error stopping ringing audio from state:', error);
+      }
       setRingingAudio(null);
     }
+    
+    // Force stop any other audio elements that might be playing
+    document.querySelectorAll('audio').forEach(audio => {
+      if (audio.src && (audio.src.includes('RINGING.mp3') || audio.src.includes('RINGTONE.mp3'))) {
+        try {
+          audio.pause();
+          audio.currentTime = 0;
+          audio.src = '';
+          audio.load();
+          console.log('✅ Stopped additional ringing audio element');
+        } catch (error) {
+          console.error('❌ Error stopping additional ringing audio:', error);
+        }
+      }
+    });
+    
+    console.log('🎵 Ringing sound cleanup completed');
   };
 
   // Handle leave call
   const handleLeave = async () => {
+    console.log('🔄 Starting video call cleanup...');
+    
     // IMMEDIATELY stop camera and microphone - do this first!
     if (localVideoTrack) {
       try { 
+        console.log('📹 Stopping local video track...');
         localVideoTrack.setEnabled(false);
         localVideoTrack.close(); 
-      } catch {}
+        console.log('✅ Local video track stopped');
+      } catch (error) {
+        console.error('❌ Error stopping local video track:', error);
+      }
     }
     if (localAudioTrack) {
       try { 
+        console.log('🎤 Stopping local audio track...');
         localAudioTrack.setEnabled(false);
         localAudioTrack.close(); 
-      } catch {}
+        console.log('✅ Local audio track stopped');
+      } catch (error) {
+        console.error('❌ Error stopping local audio track:', error);
+      }
     }
     
+    // Stop all tracked streams
+    console.log(`🔄 Stopping ${createdStreamsRef.current.length} tracked streams...`);
+    createdStreamsRef.current.forEach((stream, index) => {
+      if (stream && stream.getTracks) {
+        stream.getTracks().forEach(track => {
+          console.log(`🛑 Stopping track: ${track.kind} (${track.id})`);
+          track.stop();
+          track.enabled = false;
+        });
+      }
+    });
+    createdStreamsRef.current = []; // Clear the array
+    console.log('✅ All tracked streams stopped');
+    
     // Force stop all media tracks immediately
+    console.log('🔄 Force stopping all media tracks...');
     forceStopAllMediaTracks();
+    console.log('✅ Force stop completed');
     
     // Stop ringing sound
     stopRingingSound();
@@ -363,9 +449,12 @@ const VideoCall = ({ recipientId, socket, currentUser, isIncoming = false, chann
     // Clean up client
     if (clientRef.current) {
       try {
+        console.log('🔄 Leaving Agora channel...');
         await clientRef.current.leave();
         clientRef.current = null;
+        console.log('✅ Agora channel left');
       } catch (error) {
+        console.error('❌ Error leaving Agora channel:', error);
       }
     }
     
@@ -380,11 +469,28 @@ const VideoCall = ({ recipientId, socket, currentUser, isIncoming = false, chann
     
     // Force another cleanup after a short delay to ensure everything is stopped
     setTimeout(() => {
+      console.log('🔄 Final cleanup check...');
       forceStopAllMediaTracks();
+      // Also clear any remaining streams
+      createdStreamsRef.current.forEach(stream => {
+        if (stream && stream.getTracks) {
+          stream.getTracks().forEach(track => {
+            track.stop();
+            track.enabled = false;
+          });
+        }
+      });
+      createdStreamsRef.current = [];
+      console.log('✅ Final cleanup completed');
     }, 100);
+    
+    console.log('🎉 Video call cleanup completed');
     
     // Notify parent component
     endCall();
+    if (onCallEnded) {
+      onCallEnded();
+    }
   };
 
   const toggleMute = () => {
@@ -431,24 +537,59 @@ const VideoCall = ({ recipientId, socket, currentUser, isIncoming = false, chann
     }, 100);
 
     return () => {
+      console.log('🔄 VideoCall component unmounting...');
       clearTimeout(timer);
+      
+      // Stop ringing sounds immediately
+      stopRingingSound();
+      
+      // Stop incoming call sound if playing
+      if (incomingCallAudio) {
+        try {
+          incomingCallAudio.pause();
+          incomingCallAudio.currentTime = 0;
+          incomingCallAudio.src = '';
+          incomingCallAudio.load();
+        } catch (error) {
+          console.error('❌ Error stopping incoming call audio on unmount:', error);
+        }
+        setIncomingCallAudio(null);
+      }
       
       // IMMEDIATELY stop camera and microphone on unmount
       if (localVideoTrack) {
         try {
+          console.log('📹 Stopping local video track on unmount...');
           localVideoTrack.setEnabled(false);
           localVideoTrack.close();
+          console.log('✅ Local video track stopped on unmount');
         } catch (error) {
+          console.error('❌ Error stopping local video track on unmount:', error);
         }
       }
       
       if (localAudioTrack) {
         try {
+          console.log('🎤 Stopping local audio track on unmount...');
           localAudioTrack.setEnabled(false);
           localAudioTrack.close();
+          console.log('✅ Local audio track stopped on unmount');
         } catch (error) {
+          console.error('❌ Error stopping local audio track on unmount:', error);
         }
       }
+      
+      // Stop all tracked streams
+      console.log(`🔄 Stopping ${createdStreamsRef.current.length} tracked streams on unmount...`);
+      createdStreamsRef.current.forEach(stream => {
+        if (stream && stream.getTracks) {
+          stream.getTracks().forEach(track => {
+            track.stop();
+            track.enabled = false;
+          });
+        }
+      });
+      createdStreamsRef.current = [];
       
       // Force stop all media tracks
       forceStopAllMediaTracks();
@@ -467,6 +608,24 @@ const VideoCall = ({ recipientId, socket, currentUser, isIncoming = false, chann
         } catch (error) {
         }
       }
+      
+      // Check for any remaining active streams
+      setTimeout(() => {
+        const videoElements = document.querySelectorAll('video');
+        const activeStreams = [];
+        videoElements.forEach(video => {
+          if (video.srcObject) {
+            activeStreams.push(video.srcObject);
+          }
+        });
+        if (activeStreams.length > 0) {
+          console.warn('⚠️ Found remaining active streams after cleanup:', activeStreams.length);
+        } else {
+          console.log('✅ No remaining active streams found');
+        }
+      }, 200);
+      
+      console.log('🎉 VideoCall component unmount cleanup completed');
     };
   }, []); // Keep empty dependencies for initial mount only
 
@@ -589,6 +748,18 @@ const VideoCall = ({ recipientId, socket, currentUser, isIncoming = false, chann
           localAudioTrack.close(); 
         } catch {}
       }
+      
+      // Stop all tracked streams
+      createdStreamsRef.current.forEach(stream => {
+        if (stream && stream.getTracks) {
+          stream.getTracks().forEach(track => {
+            track.stop();
+            track.enabled = false;
+          });
+        }
+      });
+      createdStreamsRef.current = [];
+      
       forceStopAllMediaTracks();
     };
   }, []);
@@ -596,6 +767,13 @@ const VideoCall = ({ recipientId, socket, currentUser, isIncoming = false, chann
   // Also close tracks if joined becomes false (call ended remotely)
   useEffect(() => {
     if (!joined) {
+      // Stop ringing sound when call ends
+      if (isRinging) {
+        console.log('🎵 Call ended, stopping ringing sound...');
+        stopRingingSound();
+        setIsRinging(false);
+      }
+      
       if (localVideoTrack) {
         try { 
           localVideoTrack.setEnabled(false);
@@ -610,9 +788,23 @@ const VideoCall = ({ recipientId, socket, currentUser, isIncoming = false, chann
         } catch {}
         setLocalAudioTrack(null);
       }
+      
+      // Stop all tracked streams
+      createdStreamsRef.current.forEach(stream => {
+        if (stream && stream.getTracks) {
+          stream.getTracks().forEach(track => {
+            track.stop();
+            track.enabled = false;
+          });
+        }
+      });
+      createdStreamsRef.current = [];
+      
       forceStopAllMediaTracks();
     }
   }, [joined]);
+
+  // Note: Socket event handling is done in VideoCallContext to avoid duplicate toasts
 
   // Stop ringing sound when call is connected (when remote users join)
   useEffect(() => {
@@ -621,6 +813,15 @@ const VideoCall = ({ recipientId, socket, currentUser, isIncoming = false, chann
       setIsRinging(false);
     }
   }, [remoteUsers.length, isRinging]);
+
+  // Stop ringing sound when call is joined (for outgoing calls)
+  useEffect(() => {
+    if (joined && isRinging) {
+      console.log('🎵 Call joined, stopping ringing sound...');
+      stopRingingSound();
+      setIsRinging(false);
+    }
+  }, [joined, isRinging]);
 
   if (error) {
     return (
@@ -853,4 +1054,4 @@ const VideoCall = ({ recipientId, socket, currentUser, isIncoming = false, chann
   );
 };
 
-export default VideoCall; 
+export default VideoCall;

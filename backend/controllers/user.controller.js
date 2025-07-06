@@ -1,5 +1,6 @@
 import User from "../models/user.model.js";
 import Conversation from "../models/conversation.model.js";
+import Message from "../models/message.model.js";
 import cloudinary from "../config/cloudinary.js";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
@@ -114,6 +115,7 @@ export const getConversations = async (req, res) => {
 				}
 
 				// Calculate actual unread count based on messages that are not read
+				// The messages array from the populate already filters for unread messages
 				const actualUnreadCount = conversation.messages ? conversation.messages.length : 0;
 
 				// Get last message info
@@ -672,8 +674,7 @@ export const updateChatBackground = async (req, res) => {
 			return res.status(400).json({ error: "Conversation ID is required" });
 		}
 
-		// Import Conversation model
-		const Conversation = (await import("../models/conversation.model.js")).default;
+		// Use the already imported Conversation model
 
 		// Find conversation and verify user is a participant
 		const conversation = await Conversation.findById(conversationId);
@@ -736,13 +737,11 @@ export const deleteAccount = async (req, res) => {
 
 		// Delete user's conversations and messages
 		// Delete conversations where user is a participant
-		const Conversation = (await import("../models/conversation.model.js")).default;
 		await Conversation.deleteMany({
 			participants: userId
 		});
 
 		// Delete messages sent or received by user
-		const Message = (await import("../models/message.model.js")).default;
 		await Message.deleteMany({
 			$or: [
 				{ senderId: userId },
@@ -894,7 +893,6 @@ const cleanupUserBackgroundImages = async (userId) => {
 		}
 
 		// Find all conversations where user is a participant and clean up their backgrounds
-		const Conversation = (await import("../models/conversation.model.js")).default;
 		const conversations = await Conversation.find({ participants: userId });
 		
 		for (const conversation of conversations) {
@@ -918,7 +916,6 @@ export const getUserBackgroundImages = async (req, res) => {
 		}
 
 		// Get all conversations where user is a participant
-		const Conversation = (await import("../models/conversation.model.js")).default;
 		const conversations = await Conversation.find({ participants: userId })
 			.select('chatBackground createdAt')
 			.sort({ createdAt: -1 });
@@ -970,7 +967,6 @@ export const deleteBackgroundImage = async (req, res) => {
 		// Verify the image belongs to the user
 		if (conversationId) {
 			// Delete conversation background
-			const Conversation = (await import("../models/conversation.model.js")).default;
 			const conversation = await Conversation.findOne({
 				_id: conversationId,
 				participants: userId,
@@ -1007,6 +1003,66 @@ export const deleteBackgroundImage = async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error in deleteBackgroundImage: ", error.message);
+		res.status(500).json({ error: "Internal server error" });
+	}
+};
+
+export const changeUsername = async (req, res) => {
+	try {
+		const { newUsername } = req.body;
+		const userId = req.user._id;
+
+		// Validate input
+		if (!newUsername || newUsername.trim().length < 3) {
+			return res.status(400).json({ error: "Username must be at least 3 characters long" });
+		}
+
+		if (newUsername.trim().length > 30) {
+			return res.status(400).json({ error: "Username must be 30 characters or less" });
+		}
+
+		// Check if username contains only alphanumeric characters and underscores
+		const usernameRegex = /^[a-zA-Z0-9_]+$/;
+		if (!usernameRegex.test(newUsername.trim())) {
+			return res.status(400).json({ error: "Username can only contain letters, numbers, and underscores" });
+		}
+
+		// Check if username already exists
+		const existingUser = await User.findOne({ 
+			username: newUsername.trim(),
+			_id: { $ne: userId }
+		});
+
+		if (existingUser) {
+			return res.status(400).json({ error: "Username already exists" });
+		}
+
+		// Update username
+		const updatedUser = await User.findByIdAndUpdate(
+			userId,
+			{ username: newUsername.trim() },
+			{ new: true, runValidators: true }
+		).select("-password");
+
+		if (!updatedUser) {
+			return res.status(404).json({ error: "User not found" });
+		}
+
+		res.status(200).json({
+			message: "Username changed successfully",
+			user: {
+				_id: updatedUser._id,
+				fullName: updatedUser.fullName,
+				email: updatedUser.email,
+				username: updatedUser.username,
+				profilePic: updatedUser.profilePic,
+				bio: updatedUser.bio,
+				defaultChatBackground: updatedUser.defaultChatBackground,
+				soundSettings: updatedUser.soundSettings,
+			},
+		});
+	} catch (error) {
+		console.error("Error in changeUsername: ", error.message);
 		res.status(500).json({ error: "Internal server error" });
 	}
 };

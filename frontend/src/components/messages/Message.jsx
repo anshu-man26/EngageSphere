@@ -32,6 +32,15 @@ const Message = ({ message, isUploading = false, isSelected = false, onSelect = 
 	const formattedTime = extractTime(message.createdAt);
 	const profilePic = fromMe ? authUser?.profilePic : selectedConversation?.participant?.profilePic;
 
+	// Check if message is a GIF message
+	const isGifMessage = message.message && message.message.startsWith('[GIF]');
+	const gifData = isGifMessage ? (() => {
+		const lines = message.message.split('\n');
+		const title = lines[0].replace('[GIF] ', '');
+		const url = lines[1];
+		return { title, url };
+	})() : null;
+
 
 
 	const shakeClass = message.shouldShake ? "shake" : "";
@@ -462,40 +471,44 @@ const Message = ({ message, isUploading = false, isSelected = false, onSelect = 
 							
 							{/* File message display */}
 							{message.messageType === 'image' && (
-								<div className="flex flex-col space-y-2">
+								<div className="flex flex-col space-y-3">
 									{message.message && <p className="text-sm lg:text-base select-none">{message.message}</p>}
-									<div className="max-w-full relative">
-										<img 
-											ref={imageRef}
-											src={message.fileUrl} 
-											alt={message.fileName || "Image"} 
-											className="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-80 transition-opacity message-image"
-											onClick={() => window.open(message.fileUrl, '_blank')}
-											onMouseDown={handleImageMouseDown}
-											onMouseUp={handleImageMouseUp}
-											onMouseLeave={handleImageMouseLeave}
-											onTouchStart={handleImageTouchStart}
-											onTouchEnd={handleImageTouchEnd}
-											onContextMenu={handleImageContextMenu}
-										/>
+									<div className="max-w-full relative group message-image">
+										<div className="relative overflow-hidden rounded-2xl shadow-lg border border-white/10 bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm">
+											<img 
+												ref={imageRef}
+												src={message.fileUrl} 
+												alt={message.fileName || "Image"} 
+												className="w-full h-auto cursor-pointer transition-all duration-300 group-hover:scale-[1.02] group-hover:brightness-110"
+												onClick={() => window.open(message.fileUrl, '_blank')}
+												onMouseDown={handleImageMouseDown}
+												onMouseUp={handleImageMouseUp}
+												onMouseLeave={handleImageMouseLeave}
+												onTouchStart={handleImageTouchStart}
+												onTouchEnd={handleImageTouchEnd}
+												onContextMenu={handleImageContextMenu}
+											/>
+											{/* Hover overlay */}
+											<div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+										</div>
 										
 										{/* Image menu */}
 										{showImageMenu && (
-											<div className="absolute top-2 right-2 bg-gray-800/95 backdrop-blur-lg border border-gray-600/50 rounded-lg shadow-2xl p-1 min-w-[120px] z-20 animate-fadeIn image-menu">
+											<div className="absolute top-3 right-3 bg-gray-900/95 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl p-2 min-w-[130px] z-20 animate-fadeIn image-menu">
 												<button
 													onClick={() => {
 														handleFileDownload(message.fileUrl, message.fileName || "image.jpg");
 														setShowImageMenu(false);
 													}}
-													className="w-full flex items-center gap-2 px-3 py-2 text-white hover:bg-blue-500/20 rounded-md transition-all duration-200 text-xs font-medium group"
+													className="w-full flex items-center gap-2 px-3 py-2 text-white hover:bg-blue-500/20 rounded-lg transition-all duration-200 text-xs font-medium group"
 												>
 													<FaDownload size={12} className="text-blue-400 group-hover:text-blue-300 transition-colors" />
 													Download
 												</button>
-												<div className="h-px bg-gray-600/50 my-1"></div>
+												<div className="h-px bg-white/10 my-1.5"></div>
 												<button
 													onClick={handleImageReact}
-													className="w-full flex items-center gap-2 px-3 py-2 text-white hover:bg-green-500/20 rounded-md transition-all duration-200 text-xs font-medium group"
+													className="w-full flex items-center gap-2 px-3 py-2 text-white hover:bg-green-500/20 rounded-lg transition-all duration-200 text-xs font-medium group"
 												>
 													<span className="text-green-400 group-hover:text-green-300 transition-colors">😊</span>
 													React
@@ -505,6 +518,8 @@ const Message = ({ message, isUploading = false, isSelected = false, onSelect = 
 									</div>
 								</div>
 							)}
+
+
 							
 							{message.messageType === 'document' && (
 								<div className="flex flex-col space-y-2">
@@ -529,8 +544,62 @@ const Message = ({ message, isUploading = false, isSelected = false, onSelect = 
 								</div>
 							)}
 							
+							{/* GIF message display */}
+							{isGifMessage && gifData && (
+								<div className="flex flex-col space-y-3">
+									<div className="max-w-full relative group gif-message">
+										<div className="relative overflow-hidden rounded-2xl shadow-lg border border-white/10 bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm">
+											<img 
+												ref={imageRef}
+												src={gifData.url} 
+												alt={gifData.title || "GIF"} 
+												className="w-full h-auto cursor-pointer transition-all duration-300 group-hover:scale-[1.02] group-hover:brightness-110"
+												onClick={() => window.open(gifData.url, '_blank')}
+												onMouseDown={handleImageMouseDown}
+												onMouseUp={handleImageMouseUp}
+												onMouseLeave={handleImageMouseLeave}
+												onTouchStart={handleImageTouchStart}
+												onTouchEnd={handleImageTouchEnd}
+												onContextMenu={handleImageContextMenu}
+											/>
+											{/* Hover overlay */}
+											<div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+											
+											{/* GIF badge */}
+											<div className="absolute top-3 left-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs px-3 py-1.5 rounded-full font-semibold shadow-lg backdrop-blur-sm border border-white/20">
+												GIF
+											</div>
+										</div>
+										
+										{/* Image menu */}
+										{showImageMenu && (
+											<div className="absolute top-3 right-3 bg-gray-900/95 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl p-2 min-w-[130px] z-20 animate-fadeIn image-menu">
+												<button
+													onClick={() => {
+														handleFileDownload(gifData.url, gifData.title || "gif.gif");
+														setShowImageMenu(false);
+													}}
+													className="w-full flex items-center gap-2 px-3 py-2 text-white hover:bg-blue-500/20 rounded-lg transition-all duration-200 text-xs font-medium group"
+												>
+													<FaDownload size={12} className="text-blue-400 group-hover:text-blue-300 transition-colors" />
+													Download
+												</button>
+												<div className="h-px bg-white/10 my-1.5"></div>
+												<button
+													onClick={handleImageReact}
+													className="w-full flex items-center gap-2 px-3 py-2 text-white hover:bg-green-500/20 rounded-lg transition-all duration-200 text-xs font-medium group"
+												>
+													<span className="text-green-400 group-hover:text-green-300 transition-colors">😊</span>
+													React
+												</button>
+											</div>
+										)}
+									</div>
+								</div>
+							)}
+
 							{/* Regular text message */}
-							{(!message.messageType || message.messageType === 'text') && (
+							{(!message.messageType || message.messageType === 'text') && !isGifMessage && (
 								<p className="text-sm lg:text-base select-none">{message.message}</p>
 							)}
 						</>

@@ -3,18 +3,21 @@ import { useNavigate } from "react-router-dom";
 import useConversation from "../../zustand/useConversation";
 import MessageInput from "./MessageInput";
 import Messages from "./Messages";
+import GiphyPicker from "./GiphyPicker";
 import { TiMessages } from "react-icons/ti";
 import { FaTrash, FaTimes } from "react-icons/fa";
 import { Video, MoreVertical, User } from "lucide-react";
 import { VideoCameraIcon } from "@heroicons/react/24/outline";
+import { IoChevronBack } from "react-icons/io5";
 import { useAuthContext } from "../../context/AuthContext";
 import { useSocketContext } from "../../context/SocketContext";
 import { useVideoCall } from "../../context/VideoCallContext";
 import useDeleteMultipleMessages from "../../hooks/useDeleteMultipleMessages";
+import useSendGif from "../../hooks/useSendGif";
 import ChatBackgroundSelector from "../chat-background/ChatBackgroundSelector";
 import toast from "react-hot-toast";
 
-const MessageContainer = () => {
+const MessageContainer = ({ isSidebarOpen, setIsSidebarOpen }) => {
 	const navigate = useNavigate();
 	const { selectedConversation, setSelectedConversation, messages, updateConversationBackground } = useConversation();
 	const { onlineUsers } = useSocketContext();
@@ -22,6 +25,10 @@ const MessageContainer = () => {
 	const { authUser } = useAuthContext();
 	const { socket } = useSocketContext();
 	const { startOutgoingCall } = useVideoCall();
+	const { sendGif } = useSendGif();
+	
+	// GIF picker state
+	const [showGiphyPicker, setShowGiphyPicker] = useState(false);
 	
 	// Message selection state
 	const [selectedMessages, setSelectedMessages] = useState(new Set());
@@ -150,17 +157,54 @@ const MessageContainer = () => {
 		}
 	};
 
+	// Handle GIF picker toggle
+	const handleGifPickerToggle = (show) => {
+		setShowGiphyPicker(show);
+	};
+
+	// Handle GIF selection
+	const handleGifSelect = async (gifUrl, gifTitle) => {
+		await sendGif(gifUrl, gifTitle);
+		setShowGiphyPicker(false);
+	};
+
+	// Helper function to format background for CSS
+	const formatBackgroundForCSS = (background) => {
+		if (!background) return '';
+		
+		// If it's a URL (starts with http or https), wrap it in url()
+		if (background.startsWith('http://') || background.startsWith('https://')) {
+			return `url(${background})`;
+		}
+		
+		// If it's already a CSS value (like linear-gradient), return as is
+		return background;
+	};
+
 	return (
 		<div 
 			key={`${selectedConversation?._id}-${chatBackground}-${authUser?.defaultChatBackground}`}
 			className='flex-1 flex flex-col h-full relative bg-gray-900 min-w-0 overflow-hidden'
 			style={{
-				background: chatBackground ? (chatBackground.startsWith('http') ? `url(${chatBackground})` : chatBackground) : (authUser?.defaultChatBackground ? (authUser.defaultChatBackground.startsWith('http') ? `url(${authUser.defaultChatBackground})` : authUser.defaultChatBackground) : ''),
+				background: formatBackgroundForCSS(chatBackground || authUser?.defaultChatBackground || ''),
 				backgroundSize: 'cover',
 				backgroundPosition: 'center',
 				backgroundRepeat: 'no-repeat',
 			}}
 		>
+			{/* Mobile Sidebar Toggle Button - positioned below header */}
+			<div className='lg:hidden absolute top-20 left-4 z-20'>
+				<button
+					onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+					className={`sidebar-toggle-button-top ${isSidebarOpen ? 'sidebar-open' : ''}`}
+				>
+					<IoChevronBack 
+						size={20} 
+						className="arrow-icon"
+					/>
+				</button>
+			</div>
+
 			{!selectedConversation ? (
 				<NoChatSelected />
 			) : (
@@ -306,7 +350,7 @@ const MessageContainer = () => {
 					
 					{/* Fixed Input */}
 					<div className='flex-shrink-0'>
-						<MessageInput />
+						<MessageInput onGifPickerToggle={handleGifPickerToggle} />
 					</div>
 				</>
 			)}
@@ -319,6 +363,16 @@ const MessageContainer = () => {
 					onClose={() => setShowBackgroundSelector(false)}
 					onBackgroundChange={handleBackgroundChange}
 				/>
+			)}
+
+			{/* GIF Picker Modal */}
+			{showGiphyPicker && (
+				<div className="absolute inset-0 z-50 flex items-center justify-center">
+					<GiphyPicker
+						onGifSelect={handleGifSelect}
+						onClose={() => setShowGiphyPicker(false)}
+					/>
+				</div>
 			)}
 		</div>
 	);

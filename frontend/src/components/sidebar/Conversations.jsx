@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useMemo } from "react";
 import useGetConversations from "../../hooks/useGetConversations";
 import useGetUsers from "../../hooks/useGetUsers";
 import useConversation from "../../zustand/useConversation";
@@ -11,20 +12,24 @@ const Conversations = ({ onConversationSelect }) => {
 	const { users } = useGetUsers();
 	const { setSelectedConversation, searchTerm } = useConversation();
 
-	// Filter conversations based on search term
-	const filteredConversations = conversations.filter(conversation => {
-		if (!searchTerm.trim()) return true;
-		const participantName = conversation.participant?.fullName || '';
-		return participantName.toLowerCase().includes(searchTerm.toLowerCase().trim());
-	});
+	// Memoize filtered conversations and users to prevent unnecessary re-renders
+	const filteredConversations = useMemo(() => {
+		return conversations.filter(conversation => {
+			if (!searchTerm.trim()) return true;
+			const participantName = conversation.participant?.fullName || '';
+			return participantName.toLowerCase().includes(searchTerm.toLowerCase().trim());
+		});
+	}, [conversations, searchTerm]);
 
 	// Filter users for new chat (exclude users already in conversations)
-	const existingConversationUserIds = conversations.map(conv => conv.participant._id);
-	const availableUsers = users.filter(user => !existingConversationUserIds.includes(user._id));
-	const filteredUsers = availableUsers.filter(user => {
-		if (!searchTerm.trim()) return true;
-		return user.fullName && user.fullName.toLowerCase().includes(searchTerm.toLowerCase().trim());
-	});
+	const filteredUsers = useMemo(() => {
+		const existingConversationUserIds = conversations.map(conv => conv.participant._id);
+		const availableUsers = users.filter(user => !existingConversationUserIds.includes(user._id));
+		return availableUsers.filter(user => {
+			if (!searchTerm.trim()) return true;
+			return user.fullName && user.fullName.toLowerCase().includes(searchTerm.toLowerCase().trim());
+		});
+	}, [conversations, users, searchTerm]);
 
 	const handleConversationClick = (conversation) => {
 		setSelectedConversation(conversation);
@@ -56,14 +61,16 @@ const Conversations = ({ onConversationSelect }) => {
 	}
 
 	return (
-		<div className='py-2 flex flex-col overflow-auto min-w-0'>
+		<div className='py-2 flex flex-col overflow-auto min-w-0 w-full sidebar-content'>
 			{/* Search results indicator */}
 			{searchTerm.trim() && (
-				<div className='px-3 py-2 text-sm text-gray-400 border-b border-white/10 mb-2'>
-					{filteredConversations.length === 0 && filteredUsers.length === 0
-						? `No results found for "${searchTerm}"`
-						: `Found ${filteredConversations.length + filteredUsers.length} result${filteredConversations.length + filteredUsers.length === 1 ? '' : 's'} for "${searchTerm}"`
-					}
+				<div className='px-3 py-2 text-sm text-gray-400 border-b border-white/10 mb-2 overflow-hidden'>
+					<div className='truncate'>
+						{filteredConversations.length === 0 && filteredUsers.length === 0
+							? `No results found for "${searchTerm}"`
+							: `Found ${filteredConversations.length + filteredUsers.length} result${filteredConversations.length + filteredUsers.length === 1 ? '' : 's'} for "${searchTerm}"`
+						}
+					</div>
 				</div>
 			)}
 
@@ -87,7 +94,7 @@ const Conversations = ({ onConversationSelect }) => {
 			{filteredUsers.map((user, idx) => (
 				<div
 					key={user._id}
-					className='flex items-center gap-2 sm:gap-3 p-3 hover:bg-white/10 cursor-pointer border-b border-white/10 last:border-b-0 transition-colors'
+					className='flex items-center gap-2 sm:gap-3 p-3 hover:bg-white/10 cursor-pointer border-b border-white/10 last:border-b-0 transition-colors w-full min-w-0'
 					onClick={() => handleUserClick(user)}
 				>
 					<div 
@@ -108,7 +115,7 @@ const Conversations = ({ onConversationSelect }) => {
 							user.fullName.charAt(0).toUpperCase()
 						)}
 					</div>
-					<div className='flex-1 min-w-0'>
+					<div className='flex-1 min-w-0 overflow-hidden'>
 						<p className='text-white font-medium truncate text-sm sm:text-base'>{user.fullName}</p>
 						<p className='text-gray-400 text-xs sm:text-sm truncate'>Click to start chat</p>
 					</div>

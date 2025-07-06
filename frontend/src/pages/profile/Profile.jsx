@@ -5,14 +5,15 @@ import useUpdateSoundSettings from "../../hooks/useUpdateSoundSettings";
 import useUploadProfilePic from "../../hooks/useUploadProfilePic";
 import useChangePassword from "../../hooks/useChangePassword";
 import useChangeEmail from "../../hooks/useChangeEmail";
+import useChangeUsername from "../../hooks/useChangeUsername";
 import useRequestDeleteAccountOtp from "../../hooks/useRequestDeleteAccountOtp";
 import useDeleteAccount from "../../hooks/useDeleteAccount";
-import { FaUser, FaSave, FaArrowLeft, FaUpload, FaTimes, FaLock, FaEdit, FaEye, FaEyeSlash, FaShieldAlt, FaUnlock, FaTrash, FaImage, FaVolumeUp, FaVolumeMute, FaVolumeOff } from "react-icons/fa";
+import { FaUser, FaSave, FaArrowLeft, FaUpload, FaTimes, FaLock, FaEdit, FaEye, FaEyeSlash, FaShieldAlt, FaUnlock, FaTrash, FaImage, FaVolumeUp, FaVolumeMute, FaVolumeOff, FaBars, FaChevronDown, FaAt } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import ChatBackgroundSelector from "../../components/chat-background/ChatBackgroundSelector";
 import BackgroundImageManager from "../../components/chat-background/BackgroundImageManager";
-import useChatBackground from "../../hooks/useChatBackground";
+import useDefaultChatBackground from "../../hooks/useDefaultChatBackground";
 
 const Profile = () => {
 	const { authUser, setAuthUser } = useAuthContext();
@@ -21,16 +22,21 @@ const Profile = () => {
 	const { loading: uploadLoading, uploadProfilePic } = useUploadProfilePic();
 	const { loading: passwordLoading, changePassword } = useChangePassword();
 	const { loading: emailLoading, otpLoading, requestEmailChangeOtp, verifyOtp } = useChangeEmail();
+	const { loading: usernameLoading, changeUsername } = useChangeUsername();
 	const { loading: deleteOtpLoading, requestOtp: requestDeleteOtp } = useRequestDeleteAccountOtp();
 	const { loading: deleteAccountLoading, deleteAccount } = useDeleteAccount();
 	const fileInputRef = useRef(null);
-	const { loading: bgLoading, updateChatBackground } = useChatBackground();
+	const { loading: bgLoading, updateDefaultChatBackground } = useDefaultChatBackground();
 
 	const [inputs, setInputs] = useState({
 		fullName: authUser?.fullName || "",
 		profilePic: authUser?.profilePic || "",
 		bio: authUser?.bio || "",
 	});
+
+	const [usernameInput, setUsernameInput] = useState(authUser?.username || "");
+	const [usernameError, setUsernameError] = useState("");
+	const [usernameModified, setUsernameModified] = useState(false);
 
 	const [passwordInputs, setPasswordInputs] = useState({
 		currentPassword: "",
@@ -54,9 +60,13 @@ const Profile = () => {
 	const [showNewPassword, setShowNewPassword] = useState(false);
 	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 	const [activeTab, setActiveTab] = useState("profile"); // "profile", "password", "email", "2fa", "delete", "chat-settings"
+	const [showMobileMenu, setShowMobileMenu] = useState(false);
 	
 	// Bio editing state
 	const [isEditingBio, setIsEditingBio] = useState(false);
+	
+	// Username editing state
+	const [isEditingUsername, setIsEditingUsername] = useState(false);
 	
 	// 2FA states
 	const [twoFactorEnabled, setTwoFactorEnabled] = useState(authUser?.twoFactorEnabled || false);
@@ -87,6 +97,10 @@ const Profile = () => {
 		ringtone: authUser?.soundSettings?.ringtone !== false, // Default to true
 	});
 
+	// Separate loading states for each sound setting
+	const [messageSoundLoading, setMessageSoundLoading] = useState(false);
+	const [ringtoneLoading, setRingtoneLoading] = useState(false);
+
 	// Update sound settings when authUser changes
 	useEffect(() => {
 		if (authUser?.soundSettings) {
@@ -96,6 +110,28 @@ const Profile = () => {
 			});
 		}
 	}, [authUser?.soundSettings]);
+
+	// Update username input when authUser changes
+	useEffect(() => {
+		if (authUser?.username) {
+			setUsernameInput(authUser.username);
+			setUsernameModified(false);
+		}
+	}, [authUser?.username]);
+
+	// Close mobile menu when clicking outside
+	useEffect(() => {
+		const handleClickOutside = (event) => {
+			if (showMobileMenu && !event.target.closest('.mobile-menu-container')) {
+				setShowMobileMenu(false);
+			}
+		};
+
+		document.addEventListener('mousedown', handleClickOutside);
+		return () => {
+			document.removeEventListener('mousedown', handleClickOutside);
+		};
+	}, [showMobileMenu]);
 
 	const validateForm = () => {
 		const newErrors = {};
@@ -108,6 +144,50 @@ const Profile = () => {
 
 		setErrors(newErrors);
 		return Object.keys(newErrors).length === 0;
+	};
+
+	const validateUsername = () => {
+		if (!usernameInput.trim()) {
+			setUsernameError("Username is required");
+			return false;
+		}
+		
+		if (usernameInput.trim().length < 3) {
+			setUsernameError("Username must be at least 3 characters");
+			return false;
+		}
+		
+		if (usernameInput.trim().length > 30) {
+			setUsernameError("Username must be 30 characters or less");
+			return false;
+		}
+		
+		// Check if username contains only alphanumeric characters and underscores
+		const usernameRegex = /^[a-zA-Z0-9_]+$/;
+		if (!usernameRegex.test(usernameInput.trim())) {
+			setUsernameError("Username can only contain letters, numbers, and underscores");
+			return false;
+		}
+		
+		setUsernameError("");
+		return true;
+	};
+
+	const handleUsernameChange = (value) => {
+		setUsernameInput(value);
+		setUsernameModified(value !== authUser?.username);
+		if (usernameError) {
+			setUsernameError("");
+		}
+	};
+
+	const handleUsernameSubmit = async () => {
+		if (validateUsername()) {
+			const success = await changeUsername(usernameInput.trim());
+			if (success) {
+				setUsernameModified(false);
+			}
+		}
 	};
 
 	const handleSubmit = async (e) => {
@@ -188,6 +268,29 @@ const Profile = () => {
 		// Reset bio to original value
 		setInputs(prev => ({ ...prev, bio: authUser?.bio || "" }));
 		setIsEditingBio(false);
+	};
+
+	const handleEditUsername = () => {
+		setIsEditingUsername(true);
+		setUsernameModified(false);
+	};
+
+	const handleSaveUsername = async () => {
+		if (validateUsername()) {
+			const success = await changeUsername(usernameInput.trim());
+			if (success) {
+				setIsEditingUsername(false);
+				setUsernameModified(false);
+			}
+		}
+	};
+
+	const handleCancelUsername = () => {
+		// Reset username to original value
+		setUsernameInput(authUser?.username || "");
+		setUsernameError("");
+		setUsernameModified(false);
+		setIsEditingUsername(false);
 	};
 
 	const validatePasswordForm = () => {
@@ -435,7 +538,7 @@ const Profile = () => {
 
 	const handleDefaultBgChange = async (bg) => {
 		setDefaultChatBackground(bg);
-		const success = await updateChatBackground(bg);
+		const success = await updateDefaultChatBackground(bg);
 		if (success) {
 			setShowDefaultBgSelector(false);
 		}
@@ -444,6 +547,13 @@ const Profile = () => {
 	// Handle sound settings update
 	const handleSoundSettingsChange = async (setting, value) => {
 		try {
+			// Set the appropriate loading state
+			if (setting === 'messageSound') {
+				setMessageSoundLoading(true);
+			} else if (setting === 'ringtone') {
+				setRingtoneLoading(true);
+			}
+
 			const updatedSettings = { ...soundSettings, [setting]: value };
 			setSoundSettings(updatedSettings);
 			
@@ -452,7 +562,7 @@ const Profile = () => {
 			
 			if (success) {
 				toast.success(`${setting === 'messageSound' ? 'Message sound' : 'Ringtone'} ${value ? 'enabled' : 'disabled'}`);
-		} else {
+			} else {
 				// Revert the change if update fails
 				setSoundSettings(prev => ({ ...prev, [setting]: !value }));
 			}
@@ -460,84 +570,151 @@ const Profile = () => {
 			// Revert the change if update fails
 			setSoundSettings(prev => ({ ...prev, [setting]: !value }));
 			toast.error('Failed to update sound settings');
+		} finally {
+			// Clear the appropriate loading state
+			if (setting === 'messageSound') {
+				setMessageSoundLoading(false);
+			} else if (setting === 'ringtone') {
+				setRingtoneLoading(false);
+			}
 		}
 	};
 
 	return (
-		<div className='h-screen px-2 sm:px-4 py-4 bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 overflow-hidden profile-responsive'>
-			<div className='w-full max-w-2xl mx-auto h-full flex flex-col'>
-				{/* Header */}
-				<div className='text-center mb-4 sm:mb-8'>
-					<div className='inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-purple-600 rounded-full mb-3 sm:mb-4 shadow-lg'>
-						<FaUser className='text-white text-lg sm:text-2xl' />
-					</div>
-					<h1 className='text-2xl sm:text-4xl font-bold text-white mb-2'>
-						Profile Settings
-					</h1>
-					<p className='text-gray-300 text-xs sm:text-sm'>
-						Manage your account settings
-					</p>
-				</div>
-
-				{/* Tab Navigation - Responsive */}
-				<div className='flex flex-wrap sm:flex-nowrap mb-0 rounded-t-2xl overflow-hidden shadow-lg mobile-tabs profile-tabs'>
-					<button
-						onClick={() => setActiveTab("profile")}
-						className={`flex-1 py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium rounded-t-2xl transition-all duration-200 ${activeTab === "profile" ? "bg-white/20 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"}`}
-					>
-						<span className="hidden sm:inline">Profile</span>
-						<span className="sm:hidden">Profile</span>
-					</button>
-					<button
-						onClick={() => setActiveTab("password")}
-						className={`flex-1 py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium rounded-t-2xl transition-all duration-200 ${activeTab === "password" ? "bg-white/20 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"}`}
-					>
-						<span className="hidden sm:inline">Password</span>
-						<span className="sm:hidden">Pass</span>
-					</button>
-					<button
-						onClick={() => setActiveTab("email")}
-						className={`flex-1 py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium rounded-t-2xl transition-all duration-200 ${activeTab === "email" ? "bg-white/20 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"}`}
-					>
-						<span className="hidden sm:inline">Email</span>
-						<span className="sm:hidden">Email</span>
-					</button>
-					<button
-						onClick={() => setActiveTab("2fa")}
-						className={`flex-1 py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium rounded-t-2xl transition-all duration-200 ${activeTab === "2fa" ? "bg-white/20 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"}`}
-					>
-						<span className="hidden sm:inline">2FA</span>
-						<span className="sm:hidden">2FA</span>
-					</button>
-					<button
-						onClick={() => setActiveTab("delete")}
-						className={`flex-1 py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium rounded-t-2xl transition-all duration-200 ${activeTab === "delete" ? "bg-red-500/20 text-red-300" : "text-red-400 hover:text-red-300 hover:bg-red-500/5"}`}
-					>
-						<span className="hidden sm:inline">Delete Account</span>
-						<span className="sm:hidden">Delete</span>
-					</button>
-					<button
-						onClick={() => setActiveTab("chat-settings")}
-						className={`flex-1 py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium rounded-t-2xl transition-all duration-200 ${activeTab === "chat-settings" ? "bg-white/20 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"}`}
-					>
-						<span className="hidden sm:inline">Chat Settings</span>
-						<span className="sm:hidden">Chat</span>
-					</button>
-				</div>
-
-				{/* Content Container */}
-				<div className='bg-white/10 backdrop-blur-lg rounded-b-2xl shadow-2xl border border-white/20 p-4 sm:p-8 relative flex-1 overflow-y-auto profile-content content-area'>
-					{/* Back Button - Positioned at top right of form */}
-					<div className='absolute top-2 sm:top-4 right-2 sm:right-4 z-10'>
+		<div className='min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-blue-900'>
+			{/* Header */}
+			<div className='p-4 sm:p-6'>
+				<div className='max-w-6xl mx-auto'>
+					<div className='flex items-center justify-between'>
+						<div>
+							<h1 className='text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-2'>
+								Profile Settings
+							</h1>
+							<p className='text-gray-300 text-sm sm:text-base'>
+								Manage your account settings and preferences
+							</p>
+						</div>
 						<Link 
 							to="/" 
-							className='inline-flex items-center gap-1 sm:gap-2 bg-white/10 hover:bg-white/20 text-white px-2 sm:px-4 py-1 sm:py-2 rounded-lg transition-all duration-200 border border-white/20 hover:border-white/30 shadow-lg backdrop-blur-sm text-xs sm:text-sm'
+							className='inline-flex items-center gap-2 bg-gradient-to-r from-purple-500/20 to-blue-500/20 hover:from-purple-500/30 hover:to-blue-500/30 text-white px-3 sm:px-4 py-2 rounded-xl transition-all duration-300 border border-white/20 hover:border-white/40 shadow-lg backdrop-blur-sm text-sm font-medium hover:scale-105'
 						>
-							<FaArrowLeft className='text-xs sm:text-sm' />
+							<FaArrowLeft className='text-sm' />
 							<span className="hidden sm:inline">Back to Chat</span>
 							<span className="sm:hidden">Back</span>
 						</Link>
 					</div>
+				</div>
+			</div>
+
+			{/* Main Content */}
+			<div className='max-w-6xl mx-auto px-4 sm:px-6 pb-6'>
+				<div className='flex flex-col lg:flex-row gap-6'>
+					{/* Sidebar Navigation - Desktop */}
+					<div className='hidden lg:block lg:w-64 flex-shrink-0'>
+						<div className='bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-4 shadow-2xl sticky top-6'>
+							<h3 className='text-lg font-semibold text-white mb-4'>Settings</h3>
+							<nav className='space-y-2'>
+								{[
+									{ id: "profile", label: "Profile", icon: FaUser, color: "from-purple-500 to-blue-500" },
+									{ id: "password", label: "Password", icon: FaLock, color: "from-blue-500 to-cyan-500" },
+									{ id: "email", label: "Email", icon: FaEdit, color: "from-cyan-500 to-teal-500" },
+									{ id: "2fa", label: "Two-Factor Auth", icon: FaShieldAlt, color: "from-teal-500 to-green-500" },
+									{ id: "chat-settings", label: "Chat Settings", icon: FaVolumeUp, color: "from-green-500 to-emerald-500" },
+									{ id: "delete", label: "Delete Account", icon: FaTrash, color: "from-red-500 to-pink-500" }
+								].map(({ id, label, icon: Icon, color }) => (
+									<button
+										key={id}
+										onClick={() => setActiveTab(id)}
+										className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 text-left ${
+											activeTab === id 
+												? `bg-gradient-to-r ${color} text-white shadow-lg transform scale-105` 
+												: "text-white/70 hover:text-white hover:bg-white/10"
+										}`}
+									>
+										<Icon className="text-lg" />
+										<span className="font-medium">{label}</span>
+									</button>
+								))}
+							</nav>
+						</div>
+					</div>
+
+					{/* Mobile Navigation */}
+					<div className='lg:hidden mb-4 mobile-menu-container'>
+						<div className='relative'>
+							{/* Mobile Menu Button */}
+							<button
+								onClick={() => setShowMobileMenu(!showMobileMenu)}
+								className='w-full bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-4 shadow-2xl flex items-center justify-between text-white hover:bg-white/20 transition-all duration-300'
+							>
+								<div className='flex items-center gap-3'>
+									{(() => {
+										const currentTab = [
+											{ id: "profile", label: "Profile", icon: FaUser, color: "from-purple-500 to-blue-500" },
+											{ id: "password", label: "Password", icon: FaLock, color: "from-blue-500 to-cyan-500" },
+											{ id: "email", label: "Email", icon: FaEdit, color: "from-cyan-500 to-teal-500" },
+											{ id: "2fa", label: "Two-Factor Auth", icon: FaShieldAlt, color: "from-teal-500 to-green-500" },
+											{ id: "chat-settings", label: "Chat Settings", icon: FaVolumeUp, color: "from-green-500 to-emerald-500" },
+											{ id: "delete", label: "Delete Account", icon: FaTrash, color: "from-red-500 to-pink-500" }
+										].find(tab => tab.id === activeTab);
+										
+										const Icon = currentTab.icon;
+										return (
+											<>
+												<div className={`w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-r ${currentTab.color}`}>
+													<Icon className="text-white text-sm" />
+												</div>
+												<span className="font-medium">{currentTab.label}</span>
+											</>
+										);
+									})()}
+								</div>
+								<FaChevronDown className={`text-white/70 transition-transform duration-300 ${showMobileMenu ? 'rotate-180' : ''}`} />
+							</button>
+
+							{/* Mobile Dropdown Menu */}
+							{showMobileMenu && (
+								<div className='absolute top-full left-0 right-0 mt-2 bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl shadow-2xl z-50 overflow-hidden'>
+									<div className='p-2'>
+										{[
+											{ id: "profile", label: "Profile", icon: FaUser, color: "from-purple-500 to-blue-500" },
+											{ id: "password", label: "Password", icon: FaLock, color: "from-blue-500 to-cyan-500" },
+											{ id: "email", label: "Email", icon: FaEdit, color: "from-cyan-500 to-teal-500" },
+											{ id: "2fa", label: "Two-Factor Auth", icon: FaShieldAlt, color: "from-teal-500 to-green-500" },
+											{ id: "chat-settings", label: "Chat Settings", icon: FaVolumeUp, color: "from-green-500 to-emerald-500" },
+											{ id: "delete", label: "Delete Account", icon: FaTrash, color: "from-red-500 to-pink-500" }
+										].map(({ id, label, icon: Icon, color }) => (
+											<button
+												key={id}
+												onClick={() => {
+													setActiveTab(id);
+													setShowMobileMenu(false);
+												}}
+												className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 text-left ${
+													activeTab === id 
+														? `bg-gradient-to-r ${color} text-white shadow-lg` 
+														: "text-white/70 hover:text-white hover:bg-white/10"
+												}`}
+											>
+												<div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+													activeTab === id 
+														? 'bg-white/20' 
+														: `bg-gradient-to-r ${color}`
+												}`}>
+													<Icon className="text-white text-sm" />
+												</div>
+												<span className="font-medium">{label}</span>
+											</button>
+										))}
+									</div>
+								</div>
+							)}
+						</div>
+					</div>
+
+					{/* Content Area */}
+					<div className='flex-1'>
+						<div className='bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6 shadow-2xl min-h-[600px]'>
 
 					{/* Profile Tab */}
 					{activeTab === "profile" && (
@@ -645,6 +822,97 @@ const Profile = () => {
 								</div>
 								{errors.fullName && (
 									<p className='text-red-400 text-xs mt-1'>{errors.fullName}</p>
+								)}
+							</div>
+
+							{/* Username Field */}
+							<div className='space-y-2'>
+								<div className='flex items-center justify-between'>
+									<label className='text-sm font-medium text-gray-200'>
+										Username
+									</label>
+									{!isEditingUsername && (
+										<button
+											type='button'
+											onClick={handleEditUsername}
+											className='text-xs text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1'
+										>
+											<FaEdit className='text-xs' />
+											Edit Username
+										</button>
+									)}
+								</div>
+								
+								{isEditingUsername ? (
+									<div className='space-y-2'>
+										<div className='relative'>
+											<div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
+												<FaAt className='h-4 w-4 sm:h-5 sm:w-5 text-gray-400' />
+											</div>
+											<input
+												type='text'
+												placeholder='Enter your username'
+												className={`w-full pl-9 sm:pl-10 pr-4 py-2.5 sm:py-3 bg-white/10 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 text-sm sm:text-base ${
+													usernameError ? 'border-red-500' : 'border-gray-600'
+												}`}
+												value={usernameInput}
+												onChange={(e) => handleUsernameChange(e.target.value)}
+												onKeyPress={(e) => {
+													if (e.key === 'Enter') {
+														e.preventDefault();
+														handleSaveUsername();
+													}
+												}}
+												autoFocus
+												required
+											/>
+										</div>
+										{usernameError && (
+											<p className='text-red-400 text-xs mt-1'>{usernameError}</p>
+										)}
+										<div className='flex gap-2'>
+											<button
+												type='button'
+												onClick={handleSaveUsername}
+												disabled={usernameLoading}
+												className='px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm flex items-center gap-2'
+											>
+												{usernameLoading ? (
+													<div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white'></div>
+												) : (
+													<>
+														<FaSave className='text-xs' />
+														Save
+													</>
+												)}
+											</button>
+											<button
+												type='button'
+												onClick={handleCancelUsername}
+												className='px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-all duration-200 text-sm'
+											>
+												Cancel
+											</button>
+										</div>
+										<p className='text-xs text-gray-400 mt-1'>
+											Username can only contain letters, numbers, and underscores (3-30 characters)
+										</p>
+									</div>
+								) : (
+									<div className='bg-white/5 border border-gray-700 rounded-lg p-4 min-h-[60px] flex items-center'>
+										{usernameInput ? (
+											<div className='flex items-center gap-2'>
+												<FaAt className='text-gray-400 text-sm' />
+												<span className='text-white text-sm font-medium'>
+													{usernameInput}
+												</span>
+											</div>
+										) : (
+											<p className='text-gray-400 text-sm italic'>
+												No username set. Click "Edit Username" to add one.
+											</p>
+										)}
+									</div>
 								)}
 							</div>
 
@@ -1285,30 +1553,34 @@ const Profile = () => {
 
 					{/* Chat Settings Tab */}
 					{activeTab === "chat-settings" && (
-						<div className="space-y-4 sm:space-y-6 chat-settings-container">
-							<h2 className="text-lg sm:text-xl font-bold text-white mb-3 sm:mb-4">Chat Settings</h2>
+						<div className="space-y-6">
+							<h2 className="text-xl font-bold text-white mb-4">Chat Settings</h2>
 							
 							{/* Sound Settings Section */}
-							<div className="bg-white/5 rounded-lg p-4 sm:p-6 border border-white/10 chat-settings-section">
-								<h3 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4 flex items-center gap-2">
-									<FaVolumeUp className="text-purple-400 text-sm sm:text-base" />
+							<div className="bg-gray-800 rounded-lg p-6 border border-gray-600">
+								<h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+									<FaVolumeUp className="text-gray-300" />
 									Sound Settings
 								</h3>
 								
-								<div className="space-y-3 sm:space-y-4">
+								<div className="space-y-4">
 									{/* Message Sound Toggle */}
-									<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-white/5 rounded-lg border border-white/10 gap-3 sm:gap-0 min-h-[60px] sm:min-h-[70px]">
-										<div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-											<div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+									<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-gray-700 rounded-lg border border-gray-600 gap-4">
+										<div className="flex items-center gap-3 flex-1 min-w-0">
+											<div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+												soundSettings.messageSound 
+													? 'bg-green-600' 
+													: 'bg-gray-600'
+											}`}>
 												{soundSettings.messageSound ? (
-													<FaVolumeUp className="text-purple-400 text-sm sm:text-lg" />
+													<FaVolumeUp className="text-white" />
 												) : (
-													<FaVolumeMute className="text-gray-400 text-sm sm:text-lg" />
+													<FaVolumeMute className="text-white" />
 												)}
 											</div>
 											<div className="flex-1 min-w-0">
-												<h4 className="text-white font-medium text-sm sm:text-base">Message Sound</h4>
-												<p className="text-gray-400 text-xs sm:text-sm truncate chat-settings-text">
+												<h4 className="text-white font-medium">Message Sound</h4>
+												<p className="text-gray-300 text-sm">
 													{soundSettings.messageSound 
 														? "Play sound when receiving new messages" 
 														: "No sound for new messages"
@@ -1318,32 +1590,44 @@ const Profile = () => {
 										</div>
 										<button
 											onClick={() => handleSoundSettingsChange('messageSound', !soundSettings.messageSound)}
-											disabled={soundSettingsLoading}
-											className={`relative inline-flex h-5 w-10 sm:h-6 sm:w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-900 flex-shrink-0 toggle-switch chat-settings-toggle ${
-												soundSettings.messageSound ? 'bg-purple-600' : 'bg-gray-600'
-											} ${soundSettingsLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+											disabled={messageSoundLoading}
+											className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
+												soundSettings.messageSound 
+													? 'bg-green-500' 
+													: 'bg-gray-300'
+											} ${messageSoundLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
 										>
-											<span
-												className={`inline-block h-3 w-3 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
-													soundSettings.messageSound ? 'translate-x-5 sm:translate-x-6' : 'translate-x-1'
-												}`}
-											/>
+											{messageSoundLoading ? (
+												<div className="absolute inset-0 flex items-center justify-center">
+													<div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+												</div>
+											) : (
+												<span
+													className={`inline-block h-5 w-5 transform rounded-full bg-white transition duration-200 ease-in-out ${
+														soundSettings.messageSound ? 'translate-x-6' : 'translate-x-1'
+													}`}
+												/>
+											)}
 										</button>
 									</div>
 
 									{/* Ringtone Toggle */}
-									<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-white/5 rounded-lg border border-white/10 gap-3 sm:gap-0 min-h-[60px] sm:min-h-[70px]">
-										<div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-											<div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+									<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-gray-700 rounded-lg border border-gray-600 gap-4">
+										<div className="flex items-center gap-3 flex-1 min-w-0">
+											<div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+												soundSettings.ringtone 
+													? 'bg-blue-600' 
+													: 'bg-gray-600'
+											}`}>
 												{soundSettings.ringtone ? (
-													<FaVolumeUp className="text-blue-400 text-sm sm:text-lg" />
+													<FaVolumeUp className="text-white" />
 												) : (
-													<FaVolumeOff className="text-gray-400 text-sm sm:text-lg" />
+													<FaVolumeOff className="text-white" />
 												)}
 											</div>
 											<div className="flex-1 min-w-0">
-												<h4 className="text-white font-medium text-sm sm:text-base">Video Call Ringtone</h4>
-												<p className="text-gray-400 text-xs sm:text-sm truncate chat-settings-text">
+												<h4 className="text-white font-medium">Video Call Ringtone</h4>
+												<p className="text-gray-300 text-sm">
 													{soundSettings.ringtone 
 														? "Play ringtone for incoming video calls" 
 														: "No ringtone for video calls"
@@ -1353,51 +1637,59 @@ const Profile = () => {
 										</div>
 										<button
 											onClick={() => handleSoundSettingsChange('ringtone', !soundSettings.ringtone)}
-											disabled={soundSettingsLoading}
-											className={`relative inline-flex h-5 w-10 sm:h-6 sm:w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 flex-shrink-0 toggle-switch chat-settings-toggle ${
-												soundSettings.ringtone ? 'bg-blue-600' : 'bg-gray-600'
-											} ${soundSettingsLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+											disabled={ringtoneLoading}
+											className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
+												soundSettings.ringtone 
+													? 'bg-green-500' 
+													: 'bg-gray-300'
+											} ${ringtoneLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
 										>
-											<span
-												className={`inline-block h-3 w-3 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
-													soundSettings.ringtone ? 'translate-x-5 sm:translate-x-6' : 'translate-x-1'
-												}`}
-											/>
+											{ringtoneLoading ? (
+												<div className="absolute inset-0 flex items-center justify-center">
+													<div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+												</div>
+											) : (
+												<span
+													className={`inline-block h-5 w-5 transform rounded-full bg-white transition duration-200 ease-in-out ${
+														soundSettings.ringtone ? 'translate-x-6' : 'translate-x-1'
+													}`}
+												/>
+											)}
 										</button>
 									</div>
 								</div>
 							</div>
 
 							{/* Default Chat Background Section */}
-							<div className="bg-white/5 rounded-lg p-4 sm:p-6 border border-white/10 chat-settings-section min-h-[120px] sm:min-h-[140px]">
-								<h3 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">Default Chat Background</h3>
-								<div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-									<span className="text-gray-300 text-sm sm:text-base">Background:</span>
-									<div className="flex items-center gap-2 sm:gap-4">
-								<button
-									onClick={() => setShowDefaultBgSelector(true)}
-											className="px-3 sm:px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition-all duration-200 text-sm sm:text-base whitespace-nowrap chat-settings-button interactive-element"
-								>
-									Change
-								</button>
-								{defaultChatBackground && (
-											<div className="w-12 h-6 sm:w-16 sm:h-8 rounded-lg border border-white/20 flex-shrink-0" style={{ background: defaultChatBackground.startsWith('http') ? `url(${defaultChatBackground}) center/cover` : defaultChatBackground }} />
-								)}
-							</div>
+							<div className="bg-gray-800 rounded-lg p-6 border border-gray-600">
+								<h3 className="text-lg font-semibold text-white mb-4">Default Chat Background</h3>
+								<div className="flex flex-col sm:flex-row sm:items-center gap-4">
+									<span className="text-gray-300 text-sm">Background:</span>
+									<div className="flex items-center gap-3">
+										<button
+											onClick={() => setShowDefaultBgSelector(true)}
+											className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm"
+										>
+											Change
+										</button>
+										{defaultChatBackground && (
+											<div className="w-16 h-8 rounded-lg border border-gray-500 flex-shrink-0" style={{ background: defaultChatBackground.startsWith('http') ? `url(${defaultChatBackground}) center/cover` : defaultChatBackground }} />
+										)}
+									</div>
 								</div>
 							</div>
 							
 							{/* Background Image Manager */}
-							<div className="bg-white/5 rounded-lg p-4 sm:p-6 border border-white/10 chat-settings-section min-h-[120px] sm:min-h-[140px]">
-								<h3 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">Background Image Management</h3>
-								<p className="text-gray-300 text-xs sm:text-sm mb-3 sm:mb-4 chat-settings-text text-wrap">
+							<div className="bg-gray-800 rounded-lg p-6 border border-gray-600">
+								<h3 className="text-lg font-semibold text-white mb-4">Background Image Management</h3>
+								<p className="text-gray-300 text-sm mb-4">
 									Manage all your uploaded background images, preview them, and delete unused ones.
 								</p>
 								<button
 									onClick={() => setShowBackgroundManager(true)}
-									className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center gap-2 text-sm sm:text-base chat-settings-button interactive-element"
+									className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors flex items-center gap-2 text-sm"
 								>
-									<FaImage className="text-sm sm:text-lg" />
+									<FaImage className="text-sm" />
 									<span className="hidden sm:inline">Manage Background Images</span>
 									<span className="sm:hidden">Manage Images</span>
 								</button>
@@ -1421,6 +1713,8 @@ const Profile = () => {
 					)}
 				</div>
 			</div>
+		</div>
+		</div>
 		</div>
 	);
 };

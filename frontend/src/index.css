@@ -10,39 +10,105 @@
 
 /* Custom scrollbar for messages */
 .messages-container::-webkit-scrollbar {
+	width: 4px;
+}
+
+/* Prevent gradient bleeding during loading */
+.messages-container {
+	background-clip: padding-box;
+	-webkit-background-clip: padding-box;
+	/* Smooth scrolling behavior */
+	scroll-behavior: smooth;
+}
+
+/* GIF Picker Modal Styles */
+.giphy-picker-content {
+	scrollbar-width: thin;
+	scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+}
+
+.giphy-picker-content::-webkit-scrollbar {
 	width: 6px;
 }
 
-.messages-container::-webkit-scrollbar-track {
-	background: rgba(255, 255, 255, 0.1);
+.giphy-picker-content::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.giphy-picker-content::-webkit-scrollbar-thumb {
+	background-color: rgba(156, 163, 175, 0.5);
 	border-radius: 3px;
+}
+
+.giphy-picker-content::-webkit-scrollbar-thumb:hover {
+	background-color: rgba(156, 163, 175, 0.7);
+}
+
+/* Modal Animations */
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes scaleIn {
+	from {
+		opacity: 0;
+		transform: scale(0.9);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+.animate-fadeIn {
+	animation: fadeIn 0.2s ease-out;
+}
+
+.animate-scaleIn {
+	animation: scaleIn 0.3s ease-out;
+}
+
+/* Improve skeleton loading appearance */
+.animate-pulse {
+	animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+	background-clip: padding-box;
+	-webkit-background-clip: padding-box;
+}
+
+.messages-container::-webkit-scrollbar-track {
+	background: transparent;
 }
 
 .messages-container::-webkit-scrollbar-thumb {
-	background: rgba(255, 255, 255, 0.3);
-	border-radius: 3px;
+	background: rgba(255, 255, 255, 0.2);
+	border-radius: 2px;
 }
 
 .messages-container::-webkit-scrollbar-thumb:hover {
-	background: rgba(255, 255, 255, 0.5);
+	background: rgba(255, 255, 255, 0.3);
 }
 
 /* Global scrollbar */
 ::-webkit-scrollbar {
-	width: 8px;
+	width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-	background: rgba(255, 255, 255, 0.1);
+	background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-	background: rgba(255, 255, 255, 0.3);
-	border-radius: 4px;
+	background: rgba(255, 255, 255, 0.2);
+	border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-	background: rgba(255, 255, 255, 0.5);
+	background: rgba(255, 255, 255, 0.3);
 }
 
 /* Shake animation for new messages */
@@ -584,12 +650,12 @@ body {
 }
 
 .chat-settings-section {
-	transition: all 0.2s ease-in-out;
+	transition: all 0.3s ease;
 }
 
 .chat-settings-section:hover {
-	transform: translateY(-1px);
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	transform: translateY(-2px);
+	box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
 }
 
 /* Toggle switch improvements */
@@ -864,7 +930,49 @@ body {
 	}
 }
 
-/* Modern Circular Sidebar Button */
+/* Modern Circular Sidebar Button - Top Position */
+.sidebar-toggle-button-top {
+	width: 3rem;
+	height: 3rem;
+	background: linear-gradient(135deg, rgba(107, 114, 128, 0.7) 0%, rgba(75, 85, 99, 0.7) 100%);
+	border-radius: 50%;
+	border: 2px solid rgba(255, 255, 255, 0.15);
+	color: white;
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	box-shadow: 
+		0 4px 16px rgba(0, 0, 0, 0.2),
+		0 0 0 1px rgba(255, 255, 255, 0.1),
+		inset 0 1px 0 rgba(255, 255, 255, 0.1);
+	backdrop-filter: blur(8px);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	pointer-events: auto;
+}
+
+.sidebar-toggle-button-top:hover {
+	transform: scale(1.05);
+	box-shadow: 
+		0 6px 20px rgba(0, 0, 0, 0.3),
+		0 0 0 1px rgba(255, 255, 255, 0.2),
+		inset 0 1px 0 rgba(255, 255, 255, 0.2);
+	background: linear-gradient(135deg, rgba(91, 99, 104, 0.8) 0%, rgba(55, 65, 81, 0.8) 100%);
+}
+
+.sidebar-toggle-button-top:active {
+	transform: scale(0.95);
+}
+
+.sidebar-toggle-button-top .arrow-icon {
+	transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-toggle-button-top.sidebar-open .arrow-icon {
+	transform: rotate(180deg);
+}
+
+/* Modern Circular Sidebar Button - Bottom Position (Legacy) */
 .sidebar-toggle-button {
 	position: fixed;
 	bottom: 5rem;
@@ -872,7 +980,7 @@ body {
 	z-index: 40;
 	width: 3rem;
 	height: 3rem;
-	background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+	background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
 	border-radius: 50%;
 	border: 2px solid rgba(255, 255, 255, 0.2);
 	color: white;
@@ -894,7 +1002,7 @@ body {
 		0 12px 40px rgba(0, 0, 0, 0.4),
 		0 0 0 1px rgba(255, 255, 255, 0.3),
 		inset 0 1px 0 rgba(255, 255, 255, 0.3);
-	background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%);
+	background: linear-gradient(135deg, #5b6368 0%, #374151 100%);
 }
 
 .sidebar-toggle-button:active {
@@ -947,4 +1055,292 @@ body {
 
 .sidebar-toggle-button {
 	animation: buttonFadeIn 0.3s ease-out;
+}
+
+/* Enhanced Profile Tab Buttons */
+.profile-tabs button {
+	position: relative;
+	overflow: hidden;
+}
+
+.profile-tabs button::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: -100%;
+	width: 100%;
+	height: 100%;
+	background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+	transition: left 0.5s;
+}
+
+.profile-tabs button:hover::before {
+	left: 100%;
+}
+
+.profile-tabs button.active {
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Profile page background animation */
+.profile-responsive {
+	background: linear-gradient(-45deg, #3b82f6, #8b5cf6, #ec4899, #06b6d4);
+	background-size: 400% 400%;
+	animation: gradientShift 15s ease infinite;
+}
+
+@keyframes gradientShift {
+	0% {
+		background-position: 0% 50%;
+	}
+	50% {
+		background-position: 100% 50%;
+	}
+	100% {
+		background-position: 0% 50%;
+	}
+}
+
+/* Enhanced button hover effects */
+.profile-tabs button:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.profile-tabs button:active {
+	transform: translateY(0px);
+}
+
+/* Glass morphism effect for content area */
+.profile-content {
+	background: rgba(255, 255, 255, 0.1) !important;
+	backdrop-filter: blur(20px) !important;
+	border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Enhanced form inputs */
+.profile-form input:focus {
+	box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3);
+	transform: scale(1.02);
+}
+
+/* Button pulse animation for active tabs */
+.profile-tabs button.active {
+	animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+	0%, 100% {
+		box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7);
+	}
+	50% {
+		box-shadow: 0 0 0 10px rgba(139, 92, 246, 0);
+	}
+}
+
+/* Enhanced Sound Toggle Buttons */
+.sound-toggle-container {
+	background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1));
+	border: 1px solid rgba(139, 92, 246, 0.2);
+	transition: all 0.3s ease;
+}
+
+.sound-toggle-container:hover {
+	background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(59, 130, 246, 0.15));
+	transform: translateY(-2px);
+	box-shadow: 0 8px 25px rgba(139, 92, 246, 0.2);
+}
+
+.sound-toggle-button {
+	position: relative;
+	overflow: hidden;
+}
+
+.sound-toggle-button::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: -100%;
+	width: 100%;
+	height: 100%;
+	background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+	transition: left 0.6s;
+}
+
+.sound-toggle-button:hover::before {
+	left: 100%;
+}
+
+.sound-toggle-button.active {
+	box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
+}
+
+/* Toggle switch animations */
+.toggle-switch {
+	position: relative;
+	overflow: hidden;
+}
+
+.toggle-switch::after {
+	content: '';
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 0;
+	height: 0;
+	background: rgba(255, 255, 255, 0.3);
+	border-radius: 50%;
+	transform: translate(-50%, -50%);
+	transition: width 0.3s, height 0.3s;
+}
+
+.toggle-switch:active::after {
+	width: 100px;
+	height: 100px;
+}
+
+/* Icon animations */
+.sound-icon {
+	transition: all 0.3s ease;
+}
+
+.sound-toggle-container:hover .sound-icon {
+	transform: scale(1.1);
+}
+
+/* Status indicator animations */
+.status-indicator {
+	animation: statusPulse 2s infinite;
+}
+
+@keyframes statusPulse {
+	0%, 100% {
+		opacity: 1;
+		transform: scale(1);
+	}
+	50% {
+		opacity: 0.7;
+		transform: scale(1.1);
+	}
+}
+
+/* Enhanced focus states */
+.sound-toggle-button:focus {
+	outline: none;
+	box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3);
+}
+
+/* Loading state */
+.sound-toggle-button.loading {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.sound-toggle-button.loading::before {
+	animation: loadingShimmer 1.5s infinite;
+}
+
+@keyframes loadingShimmer {
+	0% {
+		transform: translateX(-100%);
+	}
+	100% {
+		transform: translateX(100%);
+	}
+}
+
+/* Enhanced Sound Settings Buttons */
+.chat-settings-section {
+	transition: all 0.3s ease;
+}
+
+.chat-settings-section:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* Sound toggle button animations */
+.chat-settings-section button {
+	position: relative;
+	overflow: hidden;
+}
+
+.chat-settings-section button::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: -100%;
+	width: 100%;
+	height: 100%;
+	background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+	transition: left 0.6s;
+}
+
+.chat-settings-section button:hover::before {
+	left: 100%;
+}
+
+/* Icon container animations */
+.chat-settings-section .w-10,
+.chat-settings-section .w-12 {
+	transition: all 0.3s ease;
+}
+
+.chat-settings-section .w-10:hover,
+.chat-settings-section .w-12:hover {
+	transform: scale(1.1);
+}
+
+/* Loading state for buttons */
+.chat-settings-section button:disabled {
+	transform: none !important;
+}
+
+.chat-settings-section button:disabled::before {
+	display: none;
+}
+
+/* Enhanced hover effects for sound settings */
+.chat-settings-section .bg-white\/5:hover {
+	background: rgba(255, 255, 255, 0.08) !important;
+	border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Button text animations */
+.chat-settings-section button span {
+	transition: all 0.3s ease;
+}
+
+.chat-settings-section button:hover span {
+	transform: translateX(2px);
+}
+
+/* Icon animations in buttons */
+.chat-settings-section button svg {
+	transition: all 0.3s ease;
+}
+
+.chat-settings-section button:hover svg {
+	transform: scale(1.1);
+}
+
+/* Modal background fixes for chat background selector */
+.chat-background-modal {
+	background-color: rgba(0, 0, 0, 0.9) !important;
+	backdrop-filter: blur(8px) !important;
+	-webkit-backdrop-filter: blur(8px) !important;
+}
+
+.chat-background-modal .bg-gray-900 {
+	background-color: rgb(17, 24, 39) !important;
+	opacity: 1 !important;
+}
+
+.chat-background-modal .bg-black\/80 {
+	background-color: rgba(0, 0, 0, 0.9) !important;
+}
+
+/* Ensure modal content is not transparent */
+.chat-background-modal .bg-gray-900 > * {
+	background-color: rgb(17, 24, 39) !important;
 }

@@ -15,10 +15,22 @@ const useConversation = create((set, get) => ({
 				activeEmojiPicker: null // Close any open emoji picker
 			});
 			
-			// Trigger conversation refresh to get latest data
-			setTimeout(() => {
-				window.dispatchEvent(new Event('refreshConversations'));
-			}, 100);
+			// Reset unread count for the selected conversation
+			if (selectedConversation && selectedConversation._id) {
+				// Dispatch event to reset unread count
+				window.dispatchEvent(new CustomEvent('resetConversationUnreadCount', {
+					detail: { conversationId: selectedConversation._id }
+				}));
+			}
+			
+			// Only refresh conversations if we're switching to an existing conversation
+			// Don't refresh when creating a new conversation from user list
+			if (selectedConversation && selectedConversation._id && selectedConversation.participant) {
+				// This is an existing conversation, refresh to get latest data
+				setTimeout(() => {
+					window.dispatchEvent(new Event('refreshConversations'));
+				}, 100);
+			}
 		} else {
 			// If it's the same conversation, just update the conversation object
 			set({ selectedConversation });

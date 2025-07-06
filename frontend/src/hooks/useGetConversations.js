@@ -36,9 +36,8 @@ const useGetConversations = () => {
 			});
 
 			if (conversationIndex === -1) {
-				// If conversation doesn't exist, we might need to refresh the list
-				// This could happen for new conversations
-				setTimeout(() => getConversations(), 100);
+				// If conversation doesn't exist, don't refresh the list
+				// This prevents unnecessary refreshes when clicking on users
 				return prevConversations;
 			}
 
@@ -54,8 +53,10 @@ const useGetConversations = () => {
 			};
 			conversation.lastMessageTime = newMessage.createdAt;
 
-			// Increment unread count if the message is for the current user
-			if (newMessage.receiverId === authUser?._id && newMessage.status !== 'read') {
+			// Increment unread count if the message is for the current user and not from themselves
+			if (newMessage.receiverId === authUser?._id && 
+				newMessage.senderId !== authUser?._id && 
+				newMessage.status !== 'read') {
 				conversation.unreadCount = (conversation.unreadCount || 0) + 1;
 			}
 
@@ -65,7 +66,7 @@ const useGetConversations = () => {
 
 			return updatedConversations;
 		});
-	}, [authUser?._id, getConversations]);
+	}, [authUser?._id]);
 
 	// Function to handle message read status updates
 	const handleMessageRead = useCallback((senderId, receiverId) => {
@@ -83,10 +84,25 @@ const useGetConversations = () => {
 			const conversation = { ...updatedConversations[conversationIndex] };
 
 			// Decrement unread count if this is the current user's conversation
-			if (conversation.unreadCount > 0) {
+			// and the message was sent to the current user
+			if (conversation.unreadCount > 0 && receiverId === authUser?._id) {
 				conversation.unreadCount = Math.max(0, conversation.unreadCount - 1);
 			}
 
+			updatedConversations[conversationIndex] = conversation;
+			return updatedConversations;
+		});
+	}, [authUser?._id]);
+
+	// Function to reset unread count for a specific conversation (when selected)
+	const resetConversationUnreadCount = useCallback((conversationId) => {
+		setConversations(prevConversations => {
+			const conversationIndex = prevConversations.findIndex(conv => conv._id === conversationId);
+			if (conversationIndex === -1) return prevConversations;
+
+			const updatedConversations = [...prevConversations];
+			const conversation = { ...updatedConversations[conversationIndex] };
+			conversation.unreadCount = 0;
 			updatedConversations[conversationIndex] = conversation;
 			return updatedConversations;
 		});
@@ -112,17 +128,25 @@ const useGetConversations = () => {
 			handleMessageRead(senderId, receiverId);
 		};
 
+		// Listen for reset unread count events
+		const handleResetUnreadCount = (event) => {
+			const { conversationId } = event.detail;
+			resetConversationUnreadCount(conversationId);
+		};
+
 		window.addEventListener('refreshConversations', handleRefresh);
 		window.addEventListener('updateConversation', handleUpdateConversation);
 		window.addEventListener('messageRead', handleMessageReadUpdate);
+		window.addEventListener('resetConversationUnreadCount', handleResetUnreadCount);
 
 		return () => {
 			window.removeEventListener('refreshConversations', handleRefresh);
 			window.removeEventListener('updateConversation', handleUpdateConversation);
 			window.removeEventListener('messageRead', handleMessageReadUpdate);
+			window.removeEventListener('resetConversationUnreadCount', handleResetUnreadCount);
 		};
-	}, [getConversations, updateConversation, handleMessageRead]);
+	}, [getConversations, updateConversation, handleMessageRead, resetConversationUnreadCount]);
 
-	return { loading, conversations, setConversations, getConversations };
+	return { loading, conversations, setConversations, getConversations, resetConversationUnreadCount };
 };
 export default useGetConversations;

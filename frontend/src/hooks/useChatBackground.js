@@ -1,8 +1,10 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
+import useConversation from "../zustand/useConversation";
 
 const useChatBackground = () => {
 	const [loading, setLoading] = useState(false);
+	const { updateConversationBackground } = useConversation();
 
 	const updateChatBackground = async (conversationId, backgroundImage) => {
 		if (!conversationId) {
@@ -23,6 +25,9 @@ const useChatBackground = () => {
 			if (data.error) {
 				throw new Error(data.error);
 			}
+			
+			// Update the conversation in the store
+			updateConversationBackground(conversationId, backgroundImage);
 			
 			toast.success("Chat background updated successfully!");
 			return true;

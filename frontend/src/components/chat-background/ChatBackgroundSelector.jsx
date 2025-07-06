@@ -20,7 +20,6 @@ const ChatBackgroundSelector = ({ conversationId, currentBackground, onClose, on
 		{ name: "Gradient Ocean", url: "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)" },
 		{ name: "Gradient Forest", url: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)" },
 		{ name: "Gradient Warm", url: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)" },
-		{ name: "Gradient Cool", url: "linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)" },
 		{ name: "Solid Dark", url: "#1a1a1a" },
 		{ name: "Solid Light", url: "#f8f9fa" },
 	];
@@ -113,10 +112,10 @@ const ChatBackgroundSelector = ({ conversationId, currentBackground, onClose, on
 	};
 
 	return (
-		<div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-			<div className="bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+		<div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 chat-background-modal">
+			<div className="bg-gray-900 rounded-2xl border border-gray-600 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl backdrop-blur-sm">
 				{/* Header */}
-				<div className="flex items-center justify-between p-6 border-b border-white/20">
+				<div className="flex items-center justify-between p-6 border-b border-gray-600">
 					<h2 className="text-xl font-bold text-white">Chat Background</h2>
 					<button
 						onClick={onClose}
@@ -127,7 +126,7 @@ const ChatBackgroundSelector = ({ conversationId, currentBackground, onClose, on
 				</div>
 
 				{/* Content */}
-				<div className="p-6 space-y-6">
+				<div className="p-6 space-y-6 bg-gray-900">
 					{/* Preset Backgrounds */}
 					<div>
 						<h3 className="text-lg font-semibold text-white mb-4">Preset Backgrounds</h3>
@@ -231,24 +230,24 @@ const ChatBackgroundSelector = ({ conversationId, currentBackground, onClose, on
 				</div>
 
 				{/* Footer */}
-				<div className="flex items-center justify-between p-6 border-t border-white/20">
+				<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-6 border-t border-gray-600">
 					<button
 						onClick={handleRemoveBackground}
-						className="px-4 py-2 text-red-400 hover:text-red-300 transition-colors"
+						className="w-full sm:w-auto px-4 py-2 text-red-400 hover:text-red-300 transition-colors text-sm sm:text-base"
 					>
 						Remove Background
 					</button>
-					<div className="flex gap-3">
+					<div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
 						<button
 							onClick={onClose}
-							className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+							className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm sm:text-base"
 						>
 							Cancel
 						</button>
 						<button
 							onClick={handleSave}
 							disabled={loading || uploadingImage}
-							className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
+							className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 text-sm sm:text-base"
 						>
 							{(loading || uploadingImage) ? (
 								<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>

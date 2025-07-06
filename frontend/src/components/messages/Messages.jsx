@@ -7,6 +7,7 @@ import { useAuthContext } from "../../context/AuthContext";
 import useConversation from "../../zustand/useConversation";
 import useMarkMessageAsDelivered from "../../hooks/useMarkMessageAsDelivered";
 import useMarkMessageAsRead from "../../hooks/useMarkMessageAsRead";
+import useScrollToBottom from "../../hooks/useScrollToBottom";
 
 const Messages = ({ isSelectionMode = false, selectedMessages = new Set(), onMessageSelect = null }) => {
 	const { messages, loading } = useGetMessages();
@@ -18,6 +19,7 @@ const Messages = ({ isSelectionMode = false, selectedMessages = new Set(), onMes
 	useListenMessages();
 	const lastMessageRef = useRef();
 	const [previousMessageCount, setPreviousMessageCount] = useState(0);
+	const { scrollToBottomAfterImagesLoad, smoothScrollToBottom, cleanup } = useScrollToBottom();
 
 	// Ensure messages is always an array
 	const messagesArray = Array.isArray(messages) ? messages : [];
@@ -58,19 +60,71 @@ const Messages = ({ isSelectionMode = false, selectedMessages = new Set(), onMes
 		return () => clearTimeout(timeoutId);
 	}, [authUser, selectedConversation, loading, messagesArray, markAsDelivered, markAsRead]);
 
+	// Reset unread count when conversation is selected
+	useEffect(() => {
+		if (selectedConversation && selectedConversation._id) {
+			// Reset unread count for the selected conversation
+			window.dispatchEvent(new CustomEvent('resetConversationUnreadCount', {
+				detail: { conversationId: selectedConversation._id }
+			}));
+		}
+	}, [selectedConversation?._id]);
+
+	// Scroll to bottom when conversation is selected and messages are loaded
+	useEffect(() => {
+		if (selectedConversation && !loading && messagesArray.length > 0) {
+			// Check if there are images or GIFs in the messages
+			const hasImagesOrGifs = messagesArray.some(message => {
+				const isGif = message.message && message.message.startsWith('[GIF]');
+				const isImage = message.messageType === 'image';
+				return isGif || isImage;
+			});
+			
+			if (hasImagesOrGifs) {
+				// Wait for images to load before scrolling
+				scrollToBottomAfterImagesLoad(messagesArray);
+			} else {
+				// For text-only messages, use custom smooth scroll
+				setTimeout(() => {
+					smoothScrollToBottom(1000); // 1 second duration for gentle scroll
+				}, 300); // Slightly longer delay for smoother feel
+			}
+		}
+	}, [selectedConversation?._id, loading, messagesArray.length, scrollToBottomAfterImagesLoad, smoothScrollToBottom]);
+
+	// Cleanup on unmount
+	useEffect(() => {
+		return () => {
+			cleanup();
+		};
+	}, [cleanup]);
+
 	useEffect(() => {
 		// Only scroll to bottom when new messages are added (not when reactions are updated)
 		const currentMessageCount = messagesArray.length;
 		const hasNewMessages = currentMessageCount > previousMessageCount;
 		
 		if (hasNewMessages || uploadingFiles.length > 0) {
-			setTimeout(() => {
-				lastMessageRef.current?.scrollIntoView({ behavior: "smooth" });
-			}, 100);
+			// Check if there are images or GIFs in the messages
+			const hasImagesOrGifs = messagesArray.some(message => {
+				const isGif = message.message && message.message.startsWith('[GIF]');
+				const isImage = message.messageType === 'image';
+				return isGif || isImage;
+			});
+			
+			if (hasImagesOrGifs) {
+				// Wait for images to load before scrolling
+				scrollToBottomAfterImagesLoad(messagesArray);
+			} else {
+				// For text-only messages, use smooth scroll
+				setTimeout(() => {
+					smoothScrollToBottom(600); // Shorter duration for new messages
+				}, 200); // Slightly longer delay for smoother feel
+			}
 		}
 		
 		setPreviousMessageCount(currentMessageCount);
-	}, [messagesArray, uploadingFiles, previousMessageCount]);
+	}, [messagesArray, uploadingFiles, previousMessageCount, scrollToBottomAfterImagesLoad, smoothScrollToBottom]);
 
 	// Error handling for invalid messages
 	if (!Array.isArray(messagesArray)) {

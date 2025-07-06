@@ -96,7 +96,11 @@ const Conversation = ({ conversation, lastIdx, emoji, onConversationSelect }) =>
 						<div className='flex items-center gap-1 sm:gap-2 flex-1 min-w-0'>
 							<div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-orange-500'}`}></div>
 							<span className='text-xs text-gray-400 truncate'>
-								{conversation.lastMessage ? conversation.lastMessage.message : 'No messages yet'}
+								{conversation.lastMessage ? (
+									conversation.lastMessage.message && conversation.lastMessage.message.startsWith('[GIF]') 
+										? 'GIF' 
+										: conversation.lastMessage.message
+								) : 'No messages yet'}
 							</span>
 						</div>
 						{conversation.lastMessage && (

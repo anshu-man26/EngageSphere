@@ -33,7 +33,7 @@ export const AuthContextProvider = ({ children }) => {
 			setAuthUser(null);
 		}
 
-		// Check for admin session
+		// Check for admin session only if user is logged in
 		const checkAdminSession = async () => {
 			try {
 				const res = await fetch("/api/admin/profile", {
@@ -42,15 +42,27 @@ export const AuthContextProvider = ({ children }) => {
 				if (res.ok) {
 					const adminData = await res.json();
 					setAdmin(adminData);
+				} else if (res.status === 401) {
+					// User is not an admin, which is normal
+					setAdmin(null);
 				}
 			} catch (error) {
-				console.error("Error checking admin session:", error);
+				// Only log error if it's not a network error
+				if (error.name !== 'TypeError') {
+					console.error("Error checking admin session:", error);
+				}
+				setAdmin(null);
 			} finally {
 				setLoading(false);
 			}
 		};
 
-		checkAdminSession();
+		// Only check admin session if user is logged in
+		if (authUser) {
+			checkAdminSession();
+		} else {
+			setLoading(false);
+		}
 	}, []);
 
 	const updateAuthUser = (user) => {

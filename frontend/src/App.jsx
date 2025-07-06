@@ -12,7 +12,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminProfile from "./pages/admin/AdminProfile";
 import AdminForgotPassword from "./pages/admin/AdminForgotPassword";
 import AdminVerifyOtp from "./pages/admin/AdminVerifyOtp";
-import PageTransition from "./components/PageTransition";
+
 import { Toaster } from "react-hot-toast";
 import { useAuthContext } from "./context/AuthContext";
 
@@ -37,8 +37,7 @@ function App() {
 
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900'>
-			<PageTransition>
-				<Routes>
+			<Routes>
 					{/* Admin Routes */}
 					<Route path='/admin/login' element={admin ? <Navigate to="/admin/dashboard" replace /> : <AdminLogin />} />
 					<Route path='/admin/forgot-password' element={<AdminForgotPassword />} />
@@ -55,7 +54,6 @@ function App() {
 					<Route path='/user/:userId' element={authUser ? <UserProfile /> : <Navigate to="/login" replace />} />
 					<Route path='/forgot-password' element={authUser ? <Navigate to="/" replace /> : <ForgotPassword />} />
 				</Routes>
-			</PageTransition>
 			<Toaster 
 				position="top-right"
 				toastOptions={{

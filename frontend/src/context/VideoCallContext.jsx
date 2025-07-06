@@ -26,11 +26,122 @@ export const VideoCallProvider = ({ children }) => {
 
   // Helper function to stop current ringtone
   const stopCurrentRingtone = () => {
+    console.log('🔇 Stopping current ringtone...');
+    
     if (currentRingtoneRef.current) {
-      currentRingtoneRef.current.pause();
-      currentRingtoneRef.current.currentTime = 0;
+      try {
+        currentRingtoneRef.current.pause();
+        currentRingtoneRef.current.currentTime = 0;
+        currentRingtoneRef.current.src = ''; // Clear the source
+        currentRingtoneRef.current.load(); // Force reload to stop
+        console.log('✅ Stopped current ringtone from ref');
+      } catch (error) {
+        console.error('❌ Error stopping current ringtone from ref:', error);
+      }
       currentRingtoneRef.current = null;
     }
+    
+    // Also stop any ringtone audio from incoming call data
+    if (incomingCall?.ringtoneAudio) {
+      try {
+        incomingCall.ringtoneAudio.pause();
+        incomingCall.ringtoneAudio.currentTime = 0;
+        incomingCall.ringtoneAudio.src = '';
+        incomingCall.ringtoneAudio.load();
+        console.log('✅ Stopped ringtone from incoming call data');
+      } catch (error) {
+        console.error('❌ Error stopping ringtone from incoming call data:', error);
+      }
+    }
+    
+    // Force stop any other audio elements that might be playing ringtone
+    document.querySelectorAll('audio').forEach(audio => {
+      if (audio.src && (audio.src.includes('RINGING.mp3') || audio.src.includes('RINGTONE.mp3'))) {
+        try {
+          audio.pause();
+          audio.currentTime = 0;
+          audio.src = '';
+          audio.load();
+          console.log('✅ Stopped additional ringtone audio element');
+        } catch (error) {
+          console.error('❌ Error stopping additional ringtone audio:', error);
+        }
+      }
+    });
+    
+    console.log('🎵 Current ringtone cleanup completed');
+  };
+
+  // Global cleanup function to stop all media tracks
+  const forceStopAllMediaTracks = () => {
+    // Stop all tracks from all video elements
+    document.querySelectorAll('video').forEach(video => {
+      if (video.srcObject) {
+        video.srcObject.getTracks().forEach(track => {
+          track.stop();
+          track.enabled = false;
+        });
+        video.srcObject = null;
+      }
+    });
+    
+    // Also stop any tracks from getUserMedia that may not be attached
+    if (window.localStream && window.localStream.getTracks) {
+      window.localStream.getTracks().forEach(track => {
+        track.stop();
+        track.enabled = false;
+      });
+      window.localStream = null;
+    }
+    
+    // Force stop any remaining active media streams
+    if (navigator.mediaDevices) {
+      try {
+        navigator.mediaDevices.enumerateDevices()
+          .then(() => {
+            // This should trigger the browser to release any held devices
+          })
+          .catch(() => {
+            // Ignore errors
+          });
+      } catch (error) {
+        // Ignore any errors
+      }
+    }
+  };
+
+  // Comprehensive audio cleanup function
+  const forceStopAllAudio = () => {
+    console.log('🔇 Force stopping all audio...');
+    
+    // Stop current ringtone
+    stopCurrentRingtone();
+    
+    // Stop any audio elements that might be playing call-related sounds
+    document.querySelectorAll('audio').forEach(audio => {
+      try {
+        if (audio.src && (
+          audio.src.includes('RINGING.mp3') || 
+          audio.src.includes('RINGTONE.mp3') ||
+          audio.src.includes('notification.mp3')
+        )) {
+          audio.pause();
+          audio.currentTime = 0;
+          audio.src = '';
+          audio.load();
+          console.log('✅ Stopped call-related audio element');
+        }
+      } catch (error) {
+        console.error('❌ Error stopping audio element:', error);
+      }
+    });
+    
+    // Stop vibration
+    if (navigator.vibrate) {
+      navigator.vibrate(0);
+    }
+    
+    console.log('🎵 All audio cleanup completed');
   };
 
   // Listen for incoming video calls globally
@@ -71,8 +182,8 @@ export const VideoCallProvider = ({ children }) => {
         setTimeout(() => {
           setIncomingCall(prev => {
             if (prev && prev.recipientId === authUser._id) {
-              // Stop the ringtone
-              stopCurrentRingtone();
+              // Stop the ringtone and all audio
+              forceStopAllAudio();
               toast.error('Call timed out');
               return null;
             }
@@ -83,14 +194,29 @@ export const VideoCallProvider = ({ children }) => {
     };
 
     const handleCallEnded = (data) => {
+      console.log('Received videoCallEnded event:', data, 'Current user:', authUser._id);
       if (data.recipientId === authUser._id || data.callerId === authUser._id) {
-        // Stop any playing ringtone
-        stopCurrentRingtone();
+        console.log('Processing videoCallEnded for current user');
+        // Stop any playing ringtone and all audio
+        forceStopAllAudio();
+        
+        // Show appropriate message based on the call state
+        if (incomingCall) {
+          // If there's an incoming call, it means the call was rejected before being accepted
+          if (data.callerId === authUser._id) {
+            // This shouldn't happen, but just in case
+            toast('Call ended', { icon: '📞' });
+          } else {
+            toast('Call was rejected', { icon: '❌' });
+          }
+        } else if (activeCall) {
+          // If there's an active call, it means the call was ended after being accepted
+          toast('Call ended', { icon: '📞' });
+        }
         
         setIncomingCall(null);
         setActiveCall(null);
         setShowVideoCall(false);
-        toast('Call ended', { icon: '📞' });
       }
     };
 
@@ -106,14 +232,42 @@ export const VideoCallProvider = ({ children }) => {
   // Cleanup effect to stop ringtone on unmount
   useEffect(() => {
     return () => {
-      stopCurrentRingtone();
+      forceStopAllAudio();
+    };
+  }, []);
+
+  // Global cleanup when page is unloaded or becomes hidden
+  useEffect(() => {
+    const handlePageUnload = () => {
+      forceStopAllMediaTracks();
+      forceStopAllAudio();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Page is hidden, ensure media tracks are stopped
+        forceStopAllMediaTracks();
+        forceStopAllAudio();
+      }
+    };
+
+    // Add event listeners
+    window.addEventListener('beforeunload', handlePageUnload);
+    window.addEventListener('unload', handlePageUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Cleanup event listeners
+    return () => {
+      window.removeEventListener('beforeunload', handlePageUnload);
+      window.removeEventListener('unload', handlePageUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 
   // Handle incoming call response
   const handleIncomingCallResponse = (accept) => {
-    // Stop the ringtone
-    stopCurrentRingtone();
+    // Stop the ringtone and all audio
+    forceStopAllAudio();
     
     if (accept && incomingCall) {
       // Use the incoming call data which contains the correct channel name
@@ -126,6 +280,18 @@ export const VideoCallProvider = ({ children }) => {
       
       setActiveCall(activeCallData);
       setShowVideoCall(true);
+    } else if (!accept && incomingCall) {
+      // Emit call ended event to notify the caller that their call was rejected
+      if (socket) {
+        console.log('Emitting videoCallEnded for rejected call:', {
+          recipientId: incomingCall.callerId,
+          callerId: authUser._id
+        });
+        socket.emit('videoCallEnded', {
+          recipientId: incomingCall.callerId,
+          callerId: authUser._id
+        });
+      }
     }
     setIncomingCall(null);
   };
@@ -153,11 +319,19 @@ export const VideoCallProvider = ({ children }) => {
 
   // End active call
   const endCall = () => {
-    // Stop any playing ringtone
-    stopCurrentRingtone();
+    console.log('endCall called, activeCall:', activeCall);
+    // Stop any playing ringtone and all audio
+    forceStopAllAudio();
+    
+    // Force stop all media tracks
+    forceStopAllMediaTracks();
     
     // Emit socket event to notify recipient that call ended
     if (socket && activeCall?.recipientId) {
+      console.log('Emitting videoCallEnded from endCall:', {
+        recipientId: activeCall.recipientId,
+        callerId: authUser._id
+      });
       socket.emit('videoCallEnded', {
         recipientId: activeCall.recipientId,
         callerId: authUser._id
@@ -175,7 +349,9 @@ export const VideoCallProvider = ({ children }) => {
     showVideoCall,
     handleIncomingCallResponse,
     startOutgoingCall,
-    endCall
+    endCall,
+    forceStopAllMediaTracks,
+    forceStopAllAudio
   };
 
   return (
@@ -277,6 +453,7 @@ export const VideoCallProvider = ({ children }) => {
           currentUser={authUser}
           isIncoming={!!incomingCall}
           channelName={activeCall.channelName}
+          onCallEnded={endCall}
         />
       )}
     </VideoCallContext.Provider>

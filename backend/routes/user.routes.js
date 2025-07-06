@@ -1,7 +1,7 @@
 import express from "express";
 import protectRoute from "../middleware/protectRoute.js";
 import upload from "../middleware/upload.js";
-import { getUsersForSidebar, getConversations, updateUserProfile, uploadProfilePic, changePassword, changeEmail, verifyChangeEmailOtp, requestDeleteAccountOtp, deleteAccount, getUserProfile, updateChatBackground, uploadChatBackground, updateDefaultChatBackground, getUserBackgroundImages, deleteBackgroundImage, updateSoundSettings } from "../controllers/user.controller.js";
+import { getUsersForSidebar, getConversations, updateUserProfile, uploadProfilePic, changePassword, changeEmail, verifyChangeEmailOtp, requestDeleteAccountOtp, deleteAccount, getUserProfile, updateChatBackground, uploadChatBackground, updateDefaultChatBackground, getUserBackgroundImages, deleteBackgroundImage, updateSoundSettings, changeUsername } from "../controllers/user.controller.js";
 
 const router = express.Router();
 
@@ -14,6 +14,7 @@ router.put("/chat-background", protectRoute, updateChatBackground);
 router.post("/upload-background", protectRoute, upload.single('backgroundImage'), uploadChatBackground);
 router.post("/profile/upload-pic", protectRoute, upload.single('profilePic'), uploadProfilePic);
 router.post("/change-password", protectRoute, changePassword);
+router.post("/change-username", protectRoute, changeUsername);
 router.put("/change-email", protectRoute, changeEmail);
 router.post("/verify-change-email-otp", protectRoute, verifyChangeEmailOtp);
 router.post("/request-delete-account-otp", protectRoute, requestDeleteAccountOtp);

@@ -8,8 +8,7 @@ import useConversation from "../../zustand/useConversation";
 import useListenConversations from "../../hooks/useListenConversations";
 import logo from '../../assets/images/logo.png';
 
-const Sidebar = () => {
-	const [isOpen, setIsOpen] = useState(true);
+const Sidebar = ({ isOpen, setIsOpen }) => {
 	const { selectedConversation } = useConversation();
 	
 	// Listen for conversation updates
@@ -24,18 +23,6 @@ const Sidebar = () => {
 
 	return (
 		<>
-			{/* Mobile Menu Button - Modern circular design positioned at bottom of profile */}
-			<div className='lg:hidden'>
-				<button
-					onClick={() => setIsOpen(!isOpen)}
-					className={`sidebar-toggle-button ${isOpen ? 'sidebar-open' : ''}`}
-				>
-					<IoChevronBack 
-						size={20} 
-						className="arrow-icon"
-					/>
-				</button>
-			</div>
 
 			{/* Sidebar */}
 			<div className={`
@@ -45,27 +32,27 @@ const Sidebar = () => {
 				top-0 left-0 
 				w-80 sm:w-96 lg:w-80 xl:w-96 h-full 
 				bg-gray-800 border-r border-gray-600 
-				p-4 lg:p-6 
+				pt-20 lg:pt-6 p-4 lg:p-6 
 				flex flex-col 
 				transition-transform duration-300 ease-in-out 
 				z-40
 				overflow-hidden
 				sidebar-mobile lg:sidebar-desktop
+				min-w-0
 			`}>
-				{/* Close Button - Inside sidebar */}
-				<div className='lg:hidden flex justify-end mb-4'>
+				{/* Header */}
+				<div className='flex items-center justify-between mb-4'>
+					<div className='flex items-center gap-2'>
+						<img src={logo} alt='EngageSphere Logo' className='h-8 w-8 object-contain' />
+						<h1 className='text-xl lg:text-2xl font-bold text-white'>EngageSphere</h1>
+					</div>
+					{/* Close Button - Inside sidebar */}
 					<button
 						onClick={() => setIsOpen(false)}
-						className='p-2 bg-gray-700 rounded-lg border border-gray-600 text-white hover:bg-gray-600 transition-colors'
+						className='lg:hidden p-2 bg-gray-700 rounded-lg border border-gray-600 text-white hover:bg-gray-600 transition-colors'
 					>
 						<IoClose size={20} />
 					</button>
-				</div>
-
-				{/* Header */}
-				<div className='flex items-center gap-2 mb-4'>
-					<img src={logo} alt='EngageSphere Logo' className='h-8 w-8 object-contain' />
-					<h1 className='text-xl lg:text-2xl font-bold text-white'>EngageSphere</h1>
 				</div>
 				
 				<SearchInput />
