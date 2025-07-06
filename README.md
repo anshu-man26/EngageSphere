@@ -18,6 +18,7 @@ A modern, feature-rich real-time chat application built with React, Node.js, and
 ## ✨ Features
 
 ### 🔐 Authentication & Security
+- **Login with Email or Username**: Users can sign in using either their email address or username
 - **Email Verification**: OTP-based email verification during signup
 - **Two-Factor Authentication (2FA)**: Enhanced security with email OTP
 - **Password Reset**: Secure password reset via email OTP
@@ -332,6 +333,9 @@ After deployment, create your first admin user:
    # Start backend
    npm run start
    ```
+
+### Login Instructions
+- You can login using either your **email address** or your **username** along with your password.
 
 ## 📱 Mobile Features
 

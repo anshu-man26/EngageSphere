@@ -15,7 +15,7 @@ const Messages = ({ isSelectionMode = false, selectedMessages = new Set(), onMes
 	const { authUser } = useAuthContext();
 	const { selectedConversation } = useConversation();
 	const { markAsDelivered } = useMarkMessageAsDelivered();
-	const { markAsRead } = useMarkMessageAsRead();
+	const { markAsRead, markMultipleAsRead } = useMarkMessageAsRead();
 	useListenMessages();
 	const lastMessageRef = useRef();
 	const [previousMessageCount, setPreviousMessageCount] = useState(0);
@@ -34,31 +34,26 @@ const Messages = ({ isSelectionMode = false, selectedMessages = new Set(), onMes
 				message.status !== 'read'
 			);
 
-			for (const message of unreadMessages) {
-				// Mark as delivered first
-				if (message.status === 'sent') {
-					await markAsDelivered(message._id);
+			if (unreadMessages.length === 0) return;
+
+			// Mark all unread messages as read in a single API call
+			const messageIds = unreadMessages.map(message => message._id);
+			await markMultipleAsRead(messageIds);
+
+			// Emit event to update conversation unread count for all messages at once
+			window.dispatchEvent(new CustomEvent('messagesRead', {
+				detail: {
+					messageIds: messageIds,
+					senderId: unreadMessages[0].senderId,
+					receiverId: unreadMessages[0].receiverId
 				}
-				
-				// Mark as read
-				if (message.status !== 'read') {
-					await markAsRead(message._id);
-					
-					// Emit event to update conversation unread count
-					window.dispatchEvent(new CustomEvent('messageRead', {
-						detail: {
-							senderId: message.senderId,
-							receiverId: message.receiverId
-						}
-					}));
-				}
-			}
+			}));
 		};
 
 		// Small delay to ensure messages are rendered
 		const timeoutId = setTimeout(markMessagesAsDeliveredAndRead, 500);
 		return () => clearTimeout(timeoutId);
-	}, [authUser, selectedConversation, loading, messagesArray, markAsDelivered, markAsRead]);
+	}, [authUser, selectedConversation, loading, messagesArray, markMultipleAsRead]);
 
 	// Reset unread count when conversation is selected
 	useEffect(() => {

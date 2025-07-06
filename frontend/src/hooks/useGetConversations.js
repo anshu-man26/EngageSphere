@@ -94,6 +94,33 @@ const useGetConversations = () => {
 		});
 	}, [authUser?._id]);
 
+	// Function to handle bulk message read status updates
+	const handleMessagesRead = useCallback((messageIds, senderId, receiverId) => {
+		setConversations(prevConversations => {
+			// Find the conversation that should be updated
+			const conversationIndex = prevConversations.findIndex(conv => {
+				const participantId = conv.participant._id;
+				return (participantId === senderId || participantId === receiverId);
+			});
+
+			if (conversationIndex === -1) return prevConversations;
+
+			// Create updated conversation
+			const updatedConversations = [...prevConversations];
+			const conversation = { ...updatedConversations[conversationIndex] };
+
+			// Decrement unread count by the number of messages that were read
+			// if this is the current user's conversation and messages were sent to the current user
+			if (conversation.unreadCount > 0 && receiverId === authUser?._id) {
+				const messagesReadCount = messageIds.length;
+				conversation.unreadCount = Math.max(0, conversation.unreadCount - messagesReadCount);
+			}
+
+			updatedConversations[conversationIndex] = conversation;
+			return updatedConversations;
+		});
+	}, [authUser?._id]);
+
 	// Function to reset unread count for a specific conversation (when selected)
 	const resetConversationUnreadCount = useCallback((conversationId) => {
 		setConversations(prevConversations => {
@@ -128,6 +155,12 @@ const useGetConversations = () => {
 			handleMessageRead(senderId, receiverId);
 		};
 
+		// Listen for bulk message read updates
+		const handleMessagesReadUpdate = (event) => {
+			const { messageIds, senderId, receiverId } = event.detail;
+			handleMessagesRead(messageIds, senderId, receiverId);
+		};
+
 		// Listen for reset unread count events
 		const handleResetUnreadCount = (event) => {
 			const { conversationId } = event.detail;
@@ -137,15 +170,17 @@ const useGetConversations = () => {
 		window.addEventListener('refreshConversations', handleRefresh);
 		window.addEventListener('updateConversation', handleUpdateConversation);
 		window.addEventListener('messageRead', handleMessageReadUpdate);
+		window.addEventListener('messagesRead', handleMessagesReadUpdate);
 		window.addEventListener('resetConversationUnreadCount', handleResetUnreadCount);
 
 		return () => {
 			window.removeEventListener('refreshConversations', handleRefresh);
 			window.removeEventListener('updateConversation', handleUpdateConversation);
 			window.removeEventListener('messageRead', handleMessageReadUpdate);
+			window.removeEventListener('messagesRead', handleMessagesReadUpdate);
 			window.removeEventListener('resetConversationUnreadCount', handleResetUnreadCount);
 		};
-	}, [getConversations, updateConversation, handleMessageRead, resetConversationUnreadCount]);
+	}, [getConversations, updateConversation, handleMessageRead, handleMessagesRead, resetConversationUnreadCount]);
 
 	return { loading, conversations, setConversations, getConversations, resetConversationUnreadCount };
 };
