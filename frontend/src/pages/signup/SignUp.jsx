@@ -4,8 +4,10 @@ import { useState } from "react";
 import useSignup from "../../hooks/useSignup";
 import useSendSignupOtp from "../../hooks/useSendSignupOtp";
 import useVerifySignupOtp from "../../hooks/useVerifySignupOtp";
-import { FaUser, FaLock, FaEye, FaEyeSlash, FaUserCircle, FaCheckCircle, FaEnvelope, FaTimes } from "react-icons/fa";
+import useRegistrationStatus from "../../hooks/useRegistrationStatus";
+import { FaUser, FaLock, FaEye, FaEyeSlash, FaUserCircle, FaCheckCircle, FaEnvelope, FaTimes, FaExclamationTriangle } from "react-icons/fa";
 import logo from '../../assets/images/logo.png';
+import ComplaintModal from "../../components/ComplaintModal";
 
 const SignUp = () => {
 	const [inputs, setInputs] = useState({
@@ -24,10 +26,12 @@ const SignUp = () => {
 	const [showOtpInput, setShowOtpInput] = useState(false);
 	const [otpError, setOtpError] = useState("");
 	const [verifyError, setVerifyError] = useState("");
+	const [showComplaintModal, setShowComplaintModal] = useState(false);
 
 	const { loading, signup } = useSignup();
 	const { loading: otpLoading, sendOtp } = useSendSignupOtp();
 	const { loading: verifyLoading, verifyOtp } = useVerifySignupOtp();
+	const { registrationEnabled, loading: registrationLoading } = useRegistrationStatus();
 
 	const handleCheckboxChange = (gender) => {
 		setInputs({ ...inputs, gender });
@@ -149,6 +153,38 @@ const SignUp = () => {
 
 				{/* Sign Up Form */}
 				<div className='bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/20 p-8'>
+					{registrationLoading ? (
+						<div className='flex items-center justify-center py-8'>
+							<div className='animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500'></div>
+							<span className='ml-3 text-gray-300'>Checking registration status...</span>
+						</div>
+					) : !registrationEnabled ? (
+						<div className='text-center py-8'>
+							<div className='flex items-center justify-center mb-4'>
+								<FaExclamationTriangle className='h-12 w-12 text-yellow-400' />
+							</div>
+							<h3 className='text-xl font-semibold text-white mb-2'>Registration Temporarily Disabled</h3>
+							<p className='text-gray-300 mb-6'>
+								New user registration is currently disabled by the administrator. 
+								Please check back later or contact support for assistance.
+							</p>
+							<div className='space-y-3'>
+								<Link 
+									to="/login" 
+									className='inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors duration-200'
+								>
+									Back to Login
+								</Link>
+								<button
+									onClick={() => setShowComplaintModal(true)}
+									className='inline-flex items-center px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white font-medium rounded-lg transition-colors duration-200'
+								>
+									<FaExclamationTriangle className='h-4 w-4 mr-2' />
+									Report an Issue
+								</button>
+							</div>
+						</div>
+					) : (
 					<form onSubmit={handleSubmit} className='space-y-6' autoComplete='on'>
 						{/* Full Name Field */}
 						<div className='space-y-2'>
@@ -374,16 +410,21 @@ const SignUp = () => {
 						{/* Submit Button */}
 						<button
 							type='submit'
-							disabled={loading || !emailVerified}
+								disabled={loading || !emailVerified || !registrationEnabled}
 							className='w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg'
 						>
 							{loading ? (
 								<div className='flex items-center justify-center'>
 									<div className='animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2'></div>
-									Creating account...
+										Creating Account...
 								</div>
 							) : !emailVerified ? (
 								'Verify Email to Continue'
+								) : !registrationEnabled ? (
+									<div className='flex items-center justify-center'>
+										<FaExclamationTriangle className='h-5 w-5 text-yellow-400 mr-2' />
+										Registration is disabled
+									</div>
 							) : (
 								'Create Account'
 							)}
@@ -399,6 +440,7 @@ const SignUp = () => {
 							</Link>
 						</div>
 					</form>
+					)}
 				</div>
 
 				{/* Footer */}
@@ -406,8 +448,24 @@ const SignUp = () => {
 					<p className='text-gray-400 text-xs'>
 						© 2024 EngageSphere. All rights reserved.
 					</p>
+					<div className='mt-2'>
+						<button
+							onClick={() => setShowComplaintModal(true)}
+							className='text-xs text-gray-500 hover:text-purple-400 transition-colors duration-200 flex items-center justify-center gap-1 mx-auto'
+						>
+							<FaExclamationTriangle className='h-3 w-3' />
+							Report an Issue
+						</button>
+					</div>
 				</div>
 			</div>
+
+			{/* Complaint Modal */}
+			<ComplaintModal 
+				isOpen={showComplaintModal} 
+				onClose={() => setShowComplaintModal(false)}
+				pageSubmitted="signup"
+			/>
 		</div>
 	);
 };

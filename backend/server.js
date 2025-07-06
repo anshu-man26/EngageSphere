@@ -18,6 +18,7 @@ import messageRoutes from "./routes/message.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
+import complaintRoutes from "./routes/complaint.routes.js";
 
 import connectToMongoDB from "./db/connectToMongoDB.js";
 import { app, server } from "./socket/socket.js";
@@ -48,6 +49,7 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/complaints", complaintRoutes);
 
 // Health check endpoint for Render
 app.get('/api/health', (req, res) => {
@@ -66,6 +68,7 @@ console.log("  - /api/messages");
 console.log("  - /api/users");
 console.log("  - /api/notifications");
 console.log("  - /api/admin");
+console.log("  - /api/complaints");
 console.log("  - /api/health");
 
 // Debug middleware to log all requests

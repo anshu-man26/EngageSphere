@@ -52,6 +52,7 @@ export const SocketContextProvider = ({ children }) => {
 			});
 
 			newSocket.on("connect", () => {
+				console.log("🔌 Socket connected for user:", authUser._id);
 				setOnlineUsers(prev => [...prev, authUser._id]);
 			});
 
@@ -60,11 +61,15 @@ export const SocketContextProvider = ({ children }) => {
 			});
 
 			newSocket.on("disconnect", (reason) => {
+				console.log("🔌 Socket disconnected for user:", authUser._id, "Reason:", reason);
 				setOnlineUsers(prev => prev.filter(id => id !== authUser._id));
 			});
 
 			// socket.on() is used to listen to the events. can be used both on client and server side
 			newSocket.on("getOnlineUsers", (users) => {
+				console.log("👥 Received online users from server:", users);
+				console.log("👤 Current user ID:", authUser._id);
+				console.log("👤 Is current user in online list?", users.includes(authUser._id));
 				setOnlineUsers(users);
 			});
 

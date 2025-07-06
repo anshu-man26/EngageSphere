@@ -98,7 +98,7 @@ const GiphyPicker = ({ onGifSelect, onClose }) => {
 	}, []);
 
 	return (
-		<div className="absolute inset-0 bg-black/80 flex items-center justify-center z-50 p-4 animate-fadeIn" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+		<div className="absolute inset-0 bg-black/80 flex items-center justify-center z-[10000] p-4 animate-fadeIn" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
 			<div ref={modalRef} className="bg-gray-900 rounded-2xl border border-gray-600 max-w-4xl w-full max-h-[70vh] flex flex-col shadow-2xl animate-scaleIn">
 				{/* Header */}
 				<div className="flex items-center justify-between p-2 sm:p-3 border-b border-gray-600">

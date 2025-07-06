@@ -21,6 +21,7 @@ const SystemSettingsPanel = () => {
 		},
 		features: {
 			userRegistration: true,
+			userLogin: true,
 			fileUpload: true,
 			videoCalls: true,
 			notifications: true
@@ -53,6 +54,7 @@ const SystemSettingsPanel = () => {
 				maintenanceMode: data.maintenanceMode || { enabled: false, message: "" },
 				features: data.features || {
 					userRegistration: true,
+					userLogin: true,
 					fileUpload: true,
 					videoCalls: true,
 					notifications: true

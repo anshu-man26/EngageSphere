@@ -47,6 +47,10 @@ const systemSettingsSchema = new mongoose.Schema({
 			type: Boolean,
 			default: true
 		},
+		userLogin: {
+			type: Boolean,
+			default: true
+		},
 		fileUpload: {
 			type: Boolean,
 			default: true

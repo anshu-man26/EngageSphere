@@ -63,7 +63,106 @@ export const adminLogin = async (req, res) => {
 			return res.status(400).json({ error: "Invalid credentials" });
 		}
 
-		// Update last login
+		// Generate login OTP
+		const otp = Math.floor(100000 + Math.random() * 900000).toString();
+		const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+		// Save OTP to admin
+		admin.loginOtp = otp;
+		admin.loginOtpExpires = otpExpires;
+		await admin.save();
+
+		// Send OTP email
+		const transporter = createEmailTransporter();
+		const mailOptions = {
+			from: process.env.EMAIL_USER,
+			to: admin.email,
+			subject: "Admin Login OTP - EngageSphere",
+			html: `
+				<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+					<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center;">
+						<h1 style="margin: 0;">EngageSphere Admin</h1>
+						<p style="margin: 10px 0 0 0;">Login Verification</p>
+					</div>
+					<div style="padding: 20px; background: #f9f9f9;">
+						<h2 style="color: #333;">Hello ${admin.username},</h2>
+						<p style="color: #666;">You have attempted to log in to your admin account.</p>
+						<p style="color: #666;">Use the following OTP to complete your login:</p>
+						<div style="background: #fff; border: 2px solid #667eea; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
+							<h1 style="color: #667eea; font-size: 32px; margin: 0; letter-spacing: 5px;">${otp}</h1>
+						</div>
+						<p style="color: #666; font-size: 14px;">
+							<strong>Important:</strong>
+							<ul>
+								<li>This OTP is valid for 10 minutes only</li>
+								<li>If you didn't attempt to log in, please ignore this email</li>
+								<li>For security, never share this OTP with anyone</li>
+							</ul>
+						</p>
+						<p style="color: #666; margin-top: 20px;">
+							Best regards,<br>
+							EngageSphere Team
+						</p>
+					</div>
+				</div>
+			`
+		};
+
+		await transporter.sendMail(mailOptions);
+
+		res.status(200).json({
+			message: "OTP sent to your email",
+			email: admin.email,
+			requiresOtp: true
+		});
+	} catch (error) {
+		console.log("Error in adminLogin controller", error.message);
+		res.status(500).json({ error: "Internal Server Error" });
+	}
+};
+
+export const verifyAdminLoginOtp = async (req, res) => {
+	try {
+		const { username, otp } = req.body;
+
+		if (!username || !otp) {
+			return res.status(400).json({ error: "Username and OTP are required" });
+		}
+
+		// Find admin by username or email
+		const admin = await Admin.findOne({
+			$or: [{ username }, { email: username }]
+		});
+
+		if (!admin) {
+			return res.status(400).json({ error: "Invalid credentials" });
+		}
+
+		if (!admin.isActive) {
+			return res.status(403).json({ error: "Admin account is deactivated" });
+		}
+
+		// Check if OTP exists and is not expired
+		if (!admin.loginOtp || !admin.loginOtpExpires) {
+			return res.status(400).json({ error: "No OTP request found. Please login again." });
+		}
+
+		if (new Date() > admin.loginOtpExpires) {
+			// Clear expired OTP
+			admin.loginOtp = null;
+			admin.loginOtpExpires = null;
+			await admin.save();
+			return res.status(400).json({ error: "OTP has expired. Please login again." });
+		}
+
+		// Verify OTP
+		if (admin.loginOtp !== otp) {
+			return res.status(400).json({ error: "Invalid OTP" });
+		}
+
+		// Clear OTP after successful verification
+		admin.loginOtp = null;
+		admin.loginOtpExpires = null;
 		admin.lastLogin = new Date();
 		await admin.save();
 
@@ -79,7 +178,7 @@ export const adminLogin = async (req, res) => {
 			lastLogin: admin.lastLogin,
 		});
 	} catch (error) {
-		console.log("Error in adminLogin controller", error.message);
+		console.log("Error in verifyAdminLoginOtp controller", error.message);
 		res.status(500).json({ error: "Internal Server Error" });
 	}
 };
@@ -439,6 +538,185 @@ export const deleteMultipleUsers = async (req, res) => {
 	}
 };
 
+// Get single user details for editing
+export const getUserDetails = async (req, res) => {
+	try {
+		const { userId } = req.params;
+
+		if (!userId) {
+			return res.status(400).json({ error: "User ID is required" });
+		}
+
+		const user = await User.findById(userId).select("-password");
+		if (!user) {
+			return res.status(404).json({ error: "User not found" });
+		}
+
+		res.status(200).json(user);
+	} catch (error) {
+		console.log("Error in getUserDetails controller", error.message);
+		res.status(500).json({ error: "Internal Server Error" });
+	}
+};
+
+// Update user profile (admin can update all user fields)
+export const updateUserProfile = async (req, res) => {
+	try {
+		const { userId } = req.params;
+		const { 
+			fullName, 
+			username, 
+			email, 
+			gender, 
+			bio, 
+			profilePic,
+			privacySettings,
+			soundSettings
+		} = req.body;
+
+		if (!userId) {
+			return res.status(400).json({ error: "User ID is required" });
+		}
+
+		const user = await User.findById(userId);
+		if (!user) {
+			return res.status(404).json({ error: "User not found" });
+		}
+
+		// Check if username or email already exists (excluding current user)
+		if (username && username !== user.username) {
+			const existingUser = await User.findOne({ 
+				_id: { $ne: userId }, 
+				username 
+			});
+			if (existingUser) {
+				return res.status(400).json({ error: "Username already exists" });
+			}
+		}
+
+		if (email && email !== user.email) {
+			const existingUser = await User.findOne({ 
+				_id: { $ne: userId }, 
+				email 
+			});
+			if (existingUser) {
+				return res.status(400).json({ error: "Email already exists" });
+			}
+		}
+
+		// Prepare update object
+		const updateData = {};
+		if (fullName !== undefined) updateData.fullName = fullName;
+		if (username !== undefined) updateData.username = username;
+		if (email !== undefined) updateData.email = email;
+		if (gender !== undefined) updateData.gender = gender;
+		if (bio !== undefined) updateData.bio = bio;
+		if (profilePic !== undefined) updateData.profilePic = profilePic;
+		if (privacySettings !== undefined) updateData.privacySettings = privacySettings;
+		if (soundSettings !== undefined) updateData.soundSettings = soundSettings;
+
+		// Update user
+		const updatedUser = await User.findByIdAndUpdate(
+			userId,
+			updateData,
+			{ new: true, runValidators: true }
+		).select("-password");
+
+		console.log(`Admin ${req.admin.username} updated user ${user.username} (${user.email})`);
+
+		res.status(200).json({
+			message: "User profile updated successfully",
+			user: updatedUser
+		});
+	} catch (error) {
+		console.log("Error in updateUserProfile controller", error.message);
+		res.status(500).json({ error: "Internal Server Error" });
+	}
+};
+
+// Change user password (admin can change without current password)
+export const changeUserPassword = async (req, res) => {
+	try {
+		const { userId } = req.params;
+		const { newPassword } = req.body;
+
+		if (!userId) {
+			return res.status(400).json({ error: "User ID is required" });
+		}
+
+		if (!newPassword) {
+			return res.status(400).json({ error: "New password is required" });
+		}
+
+		if (newPassword.length < 6) {
+			return res.status(400).json({ error: "Password must be at least 6 characters long" });
+		}
+
+		const user = await User.findById(userId);
+		if (!user) {
+			return res.status(404).json({ error: "User not found" });
+		}
+
+		// Update password
+		user.password = newPassword;
+		await user.save();
+
+		console.log(`Admin ${req.admin.username} changed password for user ${user.username} (${user.email})`);
+
+		res.status(200).json({ message: "User password changed successfully" });
+	} catch (error) {
+		console.log("Error in changeUserPassword controller", error.message);
+		res.status(500).json({ error: "Internal Server Error" });
+	}
+};
+
+// Upload user profile picture
+export const uploadUserProfilePic = async (req, res) => {
+	try {
+		const { userId } = req.params;
+
+		if (!userId) {
+			return res.status(400).json({ error: "User ID is required" });
+		}
+
+		if (!req.file) {
+			return res.status(400).json({ error: "Profile picture is required" });
+		}
+
+		const user = await User.findById(userId);
+		if (!user) {
+			return res.status(404).json({ error: "User not found" });
+		}
+
+		// Upload to Cloudinary
+		const result = await cloudinary.uploader.upload(req.file.path, {
+			folder: "profile-pics",
+			width: 300,
+			crop: "scale"
+		});
+
+		// Delete old profile pic from Cloudinary if exists
+		if (user.profilePic && user.profilePic.includes("cloudinary")) {
+			const publicId = user.profilePic.split("/").pop().split(".")[0];
+			await cloudinary.uploader.destroy(publicId);
+		}
+
+		// Update user profile pic
+		user.profilePic = result.secure_url;
+		await user.save();
+
+		console.log(`Admin ${req.admin.username} uploaded profile pic for user ${user.username} (${user.email})`);
+
+		res.status(200).json({
+			message: "Profile picture uploaded successfully",
+			profilePic: result.secure_url
+		});
+	} catch (error) {
+		console.log("Error in uploadUserProfilePic controller", error.message);
+		res.status(500).json({ error: "Internal Server Error" });
+	}
+};
+
 export const getSystemStats = async (req, res) => {
 	try {
 		const totalUsers = await User.countDocuments();
@@ -477,8 +755,21 @@ export const getSystemStats = async (req, res) => {
 		const recentLogins7d = await User.countDocuments({ lastLogin: { $gte: oneWeekAgo } });
 		const recentLogins30d = await User.countDocuments({ lastLogin: { $gte: oneMonthAgo } });
 		
-		// Users who never logged in
-		const neverLoggedIn = await User.countDocuments({ lastLogin: null });
+		// Total number of logins in last 24 hours (can be multiple per user)
+		const totalLogins24h = await User.aggregate([
+			{
+				$unwind: "$loginHistory"
+			},
+			{
+				$match: {
+					"loginHistory.loginTime": { $gte: oneDayAgo }
+				}
+			},
+			{
+				$count: "totalLogins"
+			}
+		]);
+		const logins24h = totalLogins24h.length > 0 ? totalLogins24h[0].totalLogins : 0;
 		
 		// Users inactive for more than 30 days
 		const inactiveUsers = await User.countDocuments({ 
@@ -513,7 +804,7 @@ export const getSystemStats = async (req, res) => {
 				recentLogins24h,
 				recentLogins7d,
 				recentLogins30d,
-				neverLoggedIn,
+				logins24h,
 				inactiveUsers,
 				avgLoginCount,
 				mostActiveUsers
@@ -1042,7 +1333,8 @@ export const updateSystemSettings = async (req, res) => {
 			const { io } = await import("../socket/socket.js");
 			io.emit("systemSettingsUpdated", {
 				mobileAvailability: settings.mobileAvailability,
-				maintenanceMode: settings.maintenanceMode
+				maintenanceMode: settings.maintenanceMode,
+				features: settings.features
 			});
 			console.log("📡 Emitted systemSettingsUpdated event to all clients");
 		} catch (socketError) {

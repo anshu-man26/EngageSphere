@@ -8,7 +8,7 @@ import { useVideoCall } from '../../context/VideoCallContext';
 const AGORA_APP_ID = import.meta.env.VITE_AGORA_APP_ID || 'a54ef74037d04dcb9e175550a7e05b0f';
 
 // Log the App ID for debugging (remove in production)
-console.log('Agora App ID:', AGORA_APP_ID ? 'Set' : 'Not set');
+// console.log('Agora App ID:', AGORA_APP_ID ? 'Set' : 'Not set');
 
 // Validate App ID format
 const isValidAppId = (appId) => {
@@ -82,6 +82,7 @@ const VideoCall = ({ recipientId, socket, currentUser, isIncoming = false, chann
   const isJoiningRef = useRef(false);
   const ringingAudioRef = useRef(null);
   const createdStreamsRef = useRef([]); // Track all created streams for proper cleanup
+  const hasUserInteracted = useRef(false);
 
   // Initialize the AgoraRTC client
   const initializeClient = () => {
@@ -433,9 +434,13 @@ const VideoCall = ({ recipientId, socket, currentUser, isIncoming = false, chann
       setIncomingCallAudio(null);
     }
     
-    // Stop vibration
-    if (navigator.vibrate) {
-      navigator.vibrate(0);
+    // Stop vibration (only if user has interacted with the page)
+    if (navigator.vibrate && hasUserInteracted.current) {
+      try {
+        navigator.vibrate(0);
+      } catch (error) {
+        // Ignore vibration errors
+      }
     }
     
     // Update state immediately
@@ -520,6 +525,24 @@ const VideoCall = ({ recipientId, socket, currentUser, isIncoming = false, chann
     setIsConnecting(true);
     joinChannel();
   };
+
+  // Track user interaction for vibration permission
+  useEffect(() => {
+    const handleUserInteraction = () => {
+      hasUserInteracted.current = true;
+    };
+
+    // Listen for any user interaction
+    document.addEventListener('click', handleUserInteraction, { once: true });
+    document.addEventListener('touchstart', handleUserInteraction, { once: true });
+    document.addEventListener('keydown', handleUserInteraction, { once: true });
+
+    return () => {
+      document.removeEventListener('click', handleUserInteraction);
+      document.removeEventListener('touchstart', handleUserInteraction);
+      document.removeEventListener('keydown', handleUserInteraction);
+    };
+  }, []);
 
   // Initialize when component mounts
   useEffect(() => {
@@ -825,7 +848,7 @@ const VideoCall = ({ recipientId, socket, currentUser, isIncoming = false, chann
 
   if (error) {
     return (
-      <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center">
+      <div className="fixed inset-0 bg-black/95 z-[10000] flex items-center justify-center">
         <div className="bg-gray-800/95 backdrop-blur-lg border border-gray-600/50 rounded-xl p-8 shadow-2xl max-w-md w-full mx-4 text-center">
           <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
             <FaTimes className="w-8 h-8 text-red-400" />
@@ -854,7 +877,7 @@ const VideoCall = ({ recipientId, socket, currentUser, isIncoming = false, chann
   }
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-black to-gray-900 z-50 flex flex-col">
+    <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-black to-gray-900 z-[10000] flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between p-4 bg-black/50 backdrop-blur-lg border-b border-white/10">
         <div className="flex items-center gap-3">

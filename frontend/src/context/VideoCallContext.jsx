@@ -23,10 +23,11 @@ export const VideoCallProvider = ({ children }) => {
   
   // Ref to track current ringtone audio
   const currentRingtoneRef = useRef(null);
+  const hasUserInteracted = useRef(false);
 
   // Helper function to stop current ringtone
   const stopCurrentRingtone = () => {
-    console.log('🔇 Stopping current ringtone...');
+    		// console.log('🔇 Stopping current ringtone...');
     
     if (currentRingtoneRef.current) {
       try {
@@ -69,7 +70,7 @@ export const VideoCallProvider = ({ children }) => {
       }
     });
     
-    console.log('🎵 Current ringtone cleanup completed');
+    		// console.log('🎵 Current ringtone cleanup completed');
   };
 
   // Global cleanup function to stop all media tracks
@@ -112,7 +113,7 @@ export const VideoCallProvider = ({ children }) => {
 
   // Comprehensive audio cleanup function
   const forceStopAllAudio = () => {
-    console.log('🔇 Force stopping all audio...');
+    		// console.log('🔇 Force stopping all audio...');
     
     // Stop current ringtone
     stopCurrentRingtone();
@@ -136,12 +137,16 @@ export const VideoCallProvider = ({ children }) => {
       }
     });
     
-    // Stop vibration
-    if (navigator.vibrate) {
-      navigator.vibrate(0);
+    // Stop vibration (only if user has interacted with the page)
+    if (navigator.vibrate && hasUserInteracted.current) {
+      try {
+        navigator.vibrate(0);
+      } catch (error) {
+        // Ignore vibration errors
+      }
     }
     
-    console.log('🎵 All audio cleanup completed');
+    		// console.log('🎵 All audio cleanup completed');
   };
 
   // Listen for incoming video calls globally
@@ -155,10 +160,14 @@ export const VideoCallProvider = ({ children }) => {
         
         setIncomingCall(data);
         
-        // iOS-style vibration pattern (if supported)
-        if (navigator.vibrate) {
-          // Vibration pattern: wait 1s, vibrate 200ms, wait 100ms, vibrate 200ms, wait 100ms, vibrate 200ms
-          navigator.vibrate([1000, 200, 100, 200, 100, 200]);
+        // iOS-style vibration pattern (if supported and user has interacted)
+        if (navigator.vibrate && hasUserInteracted.current) {
+          try {
+            // Vibration pattern: wait 1s, vibrate 200ms, wait 100ms, vibrate 200ms, wait 100ms, vibrate 200ms
+            navigator.vibrate([1000, 200, 100, 200, 100, 200]);
+          } catch (error) {
+            // Ignore vibration errors
+          }
         }
         
         // Play notification sound (if supported)
@@ -233,6 +242,24 @@ export const VideoCallProvider = ({ children }) => {
   useEffect(() => {
     return () => {
       forceStopAllAudio();
+    };
+  }, []);
+
+  // Track user interaction for vibration permission
+  useEffect(() => {
+    const handleUserInteraction = () => {
+      hasUserInteracted.current = true;
+    };
+
+    // Listen for any user interaction
+    document.addEventListener('click', handleUserInteraction, { once: true });
+    document.addEventListener('touchstart', handleUserInteraction, { once: true });
+    document.addEventListener('keydown', handleUserInteraction, { once: true });
+
+    return () => {
+      document.removeEventListener('click', handleUserInteraction);
+      document.removeEventListener('touchstart', handleUserInteraction);
+      document.removeEventListener('keydown', handleUserInteraction);
     };
   }, []);
 
@@ -360,7 +387,7 @@ export const VideoCallProvider = ({ children }) => {
       
       {/* Global Video Call Popup */}
       {incomingCall && (
-        <div className="fixed inset-0 bg-black/95 z-[9999] flex items-center justify-center p-4 animate-fadeIn">
+        <div className="fixed inset-0 bg-black/95 z-[10000] flex items-center justify-center p-4 animate-fadeIn">
           {/* iOS-style incoming call UI */}
           <div className="w-full max-w-sm bg-gradient-to-b from-gray-900/95 to-black/95 backdrop-blur-xl border border-gray-700/50 rounded-3xl p-8 shadow-2xl relative overflow-hidden animate-slideUp">
             {/* Animated background rings */}

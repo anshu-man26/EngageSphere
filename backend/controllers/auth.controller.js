@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import createTransporter from "../config/nodemailer.js";
+import welcomeEmailService from "../services/welcomeEmailService.js";
 
 const generateTokenAndSetCookie = (userId, res) => {
 	const token = jwt.sign({ userId }, process.env.JWT_SECRET, {
@@ -66,6 +67,11 @@ export const signup = async (req, res) => {
 		tempUser.otpExpires = null;
 
 		await tempUser.save();
+
+		// Send welcome email (non-blocking)
+		welcomeEmailService.sendWelcomeEmail(tempUser).catch(error => {
+			console.error("Failed to send welcome email:", error);
+		});
 
 		// Generate JWT token and set cookie
 		generateTokenAndSetCookie(tempUser._id, res);

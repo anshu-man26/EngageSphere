@@ -33,7 +33,27 @@ export const AuthContextProvider = ({ children }) => {
 			setAuthUser(null);
 		}
 
-		// Check for admin session only if user is logged in
+		// Safely get admin from localStorage
+		try {
+			const adminData = localStorage.getItem("chat-admin");
+			if (adminData) {
+				const parsedAdmin = JSON.parse(adminData);
+				// Validate that the admin object has required fields
+				if (parsedAdmin && parsedAdmin._id && parsedAdmin.username) {
+					setAdmin(parsedAdmin);
+				} else {
+					// Invalid admin data, clear it
+					localStorage.removeItem("chat-admin");
+					setAdmin(null);
+				}
+			}
+		} catch (error) {
+			console.error("Error parsing admin from localStorage:", error);
+			localStorage.removeItem("chat-admin");
+			setAdmin(null);
+		}
+
+		// Check for admin session independently
 		const checkAdminSession = async () => {
 			try {
 				const res = await fetch("/api/admin/profile", {
@@ -42,9 +62,11 @@ export const AuthContextProvider = ({ children }) => {
 				if (res.ok) {
 					const adminData = await res.json();
 					setAdmin(adminData);
+					localStorage.setItem("chat-admin", JSON.stringify(adminData));
 				} else if (res.status === 401) {
-					// User is not an admin, which is normal
+					// Admin session expired or invalid
 					setAdmin(null);
+					localStorage.removeItem("chat-admin");
 				}
 			} catch (error) {
 				// Only log error if it's not a network error
@@ -52,17 +74,14 @@ export const AuthContextProvider = ({ children }) => {
 					console.error("Error checking admin session:", error);
 				}
 				setAdmin(null);
+				localStorage.removeItem("chat-admin");
 			} finally {
 				setLoading(false);
 			}
 		};
 
-		// Only check admin session if user is logged in
-		if (authUser) {
-			checkAdminSession();
-		} else {
-			setLoading(false);
-		}
+		// Check admin session regardless of user login status
+		checkAdminSession();
 	}, []);
 
 	const updateAuthUser = (user) => {
@@ -76,6 +95,11 @@ export const AuthContextProvider = ({ children }) => {
 
 	const updateAdmin = (adminData) => {
 		setAdmin(adminData);
+		if (adminData) {
+			localStorage.setItem("chat-admin", JSON.stringify(adminData));
+		} else {
+			localStorage.removeItem("chat-admin");
+		}
 	};
 
 	return (

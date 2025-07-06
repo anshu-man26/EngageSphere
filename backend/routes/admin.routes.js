@@ -2,6 +2,7 @@ import express from "express";
 import {
 	adminLogin,
 	adminLogout,
+	verifyAdminLoginOtp,
 	getAdminProfile,
 	updateAdminProfile,
 	changeAdminPassword,
@@ -14,6 +15,10 @@ import {
 	getAllUsers,
 	deleteUser,
 	deleteMultipleUsers,
+	getUserDetails,
+	updateUserProfile,
+	changeUserPassword,
+	uploadUserProfilePic,
 	getSystemStats,
 	clearOnlineUsers,
 	getSystemHealth,
@@ -21,12 +26,14 @@ import {
 	updateSystemSettings
 } from "../controllers/admin.controller.js";
 import { protectAdminRoute, requirePermission } from "../middleware/protectAdminRoute.js";
+import { profilePicUpload } from "../middleware/upload.js";
 import SystemSettings from "../models/systemSettings.model.js";
 
 const router = express.Router();
 
 // Public admin routes
 router.post("/login", adminLogin);
+router.post("/verify-login-otp", verifyAdminLoginOtp);
 router.post("/logout", adminLogout);
 
 // Admin password recovery routes (public)
@@ -40,7 +47,10 @@ router.get("/settings/public", async (req, res) => {
 		const settings = await SystemSettings.getInstance();
 		res.status(200).json({
 			mobileAvailability: settings.mobileAvailability,
-			maintenanceMode: settings.maintenanceMode
+			maintenanceMode: settings.maintenanceMode,
+			userRegistration: settings.features.userRegistration,
+			userLogin: settings.features.userLogin,
+			videoCalls: settings.features.videoCalls
 		});
 	} catch (error) {
 		console.log("Error in public settings route", error.message);
@@ -59,6 +69,10 @@ router.put("/settings", protectAdminRoute, updateSystemSettings);
 
 // User management routes (require specific permissions)
 router.get("/users", protectAdminRoute, requirePermission("viewAllUsers"), getAllUsers);
+router.get("/users/:userId", protectAdminRoute, requirePermission("viewAllUsers"), getUserDetails);
+router.put("/users/:userId", protectAdminRoute, requirePermission("editAccounts"), updateUserProfile);
+router.put("/users/:userId/password", protectAdminRoute, requirePermission("editAccounts"), changeUserPassword);
+router.post("/users/:userId/profile-pic", protectAdminRoute, requirePermission("editAccounts"), profilePicUpload, uploadUserProfilePic);
 router.delete("/users/:userId", protectAdminRoute, requirePermission("deleteAccounts"), deleteUser);
 router.delete("/users", protectAdminRoute, requirePermission("deleteAccounts"), deleteMultipleUsers);
 

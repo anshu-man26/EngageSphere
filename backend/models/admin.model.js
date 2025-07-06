@@ -44,6 +44,15 @@ const adminSchema = new mongoose.Schema({
 		type: Date,
 		default: null
 	},
+	// Login OTP fields
+	loginOtp: {
+		type: String,
+		default: null
+	},
+	loginOtpExpires: {
+		type: Date,
+		default: null
+	},
 	// Delete confirmation OTP fields
 	deleteConfirmationOtp: {
 		type: String,
@@ -63,6 +72,10 @@ const adminSchema = new mongoose.Schema({
 			default: true
 		},
 		viewAllUsers: {
+			type: Boolean,
+			default: true
+		},
+		editAccounts: {
 			type: Boolean,
 			default: true
 		},

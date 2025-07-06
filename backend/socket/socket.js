@@ -108,7 +108,17 @@ export const getActiveOnlineUsers = () => {
 		}
 	}
 	
+	console.log(`📊 Current online users: ${activeUsers.length}`, activeUsers);
 	return activeUsers;
+};
+
+// Debug function to log current user map state
+export const debugUserMap = () => {
+	console.log("🔍 Current userSocketMap state:");
+	for (const [userId, userData] of Object.entries(userSocketMap)) {
+		const timeSinceActivity = Date.now() - userData.lastActivity;
+		console.log(`  User ${userId}: active=${userData.isActive}, lastActivity=${Math.floor(timeSinceActivity/1000)}s ago`);
+	}
 };
 
 // Function to broadcast online users to all clients
@@ -196,12 +206,14 @@ setInterval(() => {
 		console.log(`📡 Broadcasting updated online users after cleanup`);
 		broadcastOnlineUsers();
 	}
-}, 30000); // Check every 30 seconds for faster cleanup
+}, 15000); // Check every 15 seconds for faster cleanup
 
 io.on("connection", (socket) => {
-	console.log("a user connected", socket.id);
+	console.log("🔌 New socket connection:", socket.id);
 
 	const userId = socket.handshake.query.userId;
+	console.log("👤 User ID from query:", userId);
+	
 	if (userId && userId !== "undefined") {
 		// Store user data with timestamp
 		userSocketMap[userId] = {
@@ -211,10 +223,13 @@ io.on("connection", (socket) => {
 		};
 		socketUserMap[socket.id] = userId;
 		
-		console.log(`User ${userId} connected with socket ${socket.id}`);
+		console.log(`✅ User ${userId} connected with socket ${socket.id}`);
+		console.log(`📊 Current online users:`, getActiveOnlineUsers());
 		
 		// Broadcast updated online users
 		broadcastOnlineUsers();
+	} else {
+		console.log("❌ No valid user ID provided for socket connection");
 	}
 
 	// Handle heartbeat/ping from client
@@ -260,6 +275,36 @@ io.on("connection", (socket) => {
 		} catch (error) {
 			console.error("Error handling admin stats request:", error);
 		}
+	});
+
+	// Handle online users requests
+	socket.on("requestOnlineUsers", () => {
+		console.log(`📡 Admin ${userId} requested online users list`);
+		const onlineUsers = getActiveOnlineUsers();
+		socket.emit("getOnlineUsers", onlineUsers);
+		console.log(`📤 Sent ${onlineUsers.length} online users to admin`);
+	});
+
+	// Handle debug requests
+	socket.on("requestDebugInfo", () => {
+		console.log(`🔍 Admin ${userId} requested debug info`);
+		debugUserMap();
+		const onlineUsers = getActiveOnlineUsers();
+		socket.emit("debugInfo", {
+			onlineUsers,
+			totalUsers: Object.keys(userSocketMap).length,
+			timestamp: Date.now()
+		});
+	});
+	socket.on("requestDebugInfo", () => {
+		console.log(`🔍 Admin ${userId} requested debug info`);
+		debugUserMap();
+		const onlineUsers = getActiveOnlineUsers();
+		socket.emit("debugInfo", {
+			onlineUsers,
+			totalUsers: Object.keys(userSocketMap).length,
+			timestamp: Date.now()
+		});
 	});
 
 	// Handle video call events
@@ -314,7 +359,7 @@ io.on("connection", (socket) => {
 			removeUser(userId);
 			console.log(`✅ User ${userId} removed from online list`);
 			
-			// Broadcast updated online users
+			// Broadcast updated online users immediately
 			broadcastOnlineUsers();
 		}
 	});

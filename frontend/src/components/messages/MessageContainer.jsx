@@ -14,7 +14,9 @@ import { useSocketContext } from "../../context/SocketContext";
 import { useVideoCall } from "../../context/VideoCallContext";
 import useDeleteMultipleMessages from "../../hooks/useDeleteMultipleMessages";
 import useSendGif from "../../hooks/useSendGif";
+import useVideoCallStatus from "../../hooks/useVideoCallStatus";
 import ChatBackgroundSelector from "../chat-background/ChatBackgroundSelector";
+import VideoCallMaintenanceNotice from "./VideoCallMaintenanceNotice";
 import toast from "react-hot-toast";
 
 const MessageContainer = ({ isSidebarOpen, setIsSidebarOpen }) => {
@@ -26,6 +28,7 @@ const MessageContainer = ({ isSidebarOpen, setIsSidebarOpen }) => {
 	const { socket } = useSocketContext();
 	const { startOutgoingCall } = useVideoCall();
 	const { sendGif } = useSendGif();
+	const { isVideoCallEnabled } = useVideoCallStatus();
 	
 	// GIF picker state
 	const [showGiphyPicker, setShowGiphyPicker] = useState(false);
@@ -38,6 +41,9 @@ const MessageContainer = ({ isSidebarOpen, setIsSidebarOpen }) => {
 	const [showBackgroundSelector, setShowBackgroundSelector] = useState(false);
 	const [chatBackground, setChatBackground] = useState(selectedConversation?.chatBackground || authUser?.defaultChatBackground || "");
 	const [isDarkBackground, setIsDarkBackground] = useState(false);
+	
+	// Video call maintenance notice state
+	const [showVideoCallMaintenance, setShowVideoCallMaintenance] = useState(false);
 	
 	// Check if the selected conversation user is online
 	const isOnline = selectedConversation ? onlineUsers.includes(selectedConversation.participant?._id) : false;
@@ -127,6 +133,12 @@ const MessageContainer = ({ isSidebarOpen, setIsSidebarOpen }) => {
 
 	// Handle starting video call
 	const handleStartVideoCall = async () => {
+		// Check if video calling is enabled
+		if (!isVideoCallEnabled) {
+			setShowVideoCallMaintenance(true);
+			return;
+		}
+
 		try {
 			// Check if we have permissions first
 			const hasPermissions = await navigator.permissions.query({ name: 'camera' });
@@ -316,8 +328,12 @@ const MessageContainer = ({ isSidebarOpen, setIsSidebarOpen }) => {
 								{/* Video Call Button */}
 								<button
 									onClick={handleStartVideoCall}
-									className="p-2 sm:p-3 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
-									title="Start Video Call"
+									className={`p-2 sm:p-3 rounded-full transition-colors ${
+										isVideoCallEnabled 
+											? 'text-white/80 hover:text-white hover:bg-white/10' 
+											: 'text-gray-400 hover:text-gray-300 hover:bg-white/10 opacity-70'
+									}`}
+									title={isVideoCallEnabled ? "Start Video Call" : "Video calling is under maintenance"}
 								>
 									<VideoCameraIcon className="w-5 h-5 sm:w-6 sm:h-6" />
 								</button>
@@ -365,12 +381,19 @@ const MessageContainer = ({ isSidebarOpen, setIsSidebarOpen }) => {
 
 			{/* GIF Picker Modal */}
 			{showGiphyPicker && (
-				<div className="absolute inset-0 z-50 flex items-center justify-center">
+				<div className="absolute inset-0 z-[10000] flex items-center justify-center">
 					<GiphyPicker
 						onGifSelect={handleGifSelect}
 						onClose={() => setShowGiphyPicker(false)}
 					/>
 				</div>
+			)}
+
+			{/* Video Call Maintenance Notice */}
+			{showVideoCallMaintenance && (
+				<VideoCallMaintenanceNotice
+					onClose={() => setShowVideoCallMaintenance(false)}
+				/>
 			)}
 		</div>
 	);

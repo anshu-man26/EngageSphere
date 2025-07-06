@@ -5,6 +5,8 @@ import { useSocketContext } from "../../context/SocketContext.jsx";
 import SecureDeleteModal from "../../components/admin/SecureDeleteModal.jsx";
 import SystemHealthPanel from "../../components/admin/SystemHealthPanel.jsx";
 import SystemSettingsPanel from "../../components/admin/SystemSettingsPanel.jsx";
+import UserManagementPanel from "../../components/admin/UserManagementPanel.jsx";
+import ComplaintLogsPanel from "../../components/admin/ComplaintLogsPanel.jsx";
 
 const AdminDashboard = () => {
 	const [users, setUsers] = useState([]);
@@ -16,11 +18,14 @@ const AdminDashboard = () => {
 	const [totalPages, setTotalPages] = useState(1);
 	const [showSecureDelete, setShowSecureDelete] = useState(false);
 	const [statsUpdating, setStatsUpdating] = useState(false);
-	const [onlineUsers, setOnlineUsers] = useState([]);
 	const [showOnlyOnline, setShowOnlyOnline] = useState(false);
+	const [selectedUserForEdit, setSelectedUserForEdit] = useState(null);
+	const [showUserManagement, setShowUserManagement] = useState(false);
+	const [activeTab, setActiveTab] = useState("users");
 	const navigate = useNavigate();
 	const { admin, setAdmin } = useAuthContext();
-	const { socket } = useSocketContext();
+	const { socket, onlineUsers } = useSocketContext();
+	const { authUser } = useAuthContext();
 
 	useEffect(() => {
 		if (!admin) {
@@ -35,23 +40,39 @@ const AdminDashboard = () => {
 	useEffect(() => {
 		if (!socket) return;
 
+		console.log("🔌 Admin socket connected, setting up listeners");
+
 		// Listen for real-time stats updates
 		socket.on("adminStatsUpdate", (newStats) => {
+			console.log("📊 Admin stats updated:", newStats);
 			setStats(newStats);
 			setStatsUpdating(false);
 		});
 
-		// Listen for online users updates
-		socket.on("getOnlineUsers", (onlineUserIds) => {
-			setOnlineUsers(onlineUserIds);
+		// Listen for debug info
+		socket.on("debugInfo", (debugData) => {
+			console.log("🔍 Debug info received:", debugData);
 		});
 
 		// Request initial stats update
 		socket.emit("requestAdminStats");
 
+		// Request initial online users list
+		socket.emit("requestOnlineUsers");
+
+		// Set up periodic refresh of online users (every 30 seconds)
+		const onlineUsersInterval = setInterval(() => {
+			if (socket.connected) {
+				console.log("🔄 Requesting online users refresh");
+				socket.emit("requestOnlineUsers");
+			}
+		}, 30000);
+
 		return () => {
+			console.log("🔌 Cleaning up admin socket listeners");
 			socket.off("adminStatsUpdate");
-			socket.off("getOnlineUsers");
+			socket.off("debugInfo");
+			clearInterval(onlineUsersInterval);
 		};
 	}, [socket]);
 
@@ -127,8 +148,40 @@ const AdminDashboard = () => {
 		}
 	};
 
+	const handleRefreshOnlineUsers = () => {
+		if (socket && socket.connected) {
+			console.log("🔄 Manually refreshing online users");
+			socket.emit("requestOnlineUsers");
+		}
+	};
+
+	const handleDebugInfo = () => {
+		if (socket && socket.connected) {
+			console.log("🔍 Requesting debug info");
+			socket.emit("requestDebugInfo");
+		}
+	};
+
+	const handleTestOnlineStatus = () => {
+		console.log("🧪 Testing online status...");
+		console.log("🔌 Socket connected:", socket?.connected);
+		console.log("👥 Online users from context:", onlineUsers);
+		console.log("👤 Current user (if any):", authUser);
+		
+		if (authUser) {
+			const isOnline = onlineUsers.includes(authUser._id);
+			console.log(`🧪 Current user ${authUser._id} online status:`, isOnline ? "ONLINE" : "OFFLINE");
+		}
+		
+		if (socket && socket.connected) {
+			socket.emit("requestOnlineUsers");
+		}
+	};
+
 	const isUserOnline = (userId) => {
-		return onlineUsers.includes(userId);
+		const isOnline = onlineUsers.includes(userId);
+		console.log(`🔍 User ${userId} online status:`, isOnline ? "ONLINE" : "OFFLINE", "Online users:", onlineUsers);
+		return isOnline;
 	};
 
 	const filteredUsers = showOnlyOnline 
@@ -149,6 +202,23 @@ const AdminDashboard = () => {
 		} else {
 			setSelectedUsers(filteredUsers.map(user => user._id));
 		}
+	};
+
+	const handleEditUser = (userId) => {
+		setSelectedUserForEdit(userId);
+		setShowUserManagement(true);
+	};
+
+	const handleCloseUserManagement = () => {
+		setSelectedUserForEdit(null);
+		setShowUserManagement(false);
+	};
+
+	const handleUserUpdated = (updatedUser) => {
+		// Update the user in the local state
+		setUsers(prev => prev.map(user => 
+			user._id === updatedUser._id ? updatedUser : user
+		));
 	};
 
 	if (!admin) return null;
@@ -275,7 +345,7 @@ const AdminDashboard = () => {
 									</svg>
 								</div>
 								<div className="ml-4">
-									<p className="text-sm font-medium text-gray-400">Last 24 Hours</p>
+									<p className="text-sm font-medium text-gray-400">New Logins in Last 24h</p>
 									<p className="text-2xl font-semibold text-white">{stats.loginStats?.recentLogins24h || 0}</p>
 								</div>
 							</div>
@@ -303,8 +373,8 @@ const AdminDashboard = () => {
 									</svg>
 								</div>
 								<div className="ml-4">
-									<p className="text-sm font-medium text-gray-400">Never Logged In</p>
-									<p className="text-2xl font-semibold text-white">{stats.loginStats?.neverLoggedIn || 0}</p>
+									<p className="text-sm font-medium text-gray-400">Logins in Last 24h</p>
+									<p className="text-2xl font-semibold text-white">{stats.loginStats?.logins24h || 0}</p>
 								</div>
 							</div>
 						</div>
@@ -361,206 +431,302 @@ const AdminDashboard = () => {
 					<SystemSettingsPanel />
 				</div>
 
-				{/* User Management */}
-				<div className="bg-gray-800 rounded-lg border border-gray-700">
-					<div className="px-6 py-4 border-b border-gray-700">
-						<div className="flex justify-between items-center">
-							<h2 className="text-xl font-semibold">User Management</h2>
-							<div className="flex space-x-2">
-								{selectedUsers.length > 0 && (
-									<button
-										onClick={handleDeleteMultipleUsers}
-										className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-md text-sm font-medium"
-									>
-										Delete Selected ({selectedUsers.length})
-									</button>
-								)}
-							</div>
-						</div>
+				{/* Tabs */}
+				<div className="mb-8">
+					<div className="border-b border-gray-700">
+						<nav className="-mb-px flex space-x-8">
+							<button
+								onClick={() => setActiveTab("users")}
+								className={`py-2 px-1 border-b-2 font-medium text-sm ${
+									activeTab === "users"
+										? "border-red-500 text-red-500"
+										: "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300"
+								}`}
+							>
+								User Management
+							</button>
+							<button
+								onClick={() => setActiveTab("complaints")}
+								className={`py-2 px-1 border-b-2 font-medium text-sm ${
+									activeTab === "complaints"
+										? "border-red-500 text-red-500"
+										: "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300"
+								}`}
+							>
+								Complaint Logs
+							</button>
+						</nav>
 					</div>
 
-					<div className="p-6">
-						{/* Search and Filters */}
-						<div className="mb-4 space-y-3">
-							<input
-								type="text"
-								placeholder="Search users by name, username, or email..."
-								value={searchTerm}
-								onChange={(e) => setSearchTerm(e.target.value)}
-								className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
-							/>
-							<div className="flex items-center space-x-4">
-								<label className="flex items-center space-x-2 text-sm text-gray-300">
-									<input
-										type="checkbox"
-										checked={showOnlyOnline}
-										onChange={(e) => setShowOnlyOnline(e.target.checked)}
-										className="rounded border-gray-600 text-green-600 focus:ring-green-500"
-									/>
-									<span>Show only online users</span>
-								</label>
-								{showOnlyOnline && (
-									<span className="text-xs text-green-400">
-										({filteredUsers.length} online users)
-									</span>
-								)}
-							</div>
-						</div>
+					{/* Tab Content */}
+					<div className="mt-6">
+						{activeTab === "users" && (
+							<div className="bg-gray-800 rounded-lg border border-gray-700">
+								<div className="px-6 py-4 border-b border-gray-700">
+									<div className="flex justify-between items-center">
+										<h2 className="text-xl font-semibold">User Management</h2>
+										<div className="flex space-x-2">
+											{/* Refresh Button */}
+											<button
+												onClick={() => {
+													setLoading(true);
+													fetchUsers();
+													fetchStats();
+													handleRefreshOnlineUsers();
+												}}
+												disabled={loading}
+												className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2"
+											>
+												{loading ? (
+													<svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+														<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+														<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+													</svg>
+												) : (
+													<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+													</svg>
+												)}
+												<span>{loading ? "Refreshing..." : "Refresh"}</span>
+											</button>
+											{/* Debug Button */}
+											<button
+												onClick={handleDebugInfo}
+												className="bg-gray-600 hover:bg-gray-700 px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2"
+											>
+												<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+												</svg>
+												<span>Debug</span>
+											</button>
+											{/* Test Button */}
+											<button
+												onClick={handleTestOnlineStatus}
+												className="bg-yellow-600 hover:bg-yellow-700 px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2"
+											>
+												<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+												</svg>
+												<span>Test Online</span>
+											</button>
+											{selectedUsers.length > 0 && (
+												<button
+													onClick={handleDeleteMultipleUsers}
+													className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-md text-sm font-medium"
+												>
+													Delete Selected ({selectedUsers.length})
+												</button>
+											)}
+										</div>
+									</div>
+								</div>
 
-						{/* Users Table */}
-						<div className="overflow-x-auto">
-							<table className="min-w-full divide-y divide-gray-700">
-								<thead className="bg-gray-700">
-									<tr>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-											<input
-												type="checkbox"
-												checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
-												onChange={toggleSelectAll}
-												className="rounded border-gray-600 text-red-600 focus:ring-red-500"
-											/>
-										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-											User
-										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-											Email
-										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-											Status
-										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-											Online
-										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-											Joined
-										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-											Login Info
-										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-											Actions
-										</th>
-									</tr>
-								</thead>
-								<tbody className="bg-gray-800 divide-y divide-gray-700">
-									{loading ? (
-										<tr>
-											<td colSpan="8" className="px-6 py-4 text-center text-gray-400">
-												Loading users...
-											</td>
-										</tr>
-									) : filteredUsers.length === 0 ? (
-										<tr>
-											<td colSpan="8" className="px-6 py-4 text-center text-gray-400">
-												{showOnlyOnline ? "No online users found" : "No users found"}
-											</td>
-										</tr>
-									) : (
-										filteredUsers.map((user) => (
-											<tr key={user._id} className="hover:bg-gray-700">
-												<td className="px-6 py-4 whitespace-nowrap">
-													<input
-														type="checkbox"
-														checked={selectedUsers.includes(user._id)}
-														onChange={() => toggleUserSelection(user._id)}
-														className="rounded border-gray-600 text-red-600 focus:ring-red-500"
-													/>
-												</td>
-												<td className="px-6 py-4 whitespace-nowrap">
-													<div className="flex items-center">
-														<img
-															className="h-10 w-10 rounded-full"
-															src={user.profilePic || "/default-avatar.png"}
-															alt=""
+								<div className="p-6">
+									{/* Search and Filters */}
+									<div className="mb-4 space-y-3">
+										<input
+											type="text"
+											placeholder="Search users by name, username, or email..."
+											value={searchTerm}
+											onChange={(e) => setSearchTerm(e.target.value)}
+											className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+										/>
+										<div className="flex items-center space-x-4">
+											<label className="flex items-center space-x-2 text-sm text-gray-300">
+												<input
+													type="checkbox"
+													checked={showOnlyOnline}
+													onChange={(e) => setShowOnlyOnline(e.target.checked)}
+													className="rounded border-gray-600 text-green-600 focus:ring-green-500"
+												/>
+												<span>Show only online users</span>
+											</label>
+											{showOnlyOnline && (
+												<span className="text-xs text-green-400">
+													({filteredUsers.length} online users)
+												</span>
+											)}
+											<div className="flex items-center space-x-2 text-xs">
+												<div className={`w-2 h-2 rounded-full ${socket?.connected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+												<span className={socket?.connected ? 'text-green-400' : 'text-red-400'}>
+													{socket?.connected ? 'Socket Connected' : 'Socket Disconnected'}
+												</span>
+												<span className="text-gray-400">
+													({onlineUsers.length} online)
+												</span>
+											</div>
+										</div>
+									</div>
+
+									{/* Users Table */}
+									<div className="overflow-x-auto">
+										<table className="min-w-full divide-y divide-gray-700">
+											<thead className="bg-gray-700">
+												<tr>
+													<th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+														<input
+															type="checkbox"
+															checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
+															onChange={toggleSelectAll}
+															className="rounded border-gray-600 text-red-600 focus:ring-red-500"
 														/>
-														<div className="ml-4">
-															<div className="text-sm font-medium text-white">
-																{user.fullName}
-															</div>
-															<div className="text-sm text-gray-400">
-																@{user.username}
-															</div>
-														</div>
-													</div>
-												</td>
-												<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-													{user.email}
-												</td>
-												<td className="px-6 py-4 whitespace-nowrap">
-													<span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-														user.verified 
-															? "bg-green-900 text-green-200" 
-															: "bg-yellow-900 text-yellow-200"
-													}`}>
-														{user.verified ? "Verified" : "Unverified"}
-													</span>
-												</td>
-												<td className="px-6 py-4 whitespace-nowrap">
-													<div className="flex items-center">
-														<div className={`w-2 h-2 rounded-full mr-2 ${
-															isUserOnline(user._id) 
-																? 'bg-green-500 animate-pulse' 
-																: 'bg-gray-500'
-														}`}></div>
-														<span className={`text-xs font-medium ${
-															isUserOnline(user._id) 
-																? 'text-green-400' 
-																: 'text-gray-400'
-														}`}>
-															{isUserOnline(user._id) ? 'Online' : 'Offline'}
-														</span>
-													</div>
-												</td>
-												<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-													{new Date(user.createdAt).toLocaleDateString()}
-												</td>
-												<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-													<div>
-														<div className="font-medium">
-															{user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
-														</div>
-														<div className="text-xs text-gray-500">
-															{user.loginCount || 0} logins
-														</div>
-													</div>
-												</td>
-												<td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-													<button
-														onClick={() => handleDeleteUser(user._id)}
-														className="text-red-400 hover:text-red-300"
-													>
-														Delete
-													</button>
-												</td>
-											</tr>
-										))
-									)}
-								</tbody>
-							</table>
-						</div>
+													</th>
+													<th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+														User
+													</th>
+													<th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+														Email
+													</th>
+													<th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+														Status
+													</th>
+													<th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+														Online
+													</th>
+													<th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+														Joined
+													</th>
+													<th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+														Login Info
+													</th>
+													<th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+														Actions
+													</th>
+												</tr>
+											</thead>
+											<tbody className="bg-gray-800 divide-y divide-gray-700">
+												{loading ? (
+													<tr>
+														<td colSpan="8" className="px-6 py-4 text-center text-gray-400">
+															Loading users...
+														</td>
+													</tr>
+												) : filteredUsers.length === 0 ? (
+													<tr>
+														<td colSpan="8" className="px-6 py-4 text-center text-gray-400">
+															{showOnlyOnline ? "No online users found" : "No users found"}
+														</td>
+													</tr>
+												) : (
+													filteredUsers.map((user) => (
+														<tr key={user._id} className="hover:bg-gray-700">
+															<td className="px-6 py-4 whitespace-nowrap">
+																<input
+																	type="checkbox"
+																	checked={selectedUsers.includes(user._id)}
+																	onChange={() => toggleUserSelection(user._id)}
+																	className="rounded border-gray-600 text-red-600 focus:ring-red-500"
+																/>
+															</td>
+															<td className="px-6 py-4 whitespace-nowrap">
+																<div className="flex items-center">
+																	<img
+																		className="h-10 w-10 rounded-full"
+																		src={user.profilePic || "/default-avatar.png"}
+																		alt=""
+																	/>
+																	<div className="ml-4">
+																		<div className="text-sm font-medium text-white">
+																			{user.fullName}
+																		</div>
+																		<div className="text-sm text-gray-400">
+																			@{user.username}
+																		</div>
+																	</div>
+																</div>
+															</td>
+															<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+																{user.email}
+															</td>
+															<td className="px-6 py-4 whitespace-nowrap">
+																<span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+																	user.verified 
+																		? "bg-green-900 text-green-200" 
+																		: "bg-yellow-900 text-yellow-200"
+																}`}>
+																	{user.verified ? "Verified" : "Unverified"}
+																</span>
+															</td>
+															<td className="px-6 py-4 whitespace-nowrap">
+																<div className="flex items-center">
+																	<div className={`w-2 h-2 rounded-full mr-2 ${
+																		isUserOnline(user._id) 
+																			? 'bg-green-500 animate-pulse' 
+																			: 'bg-gray-500'
+																	}`}></div>
+																	<span className={`text-xs font-medium ${
+																		isUserOnline(user._id) 
+																			? 'text-green-400' 
+																			: 'text-gray-400'
+																	}`}>
+																		{isUserOnline(user._id) ? 'Online' : 'Offline'}
+																	</span>
+																</div>
+															</td>
+															<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+																{new Date(user.createdAt).toLocaleDateString()}
+															</td>
+															<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+																<div>
+																	<div className="font-medium">
+																		{user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
+																	</div>
+																	<div className="text-xs text-gray-500">
+																		{user.loginCount || 0} logins
+																	</div>
+																</div>
+															</td>
+															<td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+																<div className="flex space-x-2">
+																	<button
+																		onClick={() => handleEditUser(user._id)}
+																		className="text-blue-400 hover:text-blue-300"
+																	>
+																		Edit
+																	</button>
+																	<button
+																		onClick={() => handleDeleteUser(user._id)}
+																		className="text-red-400 hover:text-red-300"
+																	>
+																		Delete
+																	</button>
+																</div>
+															</td>
+														</tr>
+													))
+												)}
+											</tbody>
+										</table>
+									</div>
 
-						{/* Pagination */}
-						{totalPages > 1 && (
-							<div className="mt-4 flex justify-between items-center">
-								<button
-									onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-									disabled={currentPage === 1}
-									className="px-4 py-2 bg-gray-700 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-								>
-									Previous
-								</button>
-								<span className="text-gray-300">
-									Page {currentPage} of {totalPages}
-								</span>
-								<button
-									onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-									disabled={currentPage === totalPages}
-									className="px-4 py-2 bg-gray-700 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-								>
-									Next
-								</button>
+									{/* Pagination */}
+									{totalPages > 1 && (
+										<div className="mt-4 flex justify-between items-center">
+											<button
+												onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+												disabled={currentPage === 1}
+												className="px-4 py-2 bg-gray-700 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+											>
+												Previous
+											</button>
+											<span className="text-gray-300">
+												Page {currentPage} of {totalPages}
+											</span>
+											<button
+												onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+												disabled={currentPage === totalPages}
+												className="px-4 py-2 bg-gray-700 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+											>
+												Next
+											</button>
+										</div>
+									)}
+								</div>
 							</div>
+						)}
+
+						{activeTab === "complaints" && (
+							<ComplaintLogsPanel />
 						)}
 					</div>
 				</div>
@@ -573,6 +739,15 @@ const AdminDashboard = () => {
 				selectedUsers={selectedUsers}
 				onDeleteSuccess={handleDeleteSuccess}
 			/>
+
+			{/* User Management Panel */}
+			{showUserManagement && (
+				<UserManagementPanel
+					selectedUser={selectedUserForEdit}
+					onClose={handleCloseUserManagement}
+					onUserUpdated={handleUserUpdated}
+				/>
+			)}
 		</div>
 	);
 };
