@@ -9,7 +9,8 @@ import useChangeEmail from "../../hooks/useChangeEmail";
 import useChangeUsername from "../../hooks/useChangeUsername";
 import useRequestDeleteAccountOtp from "../../hooks/useRequestDeleteAccountOtp";
 import useDeleteAccount from "../../hooks/useDeleteAccount";
-import { FaUser, FaSave, FaArrowLeft, FaUpload, FaTimes, FaLock, FaEdit, FaEye, FaEyeSlash, FaShieldAlt, FaUnlock, FaTrash, FaImage, FaVolumeUp, FaVolumeMute, FaVolumeOff, FaBars, FaChevronDown, FaAt } from "react-icons/fa";
+import useLogout from "../../hooks/useLogout";
+import { FaUser, FaSave, FaArrowLeft, FaUpload, FaTimes, FaLock, FaEdit, FaEye, FaEyeSlash, FaShieldAlt, FaUnlock, FaTrash, FaImage, FaVolumeUp, FaVolumeMute, FaVolumeOff, FaBars, FaChevronDown, FaAt, FaSignOutAlt } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import ChatBackgroundSelector from "../../components/chat-background/ChatBackgroundSelector";
@@ -27,6 +28,7 @@ const Profile = () => {
 	const { loading: usernameLoading, changeUsername } = useChangeUsername();
 	const { loading: deleteOtpLoading, requestOtp: requestDeleteOtp } = useRequestDeleteAccountOtp();
 	const { loading: deleteAccountLoading, deleteAccount } = useDeleteAccount();
+	const { loading: logoutLoading, logout } = useLogout();
 	const fileInputRef = useRef(null);
 	const { loading: bgLoading, updateDefaultChatBackground } = useDefaultChatBackground();
 
@@ -660,14 +662,22 @@ const Profile = () => {
 									{ id: "2fa", label: "Two-Factor Auth", icon: FaShieldAlt, color: "from-teal-500 to-green-500" },
 									{ id: "privacy", label: "Privacy", icon: FaEye, color: "from-green-500 to-emerald-500" },
 									{ id: "chat-settings", label: "Chat Settings", icon: FaVolumeUp, color: "from-emerald-500 to-teal-500" },
-									{ id: "delete", label: "Delete Account", icon: FaTrash, color: "from-red-500 to-pink-500" }
+									{ id: "delete", label: "Delete Account", icon: FaTrash, color: "from-red-500 to-pink-500" },
+									{ id: "logout", label: "Sign Out", icon: FaSignOutAlt, color: "from-orange-500 to-red-500" }
 								].map(({ id, label, icon: Icon, color }) => (
 									<button
 										key={id}
-										onClick={() => setActiveTab(id)}
+										onClick={() => {
+											if (id === "logout") {
+												logout();
+											} else {
+												setActiveTab(id);
+											}
+											setShowMobileMenu(false);
+										}}
 										className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 text-left ${
 											activeTab === id 
-												? `bg-gradient-to-r ${color} text-white shadow-lg transform scale-105` 
+												? `bg-gradient-to-r ${color} text-white shadow-lg` 
 												: "text-white/70 hover:text-white hover:bg-white/10"
 										}`}
 									>
@@ -696,7 +706,8 @@ const Profile = () => {
 											{ id: "2fa", label: "Two-Factor Auth", icon: FaShieldAlt, color: "from-teal-500 to-green-500" },
 											{ id: "privacy", label: "Privacy", icon: FaEye, color: "from-green-500 to-emerald-500" },
 											{ id: "chat-settings", label: "Chat Settings", icon: FaVolumeUp, color: "from-emerald-500 to-teal-500" },
-											{ id: "delete", label: "Delete Account", icon: FaTrash, color: "from-red-500 to-pink-500" }
+											{ id: "delete", label: "Delete Account", icon: FaTrash, color: "from-red-500 to-pink-500" },
+											{ id: "logout", label: "Sign Out", icon: FaSignOutAlt, color: "from-orange-500 to-red-500" }
 										].find(tab => tab.id === activeTab);
 										
 										const Icon = currentTab.icon;
@@ -724,7 +735,8 @@ const Profile = () => {
 											{ id: "2fa", label: "Two-Factor Auth", icon: FaShieldAlt, color: "from-teal-500 to-green-500" },
 											{ id: "privacy", label: "Privacy", icon: FaEye, color: "from-green-500 to-emerald-500" },
 											{ id: "chat-settings", label: "Chat Settings", icon: FaVolumeUp, color: "from-emerald-500 to-teal-500" },
-											{ id: "delete", label: "Delete Account", icon: FaTrash, color: "from-red-500 to-pink-500" }
+											{ id: "delete", label: "Delete Account", icon: FaTrash, color: "from-red-500 to-pink-500" },
+											{ id: "logout", label: "Sign Out", icon: FaSignOutAlt, color: "from-orange-500 to-red-500" }
 										].map(({ id, label, icon: Icon, color }) => (
 											<button
 												key={id}
@@ -1814,6 +1826,48 @@ const Profile = () => {
 									onClose={() => setShowBackgroundManager(false)}
 								/>
 							)}
+						</div>
+					)}
+
+					{/* Logout Tab */}
+					{activeTab === "logout" && (
+						<div className="space-y-6">
+							<h2 className="text-xl font-bold text-white mb-4">Sign Out</h2>
+							
+							<div className="bg-gray-800 rounded-lg p-6 border border-gray-600">
+								<div className="text-center">
+									<div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+										<FaSignOutAlt className="w-8 h-8 text-red-400" />
+									</div>
+									
+									<h3 className="text-lg font-semibold text-white mb-2">Sign Out of EngageSphere</h3>
+									<p className="text-gray-300 mb-6">
+										Are you sure you want to sign out? You'll need to sign in again to access your account.
+									</p>
+									
+									<div className="flex flex-col sm:flex-row gap-3 justify-center">
+										<button
+											onClick={logout}
+											disabled={logoutLoading}
+											className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+										>
+											{logoutLoading ? (
+												<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+											) : (
+												<FaSignOutAlt className="w-4 h-4" />
+											)}
+											{logoutLoading ? "Signing out..." : "Sign Out"}
+										</button>
+										
+										<button
+											onClick={() => setActiveTab("profile")}
+											className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors duration-200"
+										>
+											Cancel
+										</button>
+									</div>
+								</div>
+							</div>
 						</div>
 					)}
 				</div>
