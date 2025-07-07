@@ -11,9 +11,7 @@ const io = new Server(server, {
 		origin: [
 			"http://localhost:3000",
 			"http://localhost:5173",
-			"https://engagesphere-mrjv.onrender.com",
-			"https://engagesphere.vercel.app",
-			"https://*.vercel.app"
+			"https://engagesphere-mrjv.onrender.com"
 		],
 		methods: ["GET", "POST"],
 		credentials: true,
