@@ -33,6 +33,15 @@ export const SocketContextProvider = ({ children }) => {
 		}
 	};
 
+	// Determine the backend URL based on environment
+	const getBackendUrl = () => {
+		if (import.meta.env.DEV) {
+			return "http://localhost:5000";
+		}
+		// For production (Vercel), use the same domain
+		return window.location.origin;
+	};
+
 	useEffect(() => {
 		if (authUser) {
 			// Prevent duplicate socket connections
@@ -41,7 +50,8 @@ export const SocketContextProvider = ({ children }) => {
 				return;
 			}
 
-			const newSocket = io("/", {
+			const backendUrl = getBackendUrl();
+			const newSocket = io(backendUrl, {
 				query: {
 					userId: authUser._id,
 				},
@@ -134,8 +144,6 @@ export const SocketContextProvider = ({ children }) => {
 					detail: data
 				}));
 			});
-
-			setSocket(newSocket);
 
 			// Set up heartbeat interval
 			const heartbeatInterval = setInterval(() => {
