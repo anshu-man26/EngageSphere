@@ -34,9 +34,7 @@ app.use(cors({
 		"http://localhost:3000", 
 		"http://localhost:5173", 
 		"http://10.18.214.234:3000",
-		"https://engagesphere-mrjv.onrender.com",
-		"https://engagesphere.vercel.app",
-		"https://*.vercel.app"
+		"https://engagesphere-mrjv.onrender.com"
 	], // Allow both common frontend ports and your IP
 	credentials: true, // Allow cookies and authentication headers
 	methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -90,22 +88,17 @@ if (process.env.NODE_ENV === 'production') {
 	});
 }
 
-// For Vercel serverless functions, we need to export the app
-if (process.env.VERCEL) {
-	module.exports = app;
-} else {
-	server.listen(PORT, '0.0.0.0', () => {
-		connectToMongoDB();
-		console.log(`Server Running on port ${PORT}`);
-		console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-		console.log(`Access from mobile: http://10.18.214.234:3000`);
-		
-		// Start notification cleanup job (runs every 6 hours)
-		setInterval(() => {
-			notificationService.cleanupOldNotifications();
-		}, 6 * 60 * 60 * 1000);
-		
-		// Run initial cleanup
+server.listen(PORT, '0.0.0.0', () => {
+	connectToMongoDB();
+	console.log(`Server Running on port ${PORT}`);
+	console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+	console.log(`Access from mobile: http://10.18.214.234:3000`);
+	
+	// Start notification cleanup job (runs every 6 hours)
+	setInterval(() => {
 		notificationService.cleanupOldNotifications();
-	});
-}
+	}, 6 * 60 * 60 * 1000);
+	
+	// Run initial cleanup
+	notificationService.cleanupOldNotifications();
+});

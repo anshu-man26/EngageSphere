@@ -38,7 +38,7 @@ export const SocketContextProvider = ({ children }) => {
 		if (import.meta.env.DEV) {
 			return "http://localhost:5000";
 		}
-		// For production (Vercel), use the same domain
+		// For production, use the same domain
 		return window.location.origin;
 	};
 

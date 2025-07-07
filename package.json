@@ -13,9 +13,7 @@
     "start": "cd backend && npm start",
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
     "render-build": "npm run install:all && npm run build:frontend",
-    "render-start": "cd backend && npm start",
-    "vercel-build": "npm run build:frontend",
-    "vercel-dev": "npm run dev"
+    "render-start": "cd backend && npm start"
   },
 	"keywords": [
 		"chat",
