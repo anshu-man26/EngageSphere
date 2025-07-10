@@ -4,7 +4,8 @@ A modern real-time chat application built with React, Node.js, and Socket.IO.
 
 ## 🌐 Live Demo
 
-**Deployed on Render:** [https://engagesphere-mrjv.onrender.com/](https://engagesphere-mrjv.onrender.com/)
+**Deployed Here:** [https://engagesphere-mrjv.onrender.com/](https://engagesphere-mrjv.onrender.com/)
+And https://engagesphere-production.up.railway.app/
 
 ## 🚀 Quick Start
 
