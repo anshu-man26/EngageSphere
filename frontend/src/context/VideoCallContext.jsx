@@ -140,7 +140,7 @@ export const VideoCallProvider = ({ children }) => {
     // Stop vibration (only if user has interacted with the page)
     if (navigator.vibrate && hasUserInteracted.current) {
       try {
-        navigator.vibrate(0);
+      navigator.vibrate(0);
       } catch (error) {
         // Ignore vibration errors
       }
@@ -163,8 +163,8 @@ export const VideoCallProvider = ({ children }) => {
         // iOS-style vibration pattern (if supported and user has interacted)
         if (navigator.vibrate && hasUserInteracted.current) {
           try {
-            // Vibration pattern: wait 1s, vibrate 200ms, wait 100ms, vibrate 200ms, wait 100ms, vibrate 200ms
-            navigator.vibrate([1000, 200, 100, 200, 100, 200]);
+          // Vibration pattern: wait 1s, vibrate 200ms, wait 100ms, vibrate 200ms, wait 100ms, vibrate 200ms
+          navigator.vibrate([1000, 200, 100, 200, 100, 200]);
           } catch (error) {
             // Ignore vibration errors
           }
