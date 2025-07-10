@@ -6,6 +6,9 @@ const useUploadFile = () => {
 	const [loading, setLoading] = useState(false);
 	const { selectedConversation, addMessage, addUploadingFile, removeUploadingFile } = useConversation();
 
+	// Mobile detection
+	const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
 	const uploadFile = async (file, message = "") => {
 		if (!file) {
 			toast.error("Please select a file");
@@ -65,7 +68,19 @@ const useUploadFile = () => {
 		} catch (error) {
 			// Remove from uploading state on error
 			removeUploadingFile(uploadingFileId);
-			toast.error(error.message);
+			
+			// Provide mobile-specific error messages
+			if (isMobile) {
+				if (error.message.includes('Network') || error.message.includes('fetch')) {
+					toast.error("Network error. Please check your connection and try again.");
+				} else if (error.message.includes('file')) {
+					toast.error("File upload failed. Please try selecting the file again.");
+				} else {
+					toast.error(error.message || "Upload failed. Please try again.");
+				}
+			} else {
+				toast.error(error.message);
+			}
 			return null;
 		} finally {
 			setLoading(false);

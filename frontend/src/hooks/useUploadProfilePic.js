@@ -6,6 +6,9 @@ const useUploadProfilePic = () => {
 	const [loading, setLoading] = useState(false);
 	const { setAuthUser } = useAuthContext();
 
+	// Mobile detection
+	const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
 	const uploadProfilePic = async (file) => {
 		if (!file) {
 			toast.error("Please select a file");
@@ -45,7 +48,20 @@ const useUploadProfilePic = () => {
 			toast.success("Profile picture uploaded successfully!");
 			return data.profilePic;
 		} catch (error) {
-			toast.error(error.message);
+			// Provide mobile-specific error messages
+			if (isMobile) {
+				if (error.message.includes('Network') || error.message.includes('fetch')) {
+					toast.error("Network error. Please check your connection and try again.");
+				} else if (error.message.includes('file') || error.message.includes('upload')) {
+					toast.error("Upload failed. Please try selecting the image again.");
+				} else if (error.message.includes('Cloudinary')) {
+					toast.error("Image upload service error. Please try again later.");
+				} else {
+					toast.error(error.message || "Upload failed. Please try again.");
+				}
+			} else {
+				toast.error(error.message);
+			}
 			return null;
 		} finally {
 			setLoading(false);

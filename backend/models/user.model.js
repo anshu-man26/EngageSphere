@@ -92,6 +92,11 @@ const userSchema = new mongoose.Schema(
 				default: true,
 			},
 		},
+		// Profanity filter settings
+		profanityFilterEnabled: {
+			type: Boolean,
+			default: true, // Default to enabled
+		},
 		// Delete account OTP fields
 		deleteAccountOtp: {
 			type: String,

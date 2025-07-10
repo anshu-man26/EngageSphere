@@ -1,6 +1,8 @@
 import Conversation from "../models/conversation.model.js";
 import Message from "../models/message.model.js";
 import { getReceiverSocketId, io } from "../socket/socket.js";
+import profanityFilterService from "../services/profanityFilterService.js";
+import SystemSettings from "../models/systemSettings.model.js";
 
 export const sendMessage = async (req, res) => {
 	try {
@@ -30,10 +32,34 @@ export const sendMessage = async (req, res) => {
 			});
 		}
 
+		// Check system settings for profanity filter
+		const systemSettings = await SystemSettings.getInstance();
+		const isProfanityFilterEnabled = systemSettings.features.profanityFilter;
+		
+		let finalMessage = message.trim();
+		let isProfanityFiltered = false;
+		let profanityReason = null;
+		
+		// Apply profanity filter if enabled globally and user has it enabled
+		if (isProfanityFilterEnabled && req.user.profanityFilterEnabled !== false) {
+			const filterResult = await profanityFilterService.filterMessage(finalMessage, {
+				profanityFilterEnabled: req.user.profanityFilterEnabled
+			});
+			
+			// If message is filtered by profanity filter, show profanity detected message
+			if (filterResult.isFiltered) {
+				isProfanityFiltered = true;
+				profanityReason = filterResult.reason;
+				finalMessage = "🚫 Profanity detected";
+			}
+		}
+
 		const newMessage = new Message({
 			senderId,
 			receiverId,
-			message: message.trim(),
+			message: finalMessage,
+			isFiltered: isProfanityFiltered,
+			filterReason: profanityReason
 		});
 
 		if (newMessage) {

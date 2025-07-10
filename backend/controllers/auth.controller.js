@@ -66,6 +66,22 @@ export const signup = async (req, res) => {
 		tempUser.otp = null;
 		tempUser.otpExpires = null;
 
+		// Update login statistics (count registration as first login)
+		const now = new Date();
+		const ipAddress = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'Unknown';
+		const userAgent = req.headers['user-agent'] || 'Unknown';
+
+		// Set first login time and count
+		tempUser.lastLogin = now;
+		tempUser.loginCount = 1;
+
+		// Add to login history
+		tempUser.loginHistory.push({
+			loginTime: now,
+			ipAddress: ipAddress,
+			userAgent: userAgent
+		});
+
 		await tempUser.save();
 
 		// Send welcome email (non-blocking)

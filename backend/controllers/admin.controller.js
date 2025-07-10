@@ -1,15 +1,17 @@
 import Admin from "../models/admin.model.js";
 import User from "../models/user.model.js";
 import SystemSettings from "../models/systemSettings.model.js";
+import Broadcast from "../models/broadcast.model.js";
 import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
 import { v2 as cloudinary } from "cloudinary";
+import { io } from "../socket/socket.js";
 
 // Configure Cloudinary
 cloudinary.config({
-	cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+	cloud_name: process.env.CLOUDINARY_NAME,
 	api_key: process.env.CLOUDINARY_API_KEY,
-	api_secret: process.env.CLOUDINARY_API_SECRET,
+	api_secret: process.env.CLOUDINARY_SECRET_KEY,
 });
 
 const generateAdminTokenAndSetCookie = (adminId, res) => {
@@ -451,7 +453,7 @@ export const getAllUsers = async (req, res) => {
 		const skip = (page - 1) * limit;
 		
 		const users = await User.find(query)
-			.select("fullName username email gender profilePic bio verified twoFactorEnabled defaultChatBackground createdAt lastLogin loginCount")
+			.select("fullName username email gender profilePic bio verified twoFactorEnabled defaultChatBackground createdAt lastLogin loginCount loginHistory")
 			.sort({ createdAt: -1 })
 			.skip(skip)
 			.limit(parseInt(limit));
@@ -672,6 +674,10 @@ export const changeUserPassword = async (req, res) => {
 
 // Upload user profile picture
 export const uploadUserProfilePic = async (req, res) => {
+	console.log("=== ADMIN UPLOAD USER PROFILE PIC STARTED ===");
+	console.log("Request params:", req.params);
+	console.log("Request file:", req.file ? "File present" : "No file");
+	
 	try {
 		const { userId } = req.params;
 
@@ -688,22 +694,72 @@ export const uploadUserProfilePic = async (req, res) => {
 			return res.status(404).json({ error: "User not found" });
 		}
 
-		// Upload to Cloudinary
-		const result = await cloudinary.uploader.upload(req.file.path, {
-			folder: "profile-pics",
-			width: 300,
-			crop: "scale"
+		console.log("File details:", {
+			mimetype: req.file.mimetype,
+			size: req.file.size,
+			originalname: req.file.originalname,
+			path: req.file.path
 		});
+
+		// Check if Cloudinary credentials are configured
+		console.log("Checking Cloudinary credentials...");
+		console.log("CLOUDINARY_NAME:", process.env.CLOUDINARY_NAME ? `${process.env.CLOUDINARY_NAME.substring(0, 3)}...` : "Missing");
+		console.log("CLOUDINARY_API_KEY:", process.env.CLOUDINARY_API_KEY ? `${process.env.CLOUDINARY_API_KEY.substring(0, 5)}...` : "Missing");
+		console.log("CLOUDINARY_SECRET_KEY:", process.env.CLOUDINARY_SECRET_KEY ? `${process.env.CLOUDINARY_SECRET_KEY.substring(0, 5)}...` : "Missing");
+		
+		if (!process.env.CLOUDINARY_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_SECRET_KEY) {
+			console.error("Cloudinary credentials not configured");
+			return res.status(500).json({ error: "Cloudinary configuration missing. Please check your environment variables." });
+		}
+
+		// Reconfigure Cloudinary to ensure credentials are loaded
+		cloudinary.config({
+			cloud_name: process.env.CLOUDINARY_NAME,
+			api_key: process.env.CLOUDINARY_API_KEY,
+			api_secret: process.env.CLOUDINARY_SECRET_KEY,
+		});
+
+		console.log("Uploading to Cloudinary...");
+		
+		// Upload to Cloudinary using file path
+		const result = await cloudinary.uploader.upload(req.file.path, {
+			folder: "admin-profile-pics",
+			width: 400,
+			height: 400,
+			crop: "fill",
+			quality: "auto",
+			format: "webp",
+		});
+
+		console.log("Cloudinary upload successful:", result.secure_url);
 
 		// Delete old profile pic from Cloudinary if exists
 		if (user.profilePic && user.profilePic.includes("cloudinary")) {
-			const publicId = user.profilePic.split("/").pop().split(".")[0];
-			await cloudinary.uploader.destroy(publicId);
+			try {
+				const publicId = user.profilePic.split("/").pop().split(".")[0];
+				await cloudinary.uploader.destroy(publicId);
+				console.log("Old profile pic deleted from Cloudinary");
+			} catch (deleteError) {
+				console.log("Error deleting old profile pic:", deleteError.message);
+				// Continue anyway - not critical
+			}
 		}
 
 		// Update user profile pic
 		user.profilePic = result.secure_url;
 		await user.save();
+
+		// Clean up temporary file
+		try {
+			const fs = await import('fs');
+			if (fs.existsSync(req.file.path)) {
+				fs.unlinkSync(req.file.path);
+				console.log("Temporary file cleaned up");
+			}
+		} catch (cleanupError) {
+			console.log("Error cleaning up temporary file:", cleanupError.message);
+			// Continue anyway - not critical
+		}
 
 		console.log(`Admin ${req.admin.username} uploaded profile pic for user ${user.username} (${user.email})`);
 
@@ -711,9 +767,34 @@ export const uploadUserProfilePic = async (req, res) => {
 			message: "Profile picture uploaded successfully",
 			profilePic: result.secure_url
 		});
+		console.log("=== ADMIN UPLOAD USER PROFILE PIC COMPLETED SUCCESSFULLY ===");
 	} catch (error) {
-		console.log("Error in uploadUserProfilePic controller", error.message);
-		res.status(500).json({ error: "Internal Server Error" });
+		console.error("=== ADMIN UPLOAD USER PROFILE PIC ERROR ===");
+		console.error("Error message:", error.message);
+		console.error("Error stack:", error.stack);
+		console.error("Error name:", error.name);
+		
+		// Provide more specific error messages
+		if (error.message && error.message.includes('cloud_name')) {
+			return res.status(500).json({ error: "Invalid Cloudinary cloud name" });
+		}
+		if (error.message && error.message.includes('api_key')) {
+			return res.status(500).json({ error: "Invalid Cloudinary API key" });
+		}
+		if (error.message && error.message.includes('api_secret')) {
+			return res.status(500).json({ error: "Invalid Cloudinary secret key" });
+		}
+		if (error.message && error.message.includes('Unauthorized')) {
+			return res.status(500).json({ error: "Cloudinary authentication failed. Please check your credentials." });
+		}
+		if (error.message && error.message.includes('Network')) {
+			return res.status(500).json({ error: "Network error connecting to Cloudinary" });
+		}
+		if (error.message && error.message.includes('ENOENT')) {
+			return res.status(500).json({ error: "File not found. Please try uploading again." });
+		}
+		
+		res.status(500).json({ error: "Internal server error during upload" });
 	}
 };
 
@@ -1347,6 +1428,285 @@ export const updateSystemSettings = async (req, res) => {
 		});
 	} catch (error) {
 		console.log("Error in updateSystemSettings controller", error.message);
+		res.status(500).json({ error: "Internal Server Error" });
+	}
+};
+
+// Broadcast Message Controller
+export const broadcastMessage = async (req, res) => {
+	try {
+		const { subject, message, messageStyle = "normal", recipients, selectedUserIds } = req.body;
+		const adminId = req.admin._id;
+
+		// Validate input
+		if (!subject || !message || !recipients) {
+			return res.status(400).json({ error: "Subject, message, and recipients are required" });
+		}
+
+		if (subject.length > 100) {
+			return res.status(400).json({ error: "Subject must be 100 characters or less" });
+		}
+
+		if (message.length > 2000) {
+			return res.status(400).json({ error: "Message must be 2000 characters or less" });
+		}
+
+		// Get users based on recipient type
+		let users = [];
+		switch (recipients) {
+			case "all":
+				users = await User.find({}).select("email fullName username");
+				break;
+			case "verified":
+				users = await User.find({ verified: true }).select("email fullName username");
+				break;
+			case "unverified":
+				users = await User.find({ verified: false }).select("email fullName username");
+				break;
+			case "selected":
+				if (!selectedUserIds || selectedUserIds.length === 0) {
+					return res.status(400).json({ error: "Please select at least one user" });
+				}
+				users = await User.find({ _id: { $in: selectedUserIds } }).select("email fullName username");
+				break;
+			default:
+				return res.status(400).json({ error: "Invalid recipient type" });
+		}
+
+		if (users.length === 0) {
+			return res.status(400).json({ error: "No users found for the selected criteria" });
+		}
+
+		// Create email transporter
+		const transporter = createEmailTransporter();
+
+		// Get style configuration based on message style
+		const getStyleConfig = (style) => {
+			switch (style) {
+				case "serious":
+					return {
+						headerBg: "linear-gradient(135deg, #dc2626 0%, #991b1b 100%)",
+						borderColor: "#dc2626",
+						badgeText: "IMPORTANT",
+						badgeBg: "#dc2626",
+						tone: "This is an important communication from EngageSphere administration."
+					};
+				case "urgent":
+					return {
+						headerBg: "linear-gradient(135deg, #ea580c 0%, #c2410c 100%)",
+						borderColor: "#ea580c",
+						badgeText: "URGENT",
+						badgeBg: "#ea580c",
+						tone: "This is an urgent communication from EngageSphere administration."
+					};
+				case "friendly":
+					return {
+						headerBg: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
+						borderColor: "#16a34a",
+						badgeText: "FRIENDLY",
+						badgeBg: "#16a34a",
+						tone: "This is a friendly update from your EngageSphere team."
+					};
+				case "informative":
+					return {
+						headerBg: "linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)",
+						borderColor: "#7c3aed",
+						badgeText: "UPDATE",
+						badgeBg: "#7c3aed",
+						tone: "This is an informative update from EngageSphere administration."
+					};
+				default: // normal
+					return {
+						headerBg: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+						borderColor: "#667eea",
+						badgeText: "NOTICE",
+						badgeBg: "#667eea",
+						tone: "This is an official communication from EngageSphere administration."
+					};
+			}
+		};
+
+		const styleConfig = getStyleConfig(messageStyle);
+
+		// Prepare email content
+		const emailHtml = `
+			<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+				<div style="background: ${styleConfig.headerBg}; color: white; padding: 20px; text-align: center;">
+					<h1 style="margin: 0;">EngageSphere</h1>
+					<p style="margin: 10px 0 0 0;">Official Communication</p>
+					<div style="margin-top: 10px;">
+						<span style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; text-transform: uppercase;">
+							${styleConfig.badgeText}
+						</span>
+					</div>
+				</div>
+				<div style="padding: 20px; background: #f9f9f9;">
+					<h2 style="color: #333;">${subject}</h2>
+					<div style="background: #fff; border-left: 4px solid ${styleConfig.borderColor}; padding: 15px; margin: 20px 0;">
+						${message.replace(/\n/g, '<br>')}
+					</div>
+					<p style="color: #666; font-size: 14px;">
+						${styleConfig.tone}
+					</p>
+					<p style="color: #666; margin-top: 20px;">
+						Best regards,<br>
+						EngageSphere Team
+					</p>
+				</div>
+			</div>
+		`;
+
+		// Save broadcast history first (with pending status)
+		const broadcastHistory = new Broadcast({
+			subject,
+			message,
+			messageStyle,
+			recipients,
+			selectedUserIds: recipients === "selected" ? selectedUserIds : [],
+			sentBy: adminId,
+			sentCount: 0,
+			totalUsers: users.length,
+			failedEmails: [],
+			status: "pending"
+		});
+
+		await broadcastHistory.save();
+
+		// Return immediate response
+		res.status(200).json({
+			message: "Broadcast message queued for sending",
+			totalUsers: users.length,
+			recipients: {
+				type: recipients,
+				count: users.length
+			},
+			broadcastId: broadcastHistory._id
+		});
+
+		// Send emails asynchronously (non-blocking)
+		(async () => {
+			let sentCount = 0;
+			let failedEmails = [];
+
+			for (let i = 0; i < users.length; i++) {
+				const user = users[i];
+				try {
+					const mailOptions = {
+						from: process.env.EMAIL_USER,
+						to: user.email,
+						subject: `[EngageSphere] ${subject}`,
+						html: emailHtml
+					};
+
+					await transporter.sendMail(mailOptions);
+					sentCount++;
+					
+					// Emit progress update via WebSocket
+					const progress = Math.round((sentCount / users.length) * 100);
+					io.emit("broadcastProgress", {
+						broadcastId: broadcastHistory._id,
+						sentCount,
+						totalUsers: users.length,
+						progress,
+						status: "sending"
+					});
+					
+				} catch (emailError) {
+					console.log(`Failed to send email to ${user.email}:`, emailError.message);
+					failedEmails.push(user.email);
+				}
+			}
+
+			// Update broadcast history with final results
+			const finalStatus = failedEmails.length === 0 ? "sent" : failedEmails.length === users.length ? "failed" : "partial";
+			try {
+				await Broadcast.findByIdAndUpdate(broadcastHistory._id, {
+					sentCount,
+					failedEmails,
+					status: finalStatus
+				});
+				
+				// Emit final status update
+				io.emit("broadcastProgress", {
+					broadcastId: broadcastHistory._id,
+					sentCount,
+					totalUsers: users.length,
+					progress: 100,
+					status: finalStatus
+				});
+				
+			} catch (updateError) {
+				console.log("Failed to update broadcast history:", updateError.message);
+			}
+
+			// Log the broadcast action
+			console.log(`Admin ${req.admin.username} completed broadcast message to ${sentCount} users. Subject: "${subject}"`);
+		})();
+
+	} catch (error) {
+		console.log("Error in broadcastMessage controller", error.message);
+		res.status(500).json({ error: "Internal Server Error" });
+	}
+};
+
+// Get Broadcast History
+export const getBroadcastHistory = async (req, res) => {
+	try {
+		const { page = 1, limit = 10 } = req.query;
+		const skip = (parseInt(page) - 1) * parseInt(limit);
+
+		const broadcasts = await Broadcast.find({})
+			.populate("sentBy", "username email")
+			.sort({ createdAt: -1 })
+			.skip(skip)
+			.limit(parseInt(limit));
+
+		const total = await Broadcast.countDocuments({});
+
+		res.status(200).json({
+			broadcasts,
+			total,
+			page: parseInt(page),
+			totalPages: Math.ceil(total / parseInt(limit))
+		});
+	} catch (error) {
+		console.log("Error in getBroadcastHistory controller", error.message);
+		res.status(500).json({ error: "Internal Server Error" });
+	}
+};
+
+// Delete Broadcast
+export const deleteBroadcast = async (req, res) => {
+	try {
+		const { broadcastId } = req.params;
+		const adminId = req.admin._id;
+
+		// Find the broadcast
+		const broadcast = await Broadcast.findById(broadcastId);
+		
+		if (!broadcast) {
+			return res.status(404).json({ error: "Broadcast not found" });
+		}
+
+		// Check if the admin has permission to delete this broadcast
+		// Only allow deletion if the admin sent the broadcast or has super admin privileges
+		if (broadcast.sentBy.toString() !== adminId.toString()) {
+			// Check if admin has super admin privileges
+			const admin = await Admin.findById(adminId);
+			if (!admin || !admin.permissions.includes("superAdmin")) {
+				return res.status(403).json({ error: "You can only delete broadcasts that you sent" });
+			}
+		}
+
+		// Delete the broadcast
+		await Broadcast.findByIdAndDelete(broadcastId);
+
+		// Log the deletion
+		console.log(`Admin ${req.admin.username} deleted broadcast: "${broadcast.subject}"`);
+
+		res.status(200).json({ message: "Broadcast deleted successfully" });
+	} catch (error) {
+		console.log("Error in deleteBroadcast controller", error.message);
 		res.status(500).json({ error: "Internal Server Error" });
 	}
 }; 

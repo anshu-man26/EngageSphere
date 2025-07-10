@@ -401,18 +401,25 @@ body {
 		overflow-x: hidden !important;
 	}
 	
+	/* Ensure messages container has proper bottom spacing on mobile */
+	@media (max-width: 768px) {
+		.mobile-messages-area .messages-container {
+			padding-bottom: 120px !important;
+		}
+	}
+	
 	.messages-container {
 		overflow-x: hidden !important;
 	}
 	
-	/* Remove extra bottom spacing on mobile */
+	/* Add proper bottom spacing on mobile to prevent overlap with input */
 	@media (max-width: 768px) {
 		.messages-container {
-			padding-bottom: 0 !important;
+			padding-bottom: 120px !important;
 		}
 		
 		.messages-container > div {
-			padding-bottom: 0 !important;
+			padding-bottom: 20px !important;
 		}
 		
 		/* Remove all bottom margins from message elements */

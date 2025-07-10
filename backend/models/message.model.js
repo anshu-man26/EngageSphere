@@ -71,6 +71,15 @@ const messageSchema = new mongoose.Schema(
 			type: Date,
 			default: null,
 		},
+		// Profanity filter fields
+		isFiltered: {
+			type: Boolean,
+			default: false,
+		},
+		filterReason: {
+			type: String,
+			default: null,
+		},
 		// createdAt, updatedAt
 	},
 	{ timestamps: true }
