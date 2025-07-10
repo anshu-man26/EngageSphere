@@ -138,7 +138,7 @@ const Messages = ({ isSelectionMode = false, selectedMessages = new Set(), onMes
 			{/* Messages container with proper spacing */}
 			<div className='px-4 sm:px-4 flex-1 overflow-auto messages-container'>
 				{/* Messages content */}
-				<div className="pb-0">
+				<div className="pb-0 md:pb-0 pb-4">
 					{/* Regular messages */}
 					{!loading &&
 						messagesArray.length > 0 &&
@@ -154,16 +154,20 @@ const Messages = ({ isSelectionMode = false, selectedMessages = new Set(), onMes
 								(messagesArray[index - 1] && 
 								 isDifferentDay(messagesArray[index - 1].createdAt, message.createdAt));
 							
+							// Add extra margin-bottom to the last message on mobile
+							const isLastMessage = index === messagesArray.length - 1 && uploadingFiles.length === 0;
+							const lastMessageMargin = isLastMessage ? "mb-24 sm:mb-0" : "";
+							
 							return (
 								<div key={message._id}>
 									{/* Date separator */}
 									{showDateSeparator && (
 										<DateSeparator date={message.createdAt} />
 									)}
-									
 									{/* Message */}
 									<div 
-										ref={index === messagesArray.length - 1 && uploadingFiles.length === 0 ? lastMessageRef : null}
+										ref={isLastMessage ? lastMessageRef : null}
+										className={lastMessageMargin}
 									>
 										<Message 
 											message={message} 

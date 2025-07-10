@@ -7,6 +7,8 @@ import SystemHealthPanel from "../../components/admin/SystemHealthPanel.jsx";
 import SystemSettingsPanel from "../../components/admin/SystemSettingsPanel.jsx";
 import UserManagementPanel from "../../components/admin/UserManagementPanel.jsx";
 import ComplaintLogsPanel from "../../components/admin/ComplaintLogsPanel.jsx";
+import BroadcastMessagePanel from "../../components/admin/BroadcastMessagePanel.jsx";
+import BroadcastHistoryPanel from "../../components/admin/BroadcastHistoryPanel.jsx";
 
 const AdminDashboard = () => {
 	const [users, setUsers] = useState([]);
@@ -21,6 +23,7 @@ const AdminDashboard = () => {
 	const [showOnlyOnline, setShowOnlyOnline] = useState(false);
 	const [selectedUserForEdit, setSelectedUserForEdit] = useState(null);
 	const [showUserManagement, setShowUserManagement] = useState(false);
+	const [showBroadcastMessage, setShowBroadcastMessage] = useState(false);
 	const [activeTab, setActiveTab] = useState("users");
 	const navigate = useNavigate();
 	const { admin, setAdmin } = useAuthContext();
@@ -44,15 +47,11 @@ const AdminDashboard = () => {
 
 		// Listen for real-time stats updates
 		socket.on("adminStatsUpdate", (newStats) => {
-			console.log("📊 Admin stats updated:", newStats);
 			setStats(newStats);
 			setStatsUpdating(false);
 		});
 
-		// Listen for debug info
-		socket.on("debugInfo", (debugData) => {
-			console.log("🔍 Debug info received:", debugData);
-		});
+
 
 		// Request initial stats update
 		socket.emit("requestAdminStats");
@@ -63,15 +62,12 @@ const AdminDashboard = () => {
 		// Set up periodic refresh of online users (every 30 seconds)
 		const onlineUsersInterval = setInterval(() => {
 			if (socket.connected) {
-				console.log("🔄 Requesting online users refresh");
 				socket.emit("requestOnlineUsers");
 			}
 		}, 30000);
 
 		return () => {
-			console.log("🔌 Cleaning up admin socket listeners");
 			socket.off("adminStatsUpdate");
-			socket.off("debugInfo");
 			clearInterval(onlineUsersInterval);
 		};
 	}, [socket]);
@@ -150,38 +146,14 @@ const AdminDashboard = () => {
 
 	const handleRefreshOnlineUsers = () => {
 		if (socket && socket.connected) {
-			console.log("🔄 Manually refreshing online users");
 			socket.emit("requestOnlineUsers");
 		}
 	};
 
-	const handleDebugInfo = () => {
-		if (socket && socket.connected) {
-			console.log("🔍 Requesting debug info");
-			socket.emit("requestDebugInfo");
-		}
-	};
 
-	const handleTestOnlineStatus = () => {
-		console.log("🧪 Testing online status...");
-		console.log("🔌 Socket connected:", socket?.connected);
-		console.log("👥 Online users from context:", onlineUsers);
-		console.log("👤 Current user (if any):", authUser);
-		
-		if (authUser) {
-			const isOnline = onlineUsers.includes(authUser._id);
-			console.log(`🧪 Current user ${authUser._id} online status:`, isOnline ? "ONLINE" : "OFFLINE");
-		}
-		
-		if (socket && socket.connected) {
-			socket.emit("requestOnlineUsers");
-		}
-	};
 
 	const isUserOnline = (userId) => {
-		const isOnline = onlineUsers.includes(userId);
-		console.log(`🔍 User ${userId} online status:`, isOnline ? "ONLINE" : "OFFLINE", "Online users:", onlineUsers);
-		return isOnline;
+		return onlineUsers.includes(userId);
 	};
 
 	const filteredUsers = showOnlyOnline 
@@ -455,6 +427,16 @@ const AdminDashboard = () => {
 							>
 								Complaint Logs
 							</button>
+							<button
+								onClick={() => setActiveTab("broadcast")}
+								className={`py-2 px-1 border-b-2 font-medium text-sm ${
+									activeTab === "broadcast"
+										? "border-red-500 text-red-500"
+										: "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300"
+								}`}
+							>
+								Broadcast Messages
+							</button>
 						</nav>
 					</div>
 
@@ -489,26 +471,7 @@ const AdminDashboard = () => {
 												)}
 												<span>{loading ? "Refreshing..." : "Refresh"}</span>
 											</button>
-											{/* Debug Button */}
-											<button
-												onClick={handleDebugInfo}
-												className="bg-gray-600 hover:bg-gray-700 px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2"
-											>
-												<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-												</svg>
-												<span>Debug</span>
-											</button>
-											{/* Test Button */}
-											<button
-												onClick={handleTestOnlineStatus}
-												className="bg-yellow-600 hover:bg-yellow-700 px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2"
-											>
-												<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-												</svg>
-												<span>Test Online</span>
-											</button>
+
 											{selectedUsers.length > 0 && (
 												<button
 													onClick={handleDeleteMultipleUsers}
@@ -590,6 +553,9 @@ const AdminDashboard = () => {
 														Login Info
 													</th>
 													<th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+														IP Address
+													</th>
+													<th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
 														Actions
 													</th>
 												</tr>
@@ -597,13 +563,13 @@ const AdminDashboard = () => {
 											<tbody className="bg-gray-800 divide-y divide-gray-700">
 												{loading ? (
 													<tr>
-														<td colSpan="8" className="px-6 py-4 text-center text-gray-400">
+														<td colSpan="9" className="px-6 py-4 text-center text-gray-400">
 															Loading users...
 														</td>
 													</tr>
 												) : filteredUsers.length === 0 ? (
 													<tr>
-														<td colSpan="8" className="px-6 py-4 text-center text-gray-400">
+														<td colSpan="9" className="px-6 py-4 text-center text-gray-400">
 															{showOnlyOnline ? "No online users found" : "No users found"}
 														</td>
 													</tr>
@@ -676,6 +642,19 @@ const AdminDashboard = () => {
 																	</div>
 																</div>
 															</td>
+															<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+																<div>
+																	<div className="font-medium">
+																		{user.loginHistory && user.loginHistory.length > 0 
+																			? user.loginHistory[user.loginHistory.length - 1].ipAddress 
+																			: 'Unknown'
+																		}
+																	</div>
+																	<div className="text-xs text-gray-500">
+																		Last login
+																	</div>
+																</div>
+															</td>
 															<td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
 																<div className="flex space-x-2">
 																	<button
@@ -728,6 +707,10 @@ const AdminDashboard = () => {
 						{activeTab === "complaints" && (
 							<ComplaintLogsPanel />
 						)}
+
+						{activeTab === "broadcast" && (
+							<BroadcastHistoryPanel onNewBroadcast={() => setShowBroadcastMessage(true)} />
+						)}
 					</div>
 				</div>
 			</div>
@@ -746,6 +729,18 @@ const AdminDashboard = () => {
 					selectedUser={selectedUserForEdit}
 					onClose={handleCloseUserManagement}
 					onUserUpdated={handleUserUpdated}
+				/>
+			)}
+
+			{/* Broadcast Message Panel */}
+			{showBroadcastMessage && (
+				<BroadcastMessagePanel
+					onClose={() => setShowBroadcastMessage(false)}
+					onMessageSent={() => {
+						// Force refresh of broadcast history
+						const event = new CustomEvent('broadcastHistoryRefresh');
+						window.dispatchEvent(event);
+					}}
 				/>
 			)}
 		</div>

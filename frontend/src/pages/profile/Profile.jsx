@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useAuthContext } from "../../context/AuthContext";
 import useUpdateProfile from "../../hooks/useUpdateProfile";
 import useUpdateSoundSettings from "../../hooks/useUpdateSoundSettings";
+import useProfanityFilterSettings from "../../hooks/useProfanityFilterSettings";
 import usePrivacySettings from "../../hooks/usePrivacySettings";
 import useUploadProfilePic from "../../hooks/useUploadProfilePic";
 import useChangePassword from "../../hooks/useChangePassword";
@@ -21,6 +22,7 @@ const Profile = () => {
 	const { authUser, setAuthUser } = useAuthContext();
 	const { loading, updateProfile } = useUpdateProfile();
 	const { loading: soundSettingsLoading, updateSoundSettings } = useUpdateSoundSettings();
+	const { loading: profanityFilterLoading, updateProfanityFilterSettings } = useProfanityFilterSettings();
 	const { loading: privacyLoading, updateEmailVisibility } = usePrivacySettings();
 	const { loading: uploadLoading, uploadProfilePic } = useUploadProfilePic();
 	const { loading: passwordLoading, changePassword } = useChangePassword();
@@ -106,6 +108,11 @@ const Profile = () => {
 		emailVisible: authUser?.privacySettings?.emailVisible || false, // Default to hidden
 	});
 
+	// Profanity filter settings state
+	const [profanityFilterEnabled, setProfanityFilterEnabled] = useState(
+		authUser?.profanityFilterEnabled !== false // Default to true
+	);
+
 	// Separate loading states for each sound setting
 	const [messageSoundLoading, setMessageSoundLoading] = useState(false);
 	const [ringtoneLoading, setRingtoneLoading] = useState(false);
@@ -128,6 +135,11 @@ const Profile = () => {
 			});
 		}
 	}, [authUser?.privacySettings]);
+
+	// Update profanity filter settings when authUser changes
+	useEffect(() => {
+		setProfanityFilterEnabled(authUser?.profanityFilterEnabled !== false);
+	}, [authUser?.profanityFilterEnabled]);
 
 	// Update username input when authUser changes
 	useEffect(() => {
@@ -400,6 +412,21 @@ const Profile = () => {
 		}
 	};
 
+	// Mobile detection
+	const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+	// Handle mobile file input click
+	const handleMobileFileClick = () => {
+		if (isMobile) {
+			// Add a small delay for mobile to ensure the file picker opens properly
+			setTimeout(() => {
+				fileInputRef.current?.click();
+			}, 100);
+		} else {
+			fileInputRef.current?.click();
+		}
+	};
+
 	// 2FA Functions
 	const handleEnable2FA = async () => {
 		setEnable2FALoading(true);
@@ -621,6 +648,16 @@ const Profile = () => {
 		}
 	};
 
+	// Handle profanity filter settings update
+	const handleProfanityFilterChange = async (value) => {
+		try {
+			await updateProfanityFilterSettings(value);
+			setProfanityFilterEnabled(value);
+		} catch (error) {
+			console.error('Failed to update profanity filter settings:', error);
+		}
+	};
+
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-blue-900'>
 			{/* Header */}
@@ -805,7 +842,7 @@ const Profile = () => {
 												isDragOver 
 													? 'border-purple-500 bg-purple-500/10' 
 													: 'border-gray-600 hover:border-gray-500'
-											}`}
+											} ${isMobile ? 'touch-manipulation' : ''}`}
 											onDragOver={handleDragOver}
 											onDragLeave={handleDragLeave}
 											onDrop={handleDrop}
@@ -816,18 +853,19 @@ const Profile = () => {
 												accept='image/*'
 												className='hidden'
 												onChange={handleFileInputChange}
+												capture={isMobile ? undefined : undefined} // Allow camera on mobile
 											/>
 											<div className='space-y-2'>
 												<FaUpload className='mx-auto text-gray-400 text-xl sm:text-2xl' />
 												<p className='text-xs sm:text-sm text-gray-300'>
-													{selectedFile ? selectedFile.name : 'Drag & drop an image here, or click to select'}
+													{selectedFile ? selectedFile.name : (isMobile ? 'Tap to select an image' : 'Drag & drop an image here, or click to select')}
 												</p>
 												<button
 													type='button'
-													className='text-xs text-purple-400 hover:text-purple-300'
-													onClick={() => fileInputRef.current?.click()}
+													className={`text-xs text-purple-400 hover:text-purple-300 ${isMobile ? 'min-h-[44px] min-w-[44px] touch-manipulation' : ''}`}
+													onClick={handleMobileFileClick}
 												>
-													Browse files
+													{isMobile ? 'Select Image' : 'Browse files'}
 												</button>
 											</div>
 										</div>
@@ -838,7 +876,9 @@ const Profile = () => {
 												type='button'
 												onClick={handleUpload}
 												disabled={uploadLoading}
-												className='w-full mt-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 text-sm'
+												className={`w-full mt-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 text-sm ${
+													isMobile ? 'min-h-[44px] touch-manipulation' : ''
+												}`}
 											>
 												{uploadLoading ? (
 													<div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white'></div>
@@ -1775,6 +1815,53 @@ const Profile = () => {
 										</button>
 									</div>
 								</div>
+							</div>
+
+							{/* Profanity Filter Toggle */}
+							<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-gray-700 rounded-lg border border-gray-600 gap-4">
+								<div className="flex items-center gap-3 flex-1 min-w-0">
+									<div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+										profanityFilterEnabled 
+											? 'bg-green-600' 
+											: 'bg-gray-600'
+									}`}>
+										{profanityFilterEnabled ? (
+											<FaShieldAlt className="text-white" />
+										) : (
+											<FaUnlock className="text-white" />
+										)}
+									</div>
+									<div className="flex-1 min-w-0">
+										<h4 className="text-white font-medium">Profanity Filter</h4>
+										<p className="text-gray-300 text-sm">
+											{profanityFilterEnabled 
+												? "Filter inappropriate content in messages" 
+												: "Show all messages without filtering"
+											}
+										</p>
+									</div>
+								</div>
+								<button
+									onClick={() => handleProfanityFilterChange(!profanityFilterEnabled)}
+									disabled={profanityFilterLoading}
+									className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
+										profanityFilterEnabled 
+											? 'bg-green-500' 
+											: 'bg-gray-300'
+									} ${profanityFilterLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+								>
+									{profanityFilterLoading ? (
+										<div className="absolute inset-0 flex items-center justify-center">
+											<div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+										</div>
+									) : (
+										<span
+											className={`inline-block h-5 w-5 transform rounded-full bg-white transition duration-200 ease-in-out ${
+												profanityFilterEnabled ? 'translate-x-6' : 'translate-x-1'
+											}`}
+										/>
+									)}
+								</button>
 							</div>
 
 							{/* Default Chat Background Section */}

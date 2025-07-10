@@ -86,6 +86,10 @@ const adminSchema = new mongoose.Schema({
 		viewAnalytics: {
 			type: Boolean,
 			default: true
+		},
+		sendNotifications: {
+			type: Boolean,
+			default: true
 		}
 	}
 }, { timestamps: true });

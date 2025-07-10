@@ -24,7 +24,8 @@ const SystemSettingsPanel = () => {
 			userLogin: true,
 			fileUpload: true,
 			videoCalls: true,
-			notifications: true
+			notifications: true,
+			profanityFilter: true
 		}
 	});
 
@@ -57,7 +58,8 @@ const SystemSettingsPanel = () => {
 					userLogin: true,
 					fileUpload: true,
 					videoCalls: true,
-					notifications: true
+					notifications: true,
+					profanityFilter: true
 				}
 			});
 		} catch (error) {

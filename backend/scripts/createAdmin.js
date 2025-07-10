@@ -25,8 +25,10 @@ const createSuperAdmin = async () => {
 			permissions: {
 				deleteAccounts: true,
 				viewAllUsers: true,
+				editAccounts: true,
 				manageAdmins: true,
-				viewAnalytics: true
+				viewAnalytics: true,
+				sendNotifications: true
 			}
 		});
 

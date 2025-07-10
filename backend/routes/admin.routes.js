@@ -23,7 +23,10 @@ import {
 	clearOnlineUsers,
 	getSystemHealth,
 	getSystemSettings,
-	updateSystemSettings
+	updateSystemSettings,
+	broadcastMessage,
+	getBroadcastHistory,
+	deleteBroadcast
 } from "../controllers/admin.controller.js";
 import { protectAdminRoute, requirePermission } from "../middleware/protectAdminRoute.js";
 import { profilePicUpload } from "../middleware/upload.js";
@@ -80,6 +83,11 @@ router.delete("/users", protectAdminRoute, requirePermission("deleteAccounts"), 
 router.post("/request-delete-otp", protectAdminRoute, requirePermission("deleteAccounts"), requestDeleteConfirmationOtp);
 router.post("/verify-delete-otp", protectAdminRoute, requirePermission("deleteAccounts"), verifyDeleteConfirmationOtp);
 router.post("/confirm-delete", protectAdminRoute, requirePermission("deleteAccounts"), confirmDeleteUsers);
+
+// Broadcast message routes
+router.post("/broadcast-message", protectAdminRoute, requirePermission("sendNotifications"), broadcastMessage);
+router.get("/broadcast-history", protectAdminRoute, requirePermission("sendNotifications"), getBroadcastHistory);
+router.delete("/broadcast/:broadcastId", protectAdminRoute, requirePermission("sendNotifications"), deleteBroadcast);
 
 // Debug routes
 router.post("/clear-online-users", protectAdminRoute, clearOnlineUsers);

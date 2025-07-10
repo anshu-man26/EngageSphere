@@ -902,7 +902,7 @@ const VideoCall = ({ recipientId, socket, currentUser, isIncoming = false, chann
       </div>
 
       {/* Video Area */}
-      <div className="flex-1 relative overflow-hidden">
+      <div className="flex-1 relative overflow-hidden video-call-container">
         {isConnecting ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
@@ -945,27 +945,27 @@ const VideoCall = ({ recipientId, socket, currentUser, isIncoming = false, chann
             </div>
           </div>
         ) : (
-          <div className="relative w-full h-full">
+          <div className="relative w-full h-full video-container">
             {/* Remote Video - Full Screen */}
             {remoteUsers.length > 0 ? (
-              <div className="w-full h-full">
+              <div className="w-full h-full flex items-center justify-center">
                 {remoteUsers.map(user => (
-                  <div key={user.uid} className="w-full h-full">
+                  <div key={user.uid} className="w-full h-full flex items-center justify-center">
                     <div 
                       id={`remote-video-${user.uid}`} 
-                      className="w-full h-full object-cover"
+                      className="w-full h-full max-w-full max-h-full object-contain bg-black"
                     />
                   </div>
                 ))}
               </div>
             ) : (
               // Show local video as main video when no remote users
-              <div className="w-full h-full">
+              <div className="w-full h-full flex items-center justify-center">
                 {localVideoTrack ? (
-                  <div className="w-full h-full relative">
+                  <div className="w-full h-full relative flex items-center justify-center">
                     <video 
                       ref={localVideoRef} 
-                      className={`w-full h-full object-cover ${isVideoOff ? 'bg-gray-800' : ''}`}
+                      className={`w-full h-full max-w-full max-h-full object-contain bg-black ${isVideoOff ? 'bg-gray-800' : ''}`}
                       autoPlay
                       playsInline
                       muted
@@ -995,14 +995,16 @@ const VideoCall = ({ recipientId, socket, currentUser, isIncoming = false, chann
 
             {/* Local Video - Picture in Picture - Show when we have remote users or when joined */}
             {(joined || localVideoTrack) && remoteUsers.length > 0 && (
-              <div className="absolute top-4 right-4 w-32 h-24 bg-gray-900 rounded-lg overflow-hidden border-2 border-white/20 shadow-lg z-10">
-                <video 
-                  ref={localVideoRef} 
-                  className={`w-full h-full object-cover ${isVideoOff ? 'bg-gray-800' : ''}`}
-                  autoPlay
-                  playsInline
-                  muted
-                />
+              <div className="absolute top-4 right-4 w-32 h-24 sm:w-40 sm:h-30 bg-gray-900 rounded-lg overflow-hidden border-2 border-white/20 shadow-lg z-10">
+                <div className="w-full h-full flex items-center justify-center">
+                  <video 
+                    ref={localVideoRef} 
+                    className={`w-full h-full max-w-full max-h-full object-contain bg-black ${isVideoOff ? 'bg-gray-800' : ''}`}
+                    autoPlay
+                    playsInline
+                    muted
+                  />
+                </div>
                 {isVideoOff && (
                   <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
                     <FaVideoSlash className="w-8 h-8 text-gray-400" />
@@ -1042,7 +1044,7 @@ const VideoCall = ({ recipientId, socket, currentUser, isIncoming = false, chann
 
       {/* Controls */}
       {!isRinging && (
-        <div className="flex items-center justify-center gap-4 p-6 bg-black/50 backdrop-blur-lg border-t border-white/10">
+        <div className="flex items-center justify-center gap-4 p-6 bg-black/50 backdrop-blur-lg border-t border-white/10 video-call-controls">
           <button
             onClick={toggleMute}
             className={`p-4 rounded-full transition-all ${
