@@ -97,7 +97,7 @@ The censoring logic can be customized in the `censorMessage` method:
 censorMessage(message) {
     const censoredWords = [
         // Add custom words here
-        'fuck', 'shit', 'bitch', 'ass', 'damn', 'hell',
+         'shit', 'damn', 'hell',
     ];
     
     let censoredMessage = message;
