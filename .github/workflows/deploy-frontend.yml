@@ -24,9 +24,10 @@ jobs:
   deploy:
     name: Deploy to Vercel
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
+    # NOTE: do NOT set working-directory to frontend/ here. The Vercel
+    # project's Root Directory is already configured as `frontend`, and
+    # Vercel CLI joins cwd + that setting — running from frontend/ would
+    # produce `frontend/frontend` and the deploy fails. Run from repo root.
 
     steps:
       - name: Checkout
@@ -48,10 +49,8 @@ jobs:
       - name: Pull Vercel project config + env
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
-      # We let Vercel build remotely (vercel deploy without --prebuilt) instead
-      # of running `vercel build` in CI. The local-build path tends to throw
-      # `spawn sh ENOENT` when Vercel's stored project settings and the
-      # checkout disagree on the install/build commands. Remote build adds
-      # ~90s but is rock-solid.
+      # Vercel builds remotely (no `--prebuilt`) which avoids the
+      # `spawn sh ENOENT` flakes the local-build path is prone to. Adds
+      # ~90s to the deploy but is rock-solid.
       - name: Deploy
         run: vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
