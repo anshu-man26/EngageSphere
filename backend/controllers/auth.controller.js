@@ -4,18 +4,15 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import createTransporter from "../config/nodemailer.js";
 import welcomeEmailService from "../services/welcomeEmailService.js";
+import { authCookieOptions, clearCookieOptions } from "../config/cookieOptions.js";
+
+const FIFTEEN_DAYS = 15 * 24 * 60 * 60 * 1000;
 
 const generateTokenAndSetCookie = (userId, res) => {
 	const token = jwt.sign({ userId }, process.env.JWT_SECRET, {
 		expiresIn: "15d",
 	});
-
-	res.cookie("jwt", token, {
-		maxAge: 15 * 24 * 60 * 60 * 1000, // MS
-		httpOnly: true, // prevent XSS attacks cross-site scripting attacks
-		sameSite: "strict", // CSRF attacks cross-site request forgery attacks
-		secure: process.env.NODE_ENV !== "development",
-	});
+	res.cookie("jwt", token, authCookieOptions(FIFTEEN_DAYS));
 };
 
 export const signup = async (req, res) => {
@@ -254,7 +251,7 @@ export const login = async (req, res) => {
 
 export const logout = (req, res) => {
 	try {
-		res.cookie("jwt", "", { maxAge: 0 });
+		res.cookie("jwt", "", { ...clearCookieOptions(), maxAge: 0 });
 		res.status(200).json({ message: "Logged out successfully" });
 	} catch (error) {
 		console.log("Error in logout controller", error.message);
