@@ -73,7 +73,7 @@ export const AuthContextProvider = ({ children }) => {
 		};
 
 		// Check admin session regardless of user login status
-		checkAdminSession();
+			checkAdminSession();
 	}, []);
 
 	const updateAuthUser = (user) => {
