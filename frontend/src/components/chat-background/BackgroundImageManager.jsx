@@ -79,9 +79,9 @@ const BackgroundImageManager = ({ onClose }) => {
 										/>
 										<div className="absolute top-2 left-2">
 											<span className={`px-2 py-1 rounded-full text-xs font-medium ${
-												image.type === 'default' 
-													? 'bg-blue-500/80 text-white' 
-													: 'bg-purple-500/80 text-white'
+												image.type === 'default'
+													? 'bg-emerald-500/80 text-white'
+													: 'bg-slate-500/80 text-white'
 											}`}>
 												{image.type === 'default' ? 'Default' : 'Conversation'}
 											</span>

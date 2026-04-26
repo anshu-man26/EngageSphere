@@ -4,6 +4,7 @@ import useGetConversations from "../../hooks/useGetConversations";
 import useGetUsers from "../../hooks/useGetUsers";
 import useConversation from "../../zustand/useConversation";
 import Conversation from "./Conversation";
+import Avatar from "../Avatar";
 
 const Conversations = ({ onConversationSelect }) => {
 	const navigate = useNavigate();
@@ -96,34 +97,27 @@ const Conversations = ({ onConversationSelect }) => {
 						{term ? "Other contacts" : "Start a new chat"}
 					</p>
 					<div>
-						{filteredUsers.map((user) => {
-							const initial = (user.fullName || "U").charAt(0).toUpperCase();
-							return (
-								<button
-									key={user._id}
-									onClick={() => handleUserClick(user)}
-									className='w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-[#202C33] transition-colors border-b border-[#222D34]/40'
-								>
-									<div
-										className='w-12 h-12 rounded-full bg-[#2A3942] overflow-hidden flex items-center justify-center text-[#E9EDEF] font-semibold text-sm flex-shrink-0'
-										onClick={(e) => {
-											e.stopPropagation();
-											navigate(`/user/${user._id}`);
-										}}
-									>
-										{user.profilePic ? (
-											<img src={user.profilePic} alt='' className='w-full h-full object-cover' />
-										) : (
-											initial
-										)}
-									</div>
-									<div className='flex-1 min-w-0'>
-										<p className='text-[15px] font-medium text-[#E9EDEF] truncate'>{user.fullName}</p>
-										<p className='text-[13px] text-[#8696A0] truncate'>Click to start chat</p>
-									</div>
-								</button>
-							);
-						})}
+						{filteredUsers.map((user) => (
+							<button
+								key={user._id}
+								onClick={() => handleUserClick(user)}
+								className='w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-[#202C33] transition-colors border-b border-[#222D34]/40'
+							>
+								<Avatar
+									src={user.profilePic}
+									alt={user.fullName}
+									size={48}
+									onClick={(e) => {
+										e.stopPropagation();
+										navigate(`/user/${user._id}`);
+									}}
+								/>
+								<div className='flex-1 min-w-0'>
+									<p className='text-[15px] font-medium text-[#E9EDEF] truncate'>{user.fullName}</p>
+									<p className='text-[13px] text-[#8696A0] truncate'>Click to start chat</p>
+								</div>
+							</button>
+						))}
 					</div>
 				</>
 			)}

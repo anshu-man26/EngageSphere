@@ -25,7 +25,7 @@ const AdminVerifyOtp = () => {
 
 	if (step === "verify") {
 		return (
-			<div className='min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 p-4'>
+			<div className='min-h-screen flex items-center justify-center bg-[#0B141A] p-4'>
 				<div className='max-w-md w-full space-y-8'>
 					<div className='bg-white rounded-lg shadow-xl p-8'>
 						<div className='text-center mb-8'>
@@ -56,7 +56,7 @@ const AdminVerifyOtp = () => {
 										required
 										value={otp}
 										onChange={handleOtpChange}
-										className='block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all text-center text-lg tracking-widest'
+										className='block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all text-center text-lg tracking-widest'
 										placeholder='000000'
 										maxLength={6}
 										disabled={loading}
@@ -69,7 +69,7 @@ const AdminVerifyOtp = () => {
 							<button
 								type='submit'
 								disabled={loading}
-								className='w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all'
+								className='w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-emerald-500 hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all'
 							>
 								{loading ? (
 									<>
@@ -85,7 +85,7 @@ const AdminVerifyOtp = () => {
 						<div className='mt-8 text-center'>
 							<p className='text-sm text-gray-600'>
 								Didn't receive the OTP?{" "}
-								<Link to='/admin/forgot-password' className='font-medium text-purple-600 hover:text-purple-500 transition-colors'>
+								<Link to='/admin/forgot-password' className='font-medium text-emerald-600 hover:text-emerald-500 transition-colors'>
 									Request again
 								</Link>
 							</p>
@@ -98,7 +98,7 @@ const AdminVerifyOtp = () => {
 
 	// Reset Password Step
 	return (
-		<div className='min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 p-4'>
+		<div className='min-h-screen flex items-center justify-center bg-[#0B141A] p-4'>
 			<div className='max-w-md w-full space-y-8'>
 				<div className='bg-white rounded-lg shadow-xl p-8'>
 					<div className='text-center mb-8'>
@@ -122,7 +122,7 @@ const AdminVerifyOtp = () => {
 									required
 									value={newPassword}
 									onChange={handleNewPasswordChange}
-									className='block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all'
+									className='block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all'
 									placeholder='Enter new password'
 									disabled={loading}
 								/>
@@ -147,7 +147,7 @@ const AdminVerifyOtp = () => {
 									required
 									value={confirmPassword}
 									onChange={handleConfirmPasswordChange}
-									className='block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all'
+									className='block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all'
 									placeholder='Confirm new password'
 									disabled={loading}
 								/>
@@ -163,7 +163,7 @@ const AdminVerifyOtp = () => {
 						<button
 							type='submit'
 							disabled={loading}
-							className='w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all'
+							className='w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-emerald-500 hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all'
 						>
 							{loading ? (
 								<>
@@ -179,7 +179,7 @@ const AdminVerifyOtp = () => {
 					<div className='mt-8 text-center'>
 						<p className='text-sm text-gray-600'>
 							Remember your password?{" "}
-							<Link to='/admin/login' className='font-medium text-purple-600 hover:text-purple-500 transition-colors'>
+							<Link to='/admin/login' className='font-medium text-emerald-600 hover:text-emerald-500 transition-colors'>
 								Sign in here
 							</Link>
 						</p>

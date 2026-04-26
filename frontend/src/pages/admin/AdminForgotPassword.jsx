@@ -7,7 +7,7 @@ const AdminForgotPassword = () => {
 		useAdminForgotPasswordForm();
 
 	return (
-		<div className='min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 p-4'>
+		<div className='min-h-screen flex items-center justify-center bg-[#0B141A] p-4'>
 			<div className='max-w-md w-full space-y-8'>
 				<div className='bg-white rounded-lg shadow-xl p-8'>
 					<div className='text-center mb-8'>
@@ -35,7 +35,7 @@ const AdminForgotPassword = () => {
 									required
 									value={email}
 									onChange={handleEmailChange}
-									className='block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all'
+									className='block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all'
 									placeholder='Enter your admin email'
 									disabled={loading}
 								/>
@@ -48,7 +48,7 @@ const AdminForgotPassword = () => {
 						<button
 							type='submit'
 							disabled={loading}
-							className='w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all'
+							className='w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-emerald-500 hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
 						>
 							{loading ? (
 								<>
@@ -84,7 +84,7 @@ const AdminForgotPassword = () => {
 					<div className='mt-8 text-center'>
 						<p className='text-sm text-gray-600'>
 							Remember your password?{" "}
-							<Link to='/admin/login' className='font-medium text-purple-600 hover:text-purple-500 transition-colors'>
+							<Link to='/admin/login' className='font-medium text-emerald-600 hover:text-emerald-500 transition-colors'>
 								Sign in here
 							</Link>
 						</p>

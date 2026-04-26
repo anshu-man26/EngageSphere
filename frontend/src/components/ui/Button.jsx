@@ -28,13 +28,13 @@ const Button = ({
   
   // Variant classes
   const variantClasses = {
-    primary: 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl focus:ring-purple-500 transform hover:scale-105 active:scale-95',
-    secondary: 'bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/30 focus:ring-white/50 transform hover:scale-105 active:scale-95',
-    success: 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl focus:ring-green-500 transform hover:scale-105 active:scale-95',
-    danger: 'bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl focus:ring-red-500 transform hover:scale-105 active:scale-95',
-    warning: 'bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 text-white shadow-lg hover:shadow-xl focus:ring-yellow-500 transform hover:scale-105 active:scale-95',
-    ghost: 'bg-transparent hover:bg-white/10 text-white/70 hover:text-white focus:ring-white/50',
-    outline: 'bg-transparent border border-white/20 hover:bg-white/10 text-white hover:border-white/30 focus:ring-white/50'
+    primary: 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-md focus:ring-emerald-500',
+    secondary: 'bg-slate-800 hover:bg-slate-700 text-slate-100 ring-1 ring-slate-700 focus:ring-slate-500',
+    success: 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-md focus:ring-emerald-500',
+    danger: 'bg-red-500 hover:bg-red-600 text-white shadow-md focus:ring-red-500',
+    warning: 'bg-amber-500 hover:bg-amber-600 text-white shadow-md focus:ring-amber-500',
+    ghost: 'bg-transparent hover:bg-slate-800/60 text-slate-300 hover:text-slate-100 focus:ring-slate-600',
+    outline: 'bg-transparent ring-1 ring-slate-700 hover:bg-slate-800/60 text-slate-200 focus:ring-slate-500'
   };
   
   // Width classes

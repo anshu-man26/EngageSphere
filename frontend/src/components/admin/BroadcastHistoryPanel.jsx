@@ -151,13 +151,13 @@ const BroadcastHistoryPanel = ({ onNewBroadcast }) => {
 					}
 				};
 			case "informative":
-				return { 
-					color: "text-purple-400", 
-					bg: "bg-purple-900/20", 
-					border: "border-purple-500/30",
+				return {
+					color: "text-cyan-400",
+					bg: "bg-cyan-900/20",
+					border: "border-cyan-500/30",
 					emailConfig: {
-						headerBg: "linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)",
-						borderColor: "#7c3aed",
+						headerBg: "linear-gradient(135deg, #0891b2 0%, #0e7490 100%)",
+						borderColor: "#0891b2",
 						badgeText: "UPDATE",
 						tone: "This is an informative update from EngageSphere administration."
 					}
@@ -312,7 +312,7 @@ const BroadcastHistoryPanel = ({ onNewBroadcast }) => {
 						</button>
 						<button
 							onClick={onNewBroadcast}
-							className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2"
+							className="bg-emerald-500 hover:bg-emerald-600 px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2"
 						>
 							<FaEnvelope className="w-4 h-4" />
 							New Broadcast
@@ -337,7 +337,7 @@ const BroadcastHistoryPanel = ({ onNewBroadcast }) => {
 						</p>
 						<button
 							onClick={onNewBroadcast}
-							className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-6 py-3 rounded-lg text-white font-medium flex items-center gap-2 mx-auto"
+							className="bg-emerald-500 hover:bg-emerald-600 px-6 py-3 rounded-lg text-white font-medium flex items-center gap-2 mx-auto"
 						>
 							<FaEnvelope className="w-5 h-5" />
 							Create First Broadcast
@@ -384,7 +384,7 @@ const BroadcastHistoryPanel = ({ onNewBroadcast }) => {
 													</div>
 													<div className="w-full bg-gray-600 rounded-full h-2 overflow-hidden relative">
 														<div 
-															className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-700 ease-out relative"
+															className="bg-emerald-500 h-2 rounded-full transition-all duration-700 ease-out relative"
 															style={{ 
 																width: `${(broadcast.sentCount / broadcast.totalUsers) * 100}%`,
 																transform: 'translateZ(0)' // Force hardware acceleration
@@ -504,7 +504,7 @@ const BroadcastHistoryPanel = ({ onNewBroadcast }) => {
 						{/* Header */}
 						<div className="flex items-center justify-between p-6 border-b border-gray-700">
 							<div className="flex items-center gap-3">
-								<div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+								<div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
 									<FaEnvelope className="w-5 h-5 text-white" />
 								</div>
 								<div>
@@ -637,7 +637,7 @@ const BroadcastHistoryPanel = ({ onNewBroadcast }) => {
 						{/* Header */}
 						<div className="flex items-center justify-between p-6 border-b border-gray-700 flex-shrink-0">
 							<div className="flex items-center gap-3">
-								<div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+								<div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
 									<FaEdit className="w-5 h-5 text-white" />
 								</div>
 								<div>
@@ -730,7 +730,7 @@ const BroadcastHistoryPanel = ({ onNewBroadcast }) => {
 						<div className="flex justify-between items-center p-6 border-t border-gray-700 flex-shrink-0">
 							<button
 								onClick={() => setShowPreview(!showPreview)}
-								className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center gap-2"
+								className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors flex items-center gap-2"
 							>
 								<FaEye className="w-4 h-4" />
 								{showPreview ? 'Hide Preview' : 'Show Preview'}

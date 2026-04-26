@@ -54,14 +54,20 @@ export const AuthContextProvider = ({ children }) => {
 			setAdmin(null);
 		}
 
-		// Check for admin session independently
+		// Only verify admin session when there's a reason to: cached admin data
+		// in localStorage, or the user is on an admin route. Otherwise skip the
+		// request — a /api/admin/profile call without an admin cookie always
+		// returns 401, which the browser logs to the devtools console regardless
+		// of how we handle the JS-side error.
+		const cachedAdmin = localStorage.getItem("chat-admin");
+		const isAdminRoute = window.location.pathname.startsWith("/admin");
+
 		const checkAdminSession = async () => {
 			try {
 				const adminData = await apiGet("/api/admin/profile");
 				setAdmin(adminData);
 				localStorage.setItem("chat-admin", JSON.stringify(adminData));
 			} catch (error) {
-				// 401 = no session; anything else = log it (but ignore network errors)
 				if (error.status !== 401 && error.name !== "TypeError") {
 					console.error("Error checking admin session:", error);
 				}
@@ -72,8 +78,11 @@ export const AuthContextProvider = ({ children }) => {
 			}
 		};
 
-		// Check admin session regardless of user login status
+		if (cachedAdmin || isAdminRoute) {
 			checkAdminSession();
+		} else {
+			setLoading(false);
+		}
 	}, []);
 
 	const updateAuthUser = (user) => {

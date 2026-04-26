@@ -1,71 +1,45 @@
+// Instagram-style quick-reaction pill.
+//
+// 6 preset emojis in a horizontal pill above the message bubble. Tap one
+// to react. Tap a reaction the user already gave to remove it (handled by
+// the parent's `onReactionSelect` which toggles add/remove).
+//
+// We dropped the heavyweight emoji-picker-react full picker — most chats
+// use ~6 reactions, the full picker felt like opening a settings panel.
+
 import { useEffect } from "react";
-import EmojiPicker from 'emoji-picker-react';
-import useConversation from "../../zustand/useConversation";
 
-const ReactionPicker = ({ onReactionSelect, onClose, isOpen = false, messageId }) => {
-	const { clearActiveEmojiPicker } = useConversation();
+const QUICK_REACTIONS = ["❤️", "😂", "😮", "😢", "🙏", "👍"];
 
+const ReactionPicker = ({ onReactionSelect, onClose, isOpen = false }) => {
 	useEffect(() => {
-		const handleClickOutside = (event) => {
-			if (!event.target.closest('.reaction-picker')) {
-				if (onClose) onClose();
-				clearActiveEmojiPicker();
-			}
+		if (!isOpen) return;
+		const onKey = (e) => {
+			if (e.key === "Escape") onClose?.();
 		};
-
-		document.addEventListener('mousedown', handleClickOutside);
-		return () => {
-			document.removeEventListener('mousedown', handleClickOutside);
-		};
-	}, [onClose, clearActiveEmojiPicker]);
-
-	const handleEmojiClick = (emojiObject) => {
-		onReactionSelect(emojiObject.emoji);
-		if (onClose) onClose();
-		clearActiveEmojiPicker();
-	};
+		document.addEventListener("keydown", onKey);
+		return () => document.removeEventListener("keydown", onKey);
+	}, [isOpen, onClose]);
 
 	if (!isOpen) return null;
 
-	// Calculate responsive dimensions
-	const windowWidth = window.innerWidth;
-	const windowHeight = window.innerHeight;
-	const isMobile = windowWidth <= 768;
-	
-	// Responsive width and height - much smaller on mobile
-	const pickerWidth = isMobile 
-		? Math.min(240, windowWidth * 0.85)  // Smaller on mobile
-		: Math.min(280, windowWidth * 0.8);
-	
-	const pickerHeight = isMobile 
-		? Math.min(300, windowHeight * 0.6)  // Smaller height on mobile
-		: Math.min(400, windowHeight * 0.8);
-
 	return (
-		<div className="reaction-picker z-20 animate-fadeIn">
-			<EmojiPicker
-				onEmojiClick={handleEmojiClick}
-				autoFocusSearch={false}
-				searchDisabled={false}
-				skinTonesDisabled={true}
-				width={pickerWidth}
-				height={pickerHeight}
-				lazyLoadEmojis={true}
-				previewConfig={{
-					showPreview: false // Hide preview on mobile to save space
-				}}
-				searchPlaceHolder="Search emoji..."
-				emojiStyle="native"
-				// Mobile-specific settings
-				{...(isMobile && {
-					searchPlaceHolder: "Search...",
-					previewConfig: {
-						showPreview: false
-					}
-				})}
-			/>
+		<div
+			className='reaction-picker flex items-center gap-1 px-2 py-1.5 bg-[#233138] ring-1 ring-black/40 rounded-full shadow-2xl animate-fadeIn'
+			onClick={(e) => e.stopPropagation()}
+		>
+			{QUICK_REACTIONS.map((emoji) => (
+				<button
+					key={emoji}
+					onClick={() => onReactionSelect(emoji)}
+					className='w-9 h-9 rounded-full hover:bg-white/10 active:scale-90 transition-all flex items-center justify-center text-xl'
+					aria-label={`React with ${emoji}`}
+				>
+					{emoji}
+				</button>
+			))}
 		</div>
 	);
 };
 
-export default ReactionPicker; 
+export default ReactionPicker;

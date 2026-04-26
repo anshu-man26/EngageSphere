@@ -25,59 +25,60 @@ const Login = () => {
 		handleResendOTP,
 	} = useLoginForm();
 
+	const inputBase =
+		"w-full pl-10 pr-4 py-3 bg-[#2A3942] border border-[#374248] rounded-xl text-[#E9EDEF] placeholder-[#8696A0] focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500/40 transition-colors";
+
 	return (
-		<div className='flex flex-col items-center justify-center min-h-screen px-4 bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 auth-page'>
+		<div className='flex flex-col items-center justify-center min-h-screen px-4 bg-[#0B141A] auth-page'>
 			<div className='w-full max-w-md'>
-				{/* Logo/Brand Section */}
+				{/* Brand */}
 				<div className='text-center mb-8'>
-					<div className='flex items-center justify-center gap-3 mb-4'>
-						<img src={logo} alt='EngageSphere Logo' className='h-10 w-10 object-contain' />
-						<span className='text-4xl font-bold text-white'>EngageSphere</span>
+					<div className='flex items-center justify-center gap-2.5 mb-3'>
+						<img src={logo} alt='EngageSphere Logo' className='h-9 w-9 object-contain' />
+						<span className='text-3xl font-bold text-[#E9EDEF] tracking-tight'>EngageSphere</span>
 					</div>
-					<p className='text-gray-300 text-sm'>Sign in to your account</p>
+					<p className='text-[#8696A0] text-sm'>Welcome back. Sign in to continue.</p>
 				</div>
 
-				{/* Login Form */}
-				<div className='bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/20 p-8'>
+				{/* Card */}
+				<div className='bg-[#111B21] ring-1 ring-[#222D34] rounded-2xl shadow-xl p-7'>
 					{loginStatusLoading ? (
 						<div className='flex items-center justify-center py-8'>
-							<div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500'></div>
-							<span className='ml-3 text-gray-300'>Checking login status...</span>
+							<div className='animate-spin rounded-full h-7 w-7 border-2 border-emerald-500 border-t-transparent' />
+							<span className='ml-3 text-[#8696A0] text-sm'>Checking login status…</span>
 						</div>
 					) : !loginEnabled ? (
-						<div className='text-center py-8'>
-							<div className='flex items-center justify-center mb-4'>
-								<FaExclamationTriangle className='h-12 w-12 text-yellow-400' />
+						<div className='text-center py-6'>
+							<div className='w-14 h-14 mx-auto mb-4 rounded-2xl bg-amber-500/10 ring-1 ring-amber-500/30 flex items-center justify-center'>
+								<FaExclamationTriangle className='h-6 w-6 text-amber-400' />
 							</div>
-							<h3 className='text-xl font-semibold text-white mb-2'>Login Temporarily Disabled</h3>
-							<p className='text-gray-300 mb-6'>
-								User login is currently disabled by the administrator.
-								Please check back later or contact support for assistance.
+							<h3 className='text-lg font-semibold text-[#E9EDEF] mb-1'>Login temporarily disabled</h3>
+							<p className='text-[#8696A0] text-sm mb-6'>
+								User login is currently disabled by the administrator. Please check back later.
 							</p>
 							<button
 								onClick={openComplaint}
-								className='inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200'
+								className='inline-flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors'
 							>
-								<FaExclamationTriangle className='h-4 w-4 mr-2' />
+								<FaExclamationTriangle className='h-4 w-4' />
 								Report an Issue
 							</button>
 						</div>
 					) : (
-						<form onSubmit={handleSubmit} className='space-y-6' autoComplete='on' method='post'>
-							{/* Email/Username Field */}
+						<form onSubmit={handleSubmit} className='space-y-5' autoComplete='on' method='post'>
 							<div className='space-y-2'>
-								<label className='text-sm font-medium text-gray-200'>
-									{isEmail ? "Email Address" : "Username"}
+								<label className='text-xs font-medium text-[#8696A0] uppercase tracking-wider'>
+									{isEmail ? "Email" : "Username"}
 								</label>
 								<div className='relative'>
 									<div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
-										{isEmail ? <FaUser className='h-5 w-5 text-gray-400' /> : <FaAt className='h-5 w-5 text-gray-400' />}
+										{isEmail ? <FaUser className='h-4 w-4 text-[#667781]' /> : <FaAt className='h-4 w-4 text-[#667781]' />}
 									</div>
 									<input
 										type={isEmail ? "email" : "text"}
 										id='username'
-										placeholder={isEmail ? "Enter your email address" : "Enter your username"}
-										className='w-full pl-10 pr-4 py-3 bg-white/10 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200'
+										placeholder={isEmail ? "you@example.com" : "your_username"}
+										className={inputBase}
 										value={inputs.username}
 										onChange={handleUsernameChange}
 										required
@@ -85,23 +86,22 @@ const Login = () => {
 										name='username'
 									/>
 								</div>
-								<p className='text-xs text-gray-400 mt-1'>
-									You can login with your email address or username
+								<p className='text-[11px] text-[#667781] mt-1'>
+									Sign in with your email or username.
 								</p>
 							</div>
 
-							{/* Password Field */}
 							<div className='space-y-2'>
-								<label className='text-sm font-medium text-gray-200'>Password</label>
+								<label className='text-xs font-medium text-[#8696A0] uppercase tracking-wider'>Password</label>
 								<div className='relative'>
 									<div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
-										<FaLock className='h-5 w-5 text-gray-400' />
+										<FaLock className='h-4 w-4 text-[#667781]' />
 									</div>
 									<input
 										type={showPassword ? "text" : "password"}
 										id='password'
 										placeholder='Enter your password'
-										className='w-full pl-10 pr-12 py-3 bg-white/10 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200'
+										className={`${inputBase} pr-12`}
 										value={inputs.password}
 										onChange={handlePasswordChange}
 										required
@@ -116,9 +116,9 @@ const Login = () => {
 										disabled={needsOTP}
 									>
 										{showPassword ? (
-											<FaEyeSlash className='h-5 w-5 text-gray-400 hover:text-gray-300 transition-colors' />
+											<FaEyeSlash className='h-4 w-4 text-[#667781] hover:text-[#D1D7DB] transition-colors' />
 										) : (
-											<FaEye className='h-5 w-5 text-gray-400 hover:text-gray-300 transition-colors' />
+											<FaEye className='h-4 w-4 text-[#667781] hover:text-[#D1D7DB] transition-colors' />
 										)}
 									</button>
 								</div>
@@ -126,98 +126,92 @@ const Login = () => {
 									<div className='flex justify-end'>
 										<Link
 											to='/forgot-password'
-											className='text-xs text-gray-400 hover:text-blue-400 transition-colors duration-200 hover:underline'
+											className='text-xs text-[#8696A0] hover:text-emerald-400 transition-colors'
 										>
-											Forgot Password?
+											Forgot password?
 										</Link>
 									</div>
 								)}
 							</div>
 
-							{/* OTP Field - Show when 2FA is required */}
 							{needsOTP && (
 								<div className='space-y-2'>
-									<label className='text-sm font-medium text-gray-200 flex items-center gap-2'>
-										<FaShieldAlt className='h-4 w-4' />
+									<label className='text-xs font-medium text-[#8696A0] uppercase tracking-wider flex items-center gap-2'>
+										<FaShieldAlt className='h-3.5 w-3.5' />
 										2FA Code
 									</label>
-									<div className='relative'>
-										<input
-											type='text'
-											placeholder='Enter 6-digit OTP'
-											className='w-full pl-4 pr-4 py-3 bg-white/10 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200'
-											value={otp}
-											onChange={handleOtpChange}
-											maxLength={6}
-											required
-										/>
-									</div>
+									<input
+										type='text'
+										placeholder='6-digit code'
+										className='w-full px-4 py-3 bg-[#2A3942] border border-[#374248] rounded-xl text-[#E9EDEF] placeholder-[#8696A0] tracking-widest text-center text-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500/40 transition-colors'
+										value={otp}
+										onChange={handleOtpChange}
+										maxLength={6}
+										required
+									/>
 									<div className='flex justify-between items-center'>
-										<p className='text-xs text-gray-400'>Enter the 6-digit code sent to your email</p>
+										<p className='text-[11px] text-[#667781]'>Sent to your email</p>
 										<button
 											type='button'
 											onClick={handleResendOTP}
-											className='text-xs text-blue-400 hover:text-blue-300 transition-colors duration-200 hover:underline'
+											className='text-xs text-emerald-400 hover:text-emerald-300 transition-colors'
 										>
-											Resend OTP
+											Resend
 										</button>
 									</div>
 								</div>
 							)}
 
-							{/* Submit Button */}
 							<button
 								type='submit'
 								disabled={loading}
-								className='w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg'
+								className='w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-60 disabled:cursor-not-allowed shadow-lg shadow-emerald-900/30'
 							>
 								{loading ? (
 									<div className='flex items-center justify-center'>
-										<div className='animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2'></div>
-										{needsOTP ? "Verifying..." : "Signing in..."}
+										<div className='animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2' />
+										{needsOTP ? "Verifying…" : "Signing in…"}
 									</div>
 								) : needsOTP ? (
-									"Verify & Sign In"
+									"Verify & Sign in"
 								) : (
-									"Sign In"
+									"Sign in"
 								)}
 							</button>
 
-							{/* Sign Up Link */}
-							<div className='text-center'>
+							<div className='text-center pt-1'>
 								<Link
 									to='/signup'
-									className='text-sm text-gray-300 hover:text-blue-400 transition-colors duration-200 hover:underline'
+									className='text-sm text-[#8696A0] hover:text-emerald-400 transition-colors'
 								>
-									Don't have an account? <span className='font-semibold'>Sign up</span>
+									Don't have an account? <span className='font-semibold text-[#E9EDEF]'>Sign up</span>
 								</Link>
 							</div>
 						</form>
 					)}
 				</div>
 
-				{/* Footer */}
-				<div className='text-center mt-8'>
-					<p className='text-gray-400 text-xs'>© 2024 EngageSphere. All rights reserved.</p>
-					<div className='mt-2 space-y-2'>
+				<div className='text-center mt-7'>
+					<p className='text-[#54656F] text-[11px]'>© 2024 EngageSphere. All rights reserved.</p>
+					<div className='mt-3 flex items-center justify-center gap-4'>
 						<button
 							onClick={openComplaint}
-							className='text-xs text-gray-500 hover:text-purple-400 transition-colors duration-200 flex items-center justify-center gap-1 mx-auto'
+							className='text-[11px] text-[#667781] hover:text-emerald-400 transition-colors flex items-center gap-1'
 						>
 							<FaExclamationTriangle className='h-3 w-3' />
-							Report an Issue
+							Report an issue
 						</button>
+						<span className='text-[#374248]'>•</span>
 						<Link
 							to='/admin/login'
-							className='text-xs text-gray-500 hover:text-red-400 transition-colors duration-200 block'
+							className='text-[11px] text-[#667781] hover:text-[#D1D7DB] transition-colors'
 						>
-							Admin Access
+							Admin
 						</Link>
 					</div>
 				</div>
 			</div>
 
-			{/* Complaint Modal */}
 			<ComplaintModal isOpen={showComplaintModal} onClose={closeComplaint} pageSubmitted='login' />
 		</div>
 	);

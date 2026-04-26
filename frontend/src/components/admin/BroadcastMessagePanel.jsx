@@ -116,7 +116,7 @@ const BroadcastMessagePanel = ({ onClose, onMessageSent }) => {
 				{/* Header */}
 				<div className="flex items-center justify-between p-6 border-b border-gray-700 flex-shrink-0">
 					<div className="flex items-center gap-3">
-						<div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+						<div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
 							<FaEnvelope className="w-5 h-5 text-white" />
 						</div>
 						<div>
@@ -244,7 +244,7 @@ const BroadcastMessagePanel = ({ onClose, onMessageSent }) => {
 
 									<label className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors border-2 ${
 										messageStyle === "informative" 
-											? "bg-purple-600 border-purple-500 text-white" 
+											? "bg-emerald-600 border-emerald-500 text-white" 
 											: "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600"
 									}`}>
 										<input
@@ -253,7 +253,7 @@ const BroadcastMessagePanel = ({ onClose, onMessageSent }) => {
 											value="informative"
 											checked={messageStyle === "informative"}
 											onChange={(e) => setMessageStyle(e.target.value)}
-											className="text-purple-500 focus:ring-purple-500"
+											className="text-emerald-500 focus:ring-emerald-500"
 										/>
 										<div className="flex-1">
 											<div className="font-medium">Informative</div>
@@ -383,7 +383,7 @@ const BroadcastMessagePanel = ({ onClose, onMessageSent }) => {
 													messageStyle === "friendly" ? "bg-green-900 text-green-200" :
 													messageStyle === "serious" ? "bg-red-900 text-red-200" :
 													messageStyle === "urgent" ? "bg-orange-900 text-orange-200" :
-													"bg-purple-900 text-purple-200"
+													"bg-cyan-900 text-cyan-200"
 												}`}>
 													{messageStyle.charAt(0).toUpperCase() + messageStyle.slice(1)}
 												</span>
@@ -407,7 +407,7 @@ const BroadcastMessagePanel = ({ onClose, onMessageSent }) => {
 												messageStyle === "friendly" ? "bg-green-900/20 border border-green-700/30" :
 												messageStyle === "serious" ? "bg-red-900/20 border border-red-700/30" :
 												messageStyle === "urgent" ? "bg-orange-900/20 border border-orange-700/30" :
-												"bg-purple-900/20 border border-purple-700/30"
+												"bg-cyan-900/20 border border-cyan-700/30"
 											}`}>
 												{message || "No message content"}
 											</div>
@@ -487,7 +487,7 @@ const BroadcastMessagePanel = ({ onClose, onMessageSent }) => {
 						<button
 							onClick={handleSendBroadcast}
 							disabled={sending || getRecipientCount() === 0}
-							className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+							className="px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
 						>
 							{sending ? (
 								<>
