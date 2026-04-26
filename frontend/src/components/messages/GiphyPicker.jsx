@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { FaSearch, FaTimes, FaGift } from "react-icons/fa";
+import { FaSearch, FaTimes } from "react-icons/fa";
 import { toast } from "react-hot-toast";
+
+const GIPHY_API_KEY = "GlVGYHkr3WSBnllca54iNt0yFbjz7L65";
+const QUICK_TAGS = ["happy", "sad", "love", "angry", "wow", "lol", "thanks"];
 
 const GiphyPicker = ({ onGifSelect, onClose }) => {
 	const [searchTerm, setSearchTerm] = useState("");
@@ -10,28 +13,22 @@ const GiphyPicker = ({ onGifSelect, onClose }) => {
 	const searchInputRef = useRef(null);
 	const modalRef = useRef(null);
 
-	// Giphy API key - you'll need to get a free API key from https://developers.giphy.com/
-	const GIPHY_API_KEY = "GlVGYHkr3WSBnllca54iNt0yFbjz7L65"; // This is a public demo key, replace with your own
-
 	const searchGifs = async (query) => {
 		if (!query.trim()) {
 			fetchTrendingGifs();
 			return;
 		}
-
 		setLoading(true);
 		try {
-			const response = await fetch(
-				`https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(query)}&limit=20&rating=g`
+			const res = await fetch(
+				`https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(query)}&limit=24&rating=g`
 			);
-			const data = await response.json();
-			
+			const data = await res.json();
 			if (data.data) {
 				setGifs(data.data);
 				setTrending(false);
 			}
 		} catch (error) {
-			console.error("Error searching GIFs:", error);
 			toast.error("Failed to search GIFs");
 		} finally {
 			setLoading(false);
@@ -41,17 +38,15 @@ const GiphyPicker = ({ onGifSelect, onClose }) => {
 	const fetchTrendingGifs = async () => {
 		setLoading(true);
 		try {
-			const response = await fetch(
-				`https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_API_KEY}&limit=20&rating=g`
+			const res = await fetch(
+				`https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_API_KEY}&limit=24&rating=g`
 			);
-			const data = await response.json();
-			
+			const data = await res.json();
 			if (data.data) {
 				setGifs(data.data);
 				setTrending(true);
 			}
 		} catch (error) {
-			console.error("Error fetching trending GIFs:", error);
 			toast.error("Failed to load trending GIFs");
 		} finally {
 			setLoading(false);
@@ -63,6 +58,11 @@ const GiphyPicker = ({ onGifSelect, onClose }) => {
 		searchGifs(searchTerm);
 	};
 
+	const handleQuickTag = (tag) => {
+		setSearchTerm(tag);
+		searchGifs(tag);
+	};
+
 	const handleGifSelect = (gif) => {
 		onGifSelect(gif.images.original.url, gif.title || "GIF");
 		onClose();
@@ -71,122 +71,134 @@ const GiphyPicker = ({ onGifSelect, onClose }) => {
 	useEffect(() => {
 		fetchTrendingGifs();
 		searchInputRef.current?.focus();
-		
-		// Ensure modal fits within chat container and stays centered
+
 		const handleResize = () => {
 			if (modalRef.current) {
 				const modal = modalRef.current;
-				const chatContainer = modal.closest('.flex-1'); // Find the chat container
+				const chatContainer = modal.closest(".flex-1");
 				const containerHeight = chatContainer ? chatContainer.clientHeight : window.innerHeight;
 				const containerWidth = chatContainer ? chatContainer.clientWidth : window.innerWidth;
-				
-				// Use 70% of container height for better fit within chat
-				const maxHeight = Math.min(containerHeight * 0.7, 500);
-				const maxWidth = Math.min(containerWidth * 0.9, 700);
-				
+				const maxHeight = Math.min(containerHeight * 0.75, 540);
+				const maxWidth = Math.min(containerWidth * 0.92, 720);
 				modal.style.maxHeight = `${maxHeight}px`;
 				modal.style.maxWidth = `${maxWidth}px`;
 			}
 		};
-		
 		handleResize();
-		window.addEventListener('resize', handleResize);
-		
-		return () => {
-			window.removeEventListener('resize', handleResize);
-		};
+		window.addEventListener("resize", handleResize);
+		return () => window.removeEventListener("resize", handleResize);
 	}, []);
 
 	return (
-		<div className="absolute inset-0 bg-black/80 flex items-center justify-center z-[10000] p-4 animate-fadeIn" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-			<div ref={modalRef} className="bg-gray-900 rounded-2xl border border-gray-600 max-w-4xl w-full max-h-[70vh] flex flex-col shadow-2xl animate-scaleIn">
-				{/* Header */}
-				<div className="flex items-center justify-between p-2 sm:p-3 border-b border-gray-600">
-					<div className="flex items-center gap-2">
-						<FaGift className="text-purple-400 text-lg sm:text-xl" />
-						<h2 className="text-lg sm:text-xl font-bold text-white">GIF Picker</h2>
-					</div>
+		<div
+			className='absolute inset-0 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center z-[10000] p-3 sm:p-4 animate-fadeIn'
+			onClick={onClose}
+		>
+			<div
+				ref={modalRef}
+				onClick={(e) => e.stopPropagation()}
+				className='bg-[#111B21] rounded-2xl w-full flex flex-col overflow-hidden shadow-2xl animate-scaleIn'
+			>
+				{/* Header — search bar + close, no border */}
+				<div className='flex items-center gap-2 px-3 pt-3 pb-2'>
+					<form onSubmit={handleSearch} className='flex-1'>
+						<div className='relative'>
+							<FaSearch className='absolute left-3 top-1/2 -translate-y-1/2 text-[#8696A0] text-sm pointer-events-none' />
+							<input
+								ref={searchInputRef}
+								type='text'
+								value={searchTerm}
+								onChange={(e) => setSearchTerm(e.target.value)}
+								placeholder='Search GIPHY'
+								className='w-full pl-10 pr-9 py-2.5 bg-[#2A3942] rounded-full text-[#E9EDEF] placeholder-[#8696A0] text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 transition'
+							/>
+							{searchTerm && (
+								<button
+									type='button'
+									onClick={() => {
+										setSearchTerm("");
+										fetchTrendingGifs();
+									}}
+									className='absolute right-3 top-1/2 -translate-y-1/2 text-[#8696A0] hover:text-[#E9EDEF] text-xs'
+								>
+									<FaTimes />
+								</button>
+							)}
+						</div>
+					</form>
 					<button
 						onClick={onClose}
-						className="text-gray-400 hover:text-white transition-colors p-2"
+						className='w-9 h-9 rounded-full text-[#8696A0] hover:text-[#E9EDEF] hover:bg-[#202C33] flex items-center justify-center transition-colors flex-shrink-0'
 					>
-						<FaTimes size={18} className="sm:w-5 sm:h-5" />
+						<FaTimes size={16} />
 					</button>
 				</div>
 
-				{/* Search Bar */}
-				<div className="p-2 sm:p-3 border-b border-gray-600">
-					<form onSubmit={handleSearch} className="flex gap-2">
-						<div className="flex-1 relative">
-							<input
-								ref={searchInputRef}
-								type="text"
-								value={searchTerm}
-								onChange={(e) => setSearchTerm(e.target.value)}
-								placeholder="Search GIFs..."
-								className="w-full px-3 sm:px-4 py-2 pl-8 sm:pl-10 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm sm:text-base"
-							/>
-							<FaSearch className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm sm:text-base" />
-						</div>
+				{/* Quick tags row */}
+				<div className='px-3 pb-2'>
+					<div className='flex gap-1.5 overflow-x-auto no-scrollbar'>
 						<button
-							type="submit"
-							className="px-3 sm:px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm sm:text-base"
+							onClick={() => {
+								setSearchTerm("");
+								fetchTrendingGifs();
+							}}
+							className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+								trending && !searchTerm
+									? "bg-emerald-500/20 text-emerald-300"
+									: "bg-[#202C33] text-[#8696A0] hover:text-[#E9EDEF]"
+							}`}
 						>
-							Search
+							Trending
 						</button>
-					</form>
+						{QUICK_TAGS.map((tag) => (
+							<button
+								key={tag}
+								onClick={() => handleQuickTag(tag)}
+								className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap capitalize transition-colors ${
+									searchTerm === tag
+										? "bg-emerald-500/20 text-emerald-300"
+										: "bg-[#202C33] text-[#8696A0] hover:text-[#E9EDEF]"
+								}`}
+							>
+								{tag}
+							</button>
+						))}
+					</div>
 				</div>
 
-				{/* Content */}
-				<div className="flex-1 overflow-y-auto p-1 sm:p-2 min-h-0 giphy-picker-content">
+				{/* Content — masonry via CSS columns so each GIF keeps its native aspect ratio */}
+				<div className='flex-1 overflow-y-auto px-3 pb-3 min-h-0 giphy-picker-content'>
 					{loading ? (
-						<div className="flex items-center justify-center py-4">
-							<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-500"></div>
-							<span className="ml-2 text-white text-sm">Loading GIFs...</span>
+						<div className='flex items-center justify-center py-10'>
+							<div className='animate-spin rounded-full h-7 w-7 border-2 border-emerald-500 border-t-transparent' />
+						</div>
+					) : gifs.length === 0 ? (
+						<div className='text-center py-10'>
+							<p className='text-[#E9EDEF] text-sm font-medium'>No GIFs found</p>
+							<p className='text-[#8696A0] text-xs mt-1'>Try a different search term</p>
 						</div>
 					) : (
-						<>
-							{trending && !searchTerm && (
-								<div className="mb-2">
-									<h3 className="text-base font-semibold text-white mb-1">Trending GIFs</h3>
-								</div>
-							)}
-							{!trending && searchTerm && (
-								<div className="mb-2">
-									<h3 className="text-base font-semibold text-white mb-1">
-										Search results for "{searchTerm}"
-									</h3>
-								</div>
-							)}
-							<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-								{gifs.map((gif) => (
-									<div
+						<div className='columns-2 sm:columns-3 md:columns-4 gap-1.5'>
+							{gifs.map((gif) => {
+								const img = gif.images.fixed_width;
+								return (
+									<button
 										key={gif.id}
 										onClick={() => handleGifSelect(gif)}
-										className="relative cursor-pointer rounded-lg overflow-hidden border-2 border-transparent hover:border-purple-500 transition-all duration-200 hover:scale-105 bg-gray-800 flex items-center justify-center"
-										style={{ aspectRatio: '1' }}
+										className='block w-full mb-1.5 relative overflow-hidden rounded-lg bg-[#202C33] hover:opacity-90 transition-opacity break-inside-avoid'
 									>
 										<img
-											src={gif.images.fixed_height_small.url}
+											src={img.url}
 											alt={gif.title || "GIF"}
-											className="w-full h-full object-contain p-1"
-											loading="lazy"
+											width={img.width}
+											height={img.height}
+											loading='lazy'
+											className='w-full h-auto block'
 										/>
-										<div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors flex items-center justify-center">
-											<div className="opacity-0 hover:opacity-100 transition-opacity">
-												<FaGift className="text-white text-xl" />
-											</div>
-										</div>
-									</div>
-								))}
-							</div>
-							{gifs.length === 0 && !loading && (
-								<div className="text-center py-4">
-									<p className="text-gray-400 text-sm">No GIFs found</p>
-									<p className="text-gray-500 text-xs mt-1">Try a different search term</p>
-								</div>
-							)}
-						</>
+									</button>
+								);
+							})}
+						</div>
 					)}
 				</div>
 			</div>
@@ -194,4 +206,4 @@ const GiphyPicker = ({ onGifSelect, onClose }) => {
 	);
 };
 
-export default GiphyPicker; 
+export default GiphyPicker;

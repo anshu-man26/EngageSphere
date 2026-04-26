@@ -21,13 +21,15 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 					lg:translate-x-0
 					fixed lg:relative
 					top-0 left-0
-					w-80 sm:w-96 lg:w-80 xl:w-96 h-full
+					w-80 sm:w-96 lg:w-80 xl:w-96
+					h-full lg:h-full
 					bg-[#111B21] border-r border-[#222D34]
 					flex flex-col
 					transition-transform duration-300 ease-in-out
 					z-[9999]
 					sidebar-mobile lg:sidebar-desktop
 				`}
+				style={{ height: "var(--app-vh, 100dvh)" }}
 			>
 				{/* Header */}
 				<div className='flex items-center justify-between px-4 h-14 bg-[#202C33]'>

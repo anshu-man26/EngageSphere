@@ -2,6 +2,12 @@ import { Link } from "react-router-dom";
 import { FaEnvelope, FaArrowLeft, FaCheckCircle, FaKey, FaEye, FaEyeSlash } from "react-icons/fa";
 import useForgotPasswordForm from "../../hooks/useForgotPasswordForm";
 
+const inputBase =
+	"w-full pl-10 pr-4 py-3 bg-[#2A3942] border border-[#374248] rounded-xl text-[#E9EDEF] placeholder-[#8696A0] focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500/40 transition-colors";
+
+const primaryBtn =
+	"w-full py-3 px-4 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl transition-colors disabled:opacity-60 disabled:cursor-not-allowed shadow-lg shadow-emerald-900/30 flex items-center justify-center gap-2";
+
 const ForgotPassword = () => {
 	const {
 		email,
@@ -26,31 +32,24 @@ const ForgotPassword = () => {
 
 	if (step === "success") {
 		return (
-			<div className='flex flex-col items-center justify-center min-h-screen px-4 bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 auth-page'>
+			<div className='flex flex-col items-center justify-center min-h-screen px-4 bg-[#0B141A] auth-page'>
 				<div className='w-full max-w-md'>
-					<div className='text-center mb-8'>
-						<div className='inline-flex items-center justify-center w-16 h-16 bg-green-600 rounded-full mb-4 shadow-lg'>
-							<FaCheckCircle className='text-white text-2xl' />
+					<div className='text-center mb-7'>
+						<div className='inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-500/15 ring-1 ring-emerald-500/40 mb-4'>
+							<FaCheckCircle className='text-emerald-400 text-2xl' />
 						</div>
-						<h1 className='text-4xl font-bold text-white mb-2'>Password Reset!</h1>
-						<p className='text-gray-300 text-sm'>Your password has been successfully reset</p>
+						<h1 className='text-2xl font-bold text-[#E9EDEF] mb-1'>Password reset</h1>
+						<p className='text-[#8696A0] text-sm'>You can now sign in with your new password.</p>
 					</div>
 
-					<div className='bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/20 p-8 relative'>
-						<div className='text-center space-y-4'>
-							<p className='text-gray-200 text-lg'>
-								Your password has been updated successfully. You can now log in with your new password.
-							</p>
-							<div className='pt-4'>
-								<Link
-									to='/login'
-									className='inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg'
-								>
-									<FaArrowLeft className='text-sm' />
-									Go to Login
-								</Link>
-							</div>
-						</div>
+					<div className='bg-[#111B21] ring-1 ring-[#222D34] rounded-2xl shadow-xl p-7 text-center'>
+						<p className='text-[#D1D7DB] text-sm mb-6'>
+							Your password has been updated successfully.
+						</p>
+						<Link to='/login' className={primaryBtn}>
+							<FaArrowLeft className='text-sm' />
+							Go to login
+						</Link>
 					</div>
 				</div>
 			</div>
@@ -58,58 +57,54 @@ const ForgotPassword = () => {
 	}
 
 	return (
-		<div className='flex flex-col items-center justify-center min-h-screen px-4 bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 auth-page'>
+		<div className='flex flex-col items-center justify-center min-h-screen px-4 bg-[#0B141A] auth-page'>
 			<div className='w-full max-w-md'>
-				<div className='text-center mb-8'>
-					<div className='inline-flex items-center justify-center w-16 h-16 bg-purple-600 rounded-full mb-4 shadow-lg'>
-						<FaKey className='text-white text-2xl' />
+				<div className='text-center mb-7'>
+					<div className='inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-500/10 ring-1 ring-emerald-500/30 mb-4'>
+						<FaKey className='text-emerald-400 text-xl' />
 					</div>
-					<h1 className='text-4xl font-bold text-white mb-2'>Reset Password</h1>
-					<p className='text-gray-300 text-sm'>
-						{step === "email" && "Enter your email to receive OTP"}
-						{step === "otp" && "Enter the OTP sent to your email"}
-						{step === "password" && "Enter your new password"}
+					<h1 className='text-2xl font-bold text-[#E9EDEF] mb-1'>Reset password</h1>
+					<p className='text-[#8696A0] text-sm'>
+						{step === "email" && "Enter your email to receive an OTP"}
+						{step === "otp" && "Enter the 6-digit OTP sent to your email"}
+						{step === "password" && "Set your new password"}
 					</p>
 				</div>
 
-				<div className='bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/20 p-8 relative'>
-					<div className='absolute top-4 right-4'>
-						<Link to='/login' className='inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm'>
-							<FaArrowLeft className='text-xs' />
-							Back to Login
+				<div className='bg-[#111B21] ring-1 ring-[#222D34] rounded-2xl shadow-xl p-7 relative'>
+					<div className='absolute top-3 right-4'>
+						<Link to='/login' className='inline-flex items-center gap-1.5 text-[#8696A0] hover:text-[#E9EDEF] transition-colors text-xs'>
+							<FaArrowLeft className='text-[10px]' />
+							Back to login
 						</Link>
 					</div>
 
 					{step === "email" && (
-						<form onSubmit={handleSendOTP} className='space-y-6'>
+						<form onSubmit={handleSendOTP} className='space-y-5 mt-4'>
 							<div className='space-y-2'>
-								<label className='text-sm font-medium text-gray-200'>Email Address</label>
+								<label className='text-xs font-medium text-[#8696A0] uppercase tracking-wider'>Email</label>
 								<div className='relative'>
 									<div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
-										<FaEnvelope className='h-5 w-5 text-gray-400' />
+										<FaEnvelope className='h-4 w-4 text-[#8696A0]' />
 									</div>
 									<input
 										type='email'
-										placeholder='Enter your email address'
-										className='w-full pl-10 pr-4 py-3 bg-white/10 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200'
+										placeholder='you@example.com'
+										className={inputBase}
 										value={email}
 										onChange={handleEmailChange}
 										required
 									/>
 								</div>
-								<p className='text-xs text-gray-400 mt-1'>We'll send you a 6-digit OTP to reset your password</p>
+								<p className='text-[11px] text-[#8696A0]'>We'll send you a 6-digit OTP.</p>
 							</div>
 
-							<button
-								type='submit'
-								disabled={loading}
-								className='w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg flex items-center justify-center gap-2'
-							>
+							<button type='submit' disabled={loading} className={primaryBtn}>
 								{loading ? (
-									<div className='animate-spin rounded-full h-5 w-5 border-b-2 border-white'></div>
+									<div className='animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent' />
 								) : (
 									<>
-										<FaEnvelope className='text-lg' />
+										<FaEnvelope />
 										Send OTP
 									</>
 								)}
@@ -118,36 +113,27 @@ const ForgotPassword = () => {
 					)}
 
 					{step === "otp" && (
-						<form onSubmit={handleVerifyOTP} className='space-y-6'>
+						<form onSubmit={handleVerifyOTP} className='space-y-5 mt-4'>
 							<div className='space-y-2'>
-								<label className='text-sm font-medium text-gray-200'>Enter OTP</label>
-								<div className='relative'>
-									<div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
-										<FaKey className='h-5 w-5 text-gray-400' />
-									</div>
-									<input
-										type='text'
-										placeholder='Enter 6-digit OTP'
-										maxLength={6}
-										className='w-full pl-10 pr-4 py-3 bg-white/10 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 text-center text-2xl tracking-widest'
-										value={otp}
-										onChange={handleOtpChange}
-										required
-									/>
-								</div>
-								<p className='text-xs text-gray-400 mt-1'>OTP sent to {email}</p>
+								<label className='text-xs font-medium text-[#8696A0] uppercase tracking-wider'>OTP code</label>
+								<input
+									type='text'
+									placeholder='6-digit code'
+									maxLength={6}
+									className='w-full px-4 py-3 bg-[#2A3942] border border-[#374248] rounded-xl text-[#E9EDEF] placeholder-[#8696A0] focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500/40 transition-colors text-center text-2xl tracking-[0.5em]'
+									value={otp}
+									onChange={handleOtpChange}
+									required
+								/>
+								<p className='text-[11px] text-[#8696A0]'>Sent to {email}</p>
 							</div>
 
-							<button
-								type='submit'
-								disabled={loading}
-								className='w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg flex items-center justify-center gap-2'
-							>
+							<button type='submit' disabled={loading} className={primaryBtn}>
 								{loading ? (
-									<div className='animate-spin rounded-full h-5 w-5 border-b-2 border-white'></div>
+									<div className='animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent' />
 								) : (
 									<>
-										<FaKey className='text-lg' />
+										<FaKey />
 										Verify OTP
 									</>
 								)}
@@ -157,7 +143,7 @@ const ForgotPassword = () => {
 								<button
 									type='button'
 									onClick={goBackToEmailStep}
-									className='text-sm text-gray-400 hover:text-purple-400 transition-colors'
+									className='text-xs text-[#8696A0] hover:text-emerald-400 transition-colors'
 								>
 									Use different email
 								</button>
@@ -166,17 +152,17 @@ const ForgotPassword = () => {
 					)}
 
 					{step === "password" && (
-						<form onSubmit={handleResetPassword} className='space-y-6'>
+						<form onSubmit={handleResetPassword} className='space-y-5 mt-4'>
 							<div className='space-y-2'>
-								<label className='text-sm font-medium text-gray-200'>New Password</label>
+								<label className='text-xs font-medium text-[#8696A0] uppercase tracking-wider'>New password</label>
 								<div className='relative'>
 									<div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
-										<FaKey className='h-5 w-5 text-gray-400' />
+										<FaKey className='h-4 w-4 text-[#8696A0]' />
 									</div>
 									<input
 										type={showPassword ? "text" : "password"}
-										placeholder='Enter your new password'
-										className='w-full pl-10 pr-12 py-3 bg-white/10 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200'
+										placeholder='Enter new password'
+										className={`${inputBase} pr-12`}
 										value={newPassword}
 										onChange={handleNewPasswordChange}
 										required
@@ -186,21 +172,25 @@ const ForgotPassword = () => {
 										className='absolute inset-y-0 right-0 pr-3 flex items-center'
 										onClick={togglePassword}
 									>
-										{showPassword ? <FaEyeSlash className='h-5 w-5 text-gray-400' /> : <FaEye className='h-5 w-5 text-gray-400' />}
+										{showPassword ? (
+											<FaEyeSlash className='h-4 w-4 text-[#8696A0] hover:text-[#D1D7DB]' />
+										) : (
+											<FaEye className='h-4 w-4 text-[#8696A0] hover:text-[#D1D7DB]' />
+										)}
 									</button>
 								</div>
 							</div>
 
 							<div className='space-y-2'>
-								<label className='text-sm font-medium text-gray-200'>Confirm New Password</label>
+								<label className='text-xs font-medium text-[#8696A0] uppercase tracking-wider'>Confirm password</label>
 								<div className='relative'>
 									<div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
-										<FaKey className='h-5 w-5 text-gray-400' />
+										<FaKey className='h-4 w-4 text-[#8696A0]' />
 									</div>
 									<input
 										type={showConfirmPassword ? "text" : "password"}
-										placeholder='Confirm your new password'
-										className='w-full pl-10 pr-12 py-3 bg-white/10 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200'
+										placeholder='Re-enter password'
+										className={`${inputBase} pr-12`}
 										value={confirmPassword}
 										onChange={handleConfirmPasswordChange}
 										required
@@ -210,22 +200,22 @@ const ForgotPassword = () => {
 										className='absolute inset-y-0 right-0 pr-3 flex items-center'
 										onClick={toggleConfirmPassword}
 									>
-										{showConfirmPassword ? <FaEyeSlash className='h-5 w-5 text-gray-400' /> : <FaEye className='h-5 w-5 text-gray-400' />}
+										{showConfirmPassword ? (
+											<FaEyeSlash className='h-4 w-4 text-[#8696A0] hover:text-[#D1D7DB]' />
+										) : (
+											<FaEye className='h-4 w-4 text-[#8696A0] hover:text-[#D1D7DB]' />
+										)}
 									</button>
 								</div>
 							</div>
 
-							<button
-								type='submit'
-								disabled={loading}
-								className='w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg flex items-center justify-center gap-2'
-							>
+							<button type='submit' disabled={loading} className={primaryBtn}>
 								{loading ? (
-									<div className='animate-spin rounded-full h-5 w-5 border-b-2 border-white'></div>
+									<div className='animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent' />
 								) : (
 									<>
-										<FaKey className='text-lg' />
-										Reset Password
+										<FaKey />
+										Reset password
 									</>
 								)}
 							</button>

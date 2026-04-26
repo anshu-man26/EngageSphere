@@ -79,8 +79,9 @@
 .messages-container {
 	background-clip: padding-box;
 	-webkit-background-clip: padding-box;
-	/* Smooth scrolling behavior */
-	scroll-behavior: smooth;
+	/* No smooth-scroll on the container — we want scrollTop assignments
+	 * to be instant. The "↓ N new messages" pill explicitly opts into
+	 * smooth via scrollTo({ behavior: "smooth" }) when clicked. */
 }
 
 /* GIF Picker Modal Styles */
@@ -218,7 +219,7 @@
 
 /* Gradient text */
 .gradient-text {
-	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	background: linear-gradient(135deg, #00A884 0%, #06b6a8 100%);
 	-webkit-background-clip: text;
 	-webkit-text-fill-color: transparent;
 	background-clip: text;
@@ -285,8 +286,8 @@
 	box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
 }
 
-.glow-purple {
-	box-shadow: 0 0 20px rgba(147, 51, 234, 0.3);
+.glow-emerald {
+	box-shadow: 0 0 20px rgba(0, 168, 132, 0.3);
 }
 
 /* Text selection */
@@ -300,15 +301,26 @@
 	color: white;
 }
 
-body {
+html, body, #root {
+	height: 100%;
 	margin: 0;
+	background: #0B141A;
+	overscroll-behavior: none;
+}
+
+/* Lock body scroll only when the chat page is mounted (Home toggles this
+ * class on/off). Other pages (/profile, /user/:id, auth pages) keep normal
+ * page scrolling on desktop and mobile. */
+body.chat-locked {
+	overflow: hidden;
+}
+
+body {
 	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
 		'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
 		sans-serif;
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
-	background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
-	min-height: 100vh;
 }
 
 /* SHAKE ANIMATION ON HORIZONTAL DIRECTION */
@@ -1084,6 +1096,7 @@ body {
 		top: 0 !important;
 		left: 0 !important;
 		height: 100vh !important;
+		height: 100dvh !important;
 		width: 80vw !important;
 		max-width: 384px !important;
 	}
@@ -1236,11 +1249,9 @@ body {
 	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
-/* Profile page background animation */
+/* Profile page background — flat slate to match settings palette */
 .profile-responsive {
-	background: linear-gradient(-45deg, #3b82f6, #8b5cf6, #ec4899, #06b6d4);
-	background-size: 400% 400%;
-	animation: gradientShift 15s ease infinite;
+	background: #020617;
 }
 
 @keyframes gradientShift {
@@ -1524,3 +1535,6 @@ body {
 .animate-slideUp {
 	animation: slideUp 0.3s ease-out;
 }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

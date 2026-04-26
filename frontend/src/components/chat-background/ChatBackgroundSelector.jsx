@@ -13,13 +13,13 @@ const ChatBackgroundSelector = ({ conversationId, currentBackground, onClose, on
 	// Preset background options
 	const presetBackgrounds = [
 		{ name: "Default", url: "" },
-		{ name: "Gradient Blue", url: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" },
-		{ name: "Gradient Purple", url: "linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)" },
-		{ name: "Gradient Sunset", url: "linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%)" },
-		{ name: "Gradient Ocean", url: "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)" },
-		{ name: "Gradient Forest", url: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)" },
-		{ name: "Gradient Warm", url: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)" },
-		{ name: "Solid Dark", url: "#1a1a1a" },
+		{ name: "Emerald", url: "linear-gradient(135deg, #064e3b 0%, #022c22 100%)" },
+		{ name: "Mint", url: "linear-gradient(135deg, #134e4a 0%, #0f3a30 100%)" },
+		{ name: "Ocean", url: "linear-gradient(135deg, #0c4a6e 0%, #082f49 100%)" },
+		{ name: "Forest", url: "linear-gradient(135deg, #14532d 0%, #052e16 100%)" },
+		{ name: "Slate", url: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)" },
+		{ name: "Charcoal", url: "linear-gradient(135deg, #262d31 0%, #111B21 100%)" },
+		{ name: "Solid Dark", url: "#0B141A" },
 		{ name: "Solid Light", url: "#f8f9fa" },
 	];
 
@@ -117,24 +117,24 @@ const ChatBackgroundSelector = ({ conversationId, currentBackground, onClose, on
 									onClick={() => handleBackgroundSelect(bg)}
 									className={`relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all duration-200 ${
 										selectedBackground === bg.url && !customImage
-											? 'border-purple-500 scale-105'
+											? 'border-emerald-500 scale-105'
 											: 'border-white/20 hover:border-white/40'
 									}`}
 								>
 									<div
 										className="h-20 w-full"
 										style={{
-											background: bg.url || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+											background: bg.url || 'linear-gradient(135deg, #0f3a30 0%, #064e3b 100%)',
 										}}
 									>
 										{bg.url === "" && (
-											<div className="h-full w-full bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center">
+											<div className="h-full w-full bg-slate-900 flex items-center justify-center">
 												<span className="text-white text-xs font-medium">Default</span>
 											</div>
 										)}
 									</div>
 									{selectedBackground === bg.url && !customImage && (
-										<div className="absolute top-1 right-1 w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center">
+										<div className="absolute top-1 right-1 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
 											<FaCheck className="text-white text-xs" />
 										</div>
 									)}
@@ -227,7 +227,7 @@ const ChatBackgroundSelector = ({ conversationId, currentBackground, onClose, on
 						<button
 							onClick={handleSave}
 							disabled={loading || uploadingImage}
-							className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 text-sm sm:text-base"
+							className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm sm:text-base shadow-md shadow-emerald-900/30"
 						>
 							{(loading || uploadingImage) ? (
 								<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>

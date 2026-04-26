@@ -24,12 +24,12 @@ function App() {
 	// Show loading screen while checking authentication
 	if (loading) {
 		return (
-			<div className='min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center'>
+			<div className='min-h-screen bg-[#0B141A] flex items-center justify-center'>
 				<div className='text-center'>
-					<div className='w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center'>
-						<div className='animate-spin rounded-full h-8 w-8 border-b-2 border-white'></div>
+					<div className='w-14 h-14 mx-auto mb-4 rounded-2xl bg-emerald-500/10 ring-1 ring-emerald-500/30 flex items-center justify-center'>
+						<div className='animate-spin rounded-full h-7 w-7 border-2 border-emerald-500 border-t-transparent' />
 					</div>
-					<p className='text-white text-lg'>Loading...</p>
+					<p className='text-[#8696A0] text-sm'>Loading…</p>
 				</div>
 			</div>
 		);
@@ -38,7 +38,7 @@ function App() {
 
 
 	return (
-		<div className='min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900'>
+		<div className='min-h-screen bg-[#0B141A]'>
 			{/* System Notices */}
 			<SystemMaintenanceNotice />
 			<MobileAvailabilityNotice />

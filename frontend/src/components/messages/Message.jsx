@@ -10,6 +10,42 @@ import ReactionPicker from "./ReactionPicker";
 
 const LONG_PRESS_MS = 500;
 
+// Image with loading skeleton — reserves vertical space so the chat layout
+// doesn't collapse/jump while remote GIFs and images are still downloading.
+// The skeleton fades out when the image fires onLoad.
+const MediaImage = ({ src, alt, width, placeholderHeight = 180 }) => {
+	const [loaded, setLoaded] = useState(false);
+	const [errored, setErrored] = useState(false);
+	return (
+		<div className='relative w-full' style={{ minHeight: loaded || errored ? 0 : placeholderHeight }}>
+			{!loaded && !errored && (
+				<div
+					className='absolute inset-0 bg-[#222D34] animate-pulse'
+					style={{ minHeight: placeholderHeight }}
+				>
+					<div className='absolute inset-0 flex items-center justify-center'>
+						<div className='animate-spin rounded-full h-6 w-6 border-2 border-white/40 border-t-transparent' />
+					</div>
+				</div>
+			)}
+			<img
+				src={src}
+				alt={alt}
+				width={width}
+				onLoad={() => setLoaded(true)}
+				onError={() => setErrored(true)}
+				onContextMenu={(e) => e.preventDefault()}
+				className={`w-full h-auto block transition-opacity duration-200 ${loaded ? "opacity-100" : "opacity-0"}`}
+			/>
+			{errored && (
+				<div className='absolute inset-0 bg-[#202C33] flex items-center justify-center text-[#8696A0] text-xs'>
+					Failed to load
+				</div>
+			)}
+		</div>
+	);
+};
+
 const Message = ({
 	message,
 	isUploading = false,
@@ -134,52 +170,34 @@ const Message = ({
 		return () => document.removeEventListener("mousedown", onClickOutside);
 	}, [showReactionPicker, showImageMenu, clearActiveEmojiPicker]);
 
-	// ── Emoji picker placement ────────────────────────────────────
+	// ── Reaction pill placement ────────────────────────────────────
+	// Sits just above the bubble, aligned to the bubble's leading edge
+	// (right edge for our own messages, left edge for incoming). Falls
+	// below if there's no room above (rare — only at the very top of
+	// chat history).
 	const getEmojiPickerPosition = () => {
-		if (!messageBubbleRef.current) return {};
-		const rect = messageBubbleRef.current.getBoundingClientRect();
-		const w = window.innerWidth;
-		const h = window.innerHeight;
-		const isMobile = w <= 768;
-		const pickerW = isMobile ? Math.min(240, w * 0.85) : 280;
-		const pickerH = isMobile ? Math.min(300, h * 0.6) : 400;
+		const PILL_HEIGHT = 52;
+		const style = { position: "absolute", zIndex: 50 };
 
-		let style = {
-			position: "absolute",
-			zIndex: 50,
-			maxWidth: isMobile ? "85vw" : "90vw",
-			maxHeight: isMobile ? "60vh" : "80vh",
-		};
-
-		const spaceAbove = rect.top;
-		const spaceBelow = h - rect.bottom;
-		if (spaceAbove < pickerH + 20) {
-			style.top = "100%";
-			style.marginTop = "0.5rem";
+		if (messageBubbleRef.current) {
+			const rect = messageBubbleRef.current.getBoundingClientRect();
+			if (rect.top < PILL_HEIGHT + 12) {
+				style.top = "100%";
+				style.marginTop = "0.4rem";
+			} else {
+				style.bottom = "100%";
+				style.marginBottom = "0.4rem";
+			}
 		} else {
 			style.bottom = "100%";
-			style.marginBottom = "0.5rem";
+			style.marginBottom = "0.4rem";
 		}
 
-		if (isMobile) {
-			style.left = "50%";
-			style.transform = "translateX(-50%)";
-		} else if (fromMe) {
-			if (rect.left < pickerW + 20) {
-				style.left = "100%";
-				style.marginLeft = "0.5rem";
-			} else {
-				style.right = "100%";
-				style.marginRight = "0.5rem";
-			}
+		// Anchor to the bubble's edge so it doesn't overflow the chat side
+		if (fromMe) {
+			style.right = 0;
 		} else {
-			if (w - rect.right < pickerW + 20) {
-				style.right = "100%";
-				style.marginRight = "0.5rem";
-			} else {
-				style.left = "100%";
-				style.marginLeft = "0.5rem";
-			}
+			style.left = 0;
 		}
 		return style;
 	};
@@ -194,7 +212,7 @@ const Message = ({
 	// ── Loading state ─────────────────────────────────────────────
 	if (isUploading) {
 		return (
-			<div className={`flex ${fromMe ? "justify-end" : "justify-start"} mb-1 px-3 sm:px-6`}>
+			<div className={`flex ${fromMe ? "justify-end" : "justify-start"} mb-2.5 px-3 sm:px-6`}>
 				<div className={`relative max-w-[75%] sm:max-w-md ${bubbleClass} px-2 py-1.5 shadow`}>
 					<div className='flex flex-col items-center space-y-2 py-2'>
 						<div className='w-20 h-20 sm:w-28 sm:h-28 bg-black/20 rounded-lg flex items-center justify-center'>
@@ -213,7 +231,7 @@ const Message = ({
 	// ── Regular render ────────────────────────────────────────────
 	return (
 		<div
-			className={`flex ${fromMe ? "justify-end" : "justify-start"} mb-1 px-3 sm:px-6 group transition-colors ${
+			className={`flex ${fromMe ? "justify-end" : "justify-start"} mb-2.5 px-3 sm:px-6 group transition-colors ${
 				isSelectionMode ? "cursor-pointer" : ""
 			} ${isSelected ? "bg-[#00A884]/10" : ""}`}
 			onClick={handleClick}
@@ -223,7 +241,7 @@ const Message = ({
 					ref={messageBubbleRef}
 					data-message-bubble
 					className={`${bubbleClass} ${
-						isMedia ? "p-1" : "px-2.5 py-1.5"
+						isMedia ? "p-0" : "px-2.5 py-1.5"
 					} shadow relative ${message.shouldShake ? "shake" : ""} ${
 						isSelected ? "ring-2 ring-[#00A884]" : ""
 					} select-none`}
@@ -252,46 +270,24 @@ const Message = ({
 					) : (
 						<>
 							{message.messageType === "image" && (
-								<div className='flex flex-col gap-1.5'>
-									<div className='relative overflow-hidden rounded-xl message-image group/img'>
-										<img
+								<div className='flex flex-col'>
+									<div
+										className={`relative overflow-hidden message-image group/img ${fromMe ? "rounded-lg rounded-br-none" : "rounded-lg rounded-bl-none"}`}
+										style={{ width: 280 }}
+									>
+										<MediaImage
 											src={message.fileUrl}
 											alt={message.fileName || "Image"}
-											className='max-w-full max-h-80 cursor-pointer rounded-xl'
-											onClick={() => window.open(message.fileUrl, "_blank")}
-											onMouseDown={startImagePress}
-											onMouseUp={cancelImagePress}
-											onMouseLeave={cancelImagePress}
-											onTouchStart={startImagePress}
-											onTouchEnd={cancelImagePress}
-											onContextMenu={(e) => e.preventDefault()}
+											width={280}
+											placeholderHeight={200}
 										/>
-										{showImageMenu && (
-											<div className='absolute top-2 right-2 bg-[#233138] ring-1 ring-black/30 rounded-xl shadow-xl p-1 image-menu z-20'>
-												<button
-													onClick={() => {
-														handleFileDownload(message.fileUrl, message.fileName || "image.jpg");
-														setShowImageMenu(false);
-													}}
-													className='w-full flex items-center gap-2 px-3 py-1.5 text-[#E9EDEF] hover:bg-[#2A3942] rounded-lg text-xs'
-												>
-													<FaDownload size={11} className='text-[#8696A0]' />
-													Download
-												</button>
-												<button
-													onClick={() => {
-														setShowImageMenu(false);
-														setActiveEmojiPicker(message._id);
-													}}
-													className='w-full flex items-center gap-2 px-3 py-1.5 text-[#E9EDEF] hover:bg-[#2A3942] rounded-lg text-xs'
-												>
-													😊 React
-												</button>
-											</div>
-										)}
+										<MediaActions
+											onReact={() => setActiveEmojiPicker(message._id)}
+											onDownload={() => handleFileDownload(message.fileUrl, message.fileName || "image.jpg")}
+										/>
 									</div>
 									{message.message && (
-										<p className='text-sm px-1.5'>{message.message}</p>
+										<p className='text-sm px-2.5 py-1.5'>{message.message}</p>
 									)}
 								</div>
 							)}
@@ -318,45 +314,20 @@ const Message = ({
 							)}
 
 							{isGifMessage && gifData && (
-								<div className='relative overflow-hidden rounded-xl message-image group/img'>
-									<img
+								<div
+									className={`relative overflow-hidden message-image group/img ${fromMe ? "rounded-lg rounded-br-none" : "rounded-lg rounded-bl-none"}`}
+									style={{ width: 240 }}
+								>
+									<MediaImage
 										src={gifData.url}
 										alt={gifData.title || "GIF"}
-										className='max-w-full max-h-80 cursor-pointer rounded-xl'
-										onClick={() => window.open(gifData.url, "_blank")}
-										onMouseDown={startImagePress}
-										onMouseUp={cancelImagePress}
-										onMouseLeave={cancelImagePress}
-										onTouchStart={startImagePress}
-										onTouchEnd={cancelImagePress}
-										onContextMenu={(e) => e.preventDefault()}
+										width={240}
+										placeholderHeight={180}
 									/>
-									<span className='absolute top-2 left-2 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded font-bold tracking-wider backdrop-blur-sm'>
+									<span className='absolute bottom-1.5 left-1.5 bg-black/55 text-white text-[10px] px-1.5 py-0.5 rounded font-semibold tracking-wider backdrop-blur-sm'>
 										GIF
 									</span>
-									{showImageMenu && (
-										<div className='absolute top-2 right-2 bg-[#233138] ring-1 ring-black/30 rounded-xl shadow-xl p-1 image-menu z-20'>
-											<button
-												onClick={() => {
-													handleFileDownload(gifData.url, gifData.title || "gif.gif");
-													setShowImageMenu(false);
-												}}
-												className='w-full flex items-center gap-2 px-3 py-1.5 text-[#E9EDEF] hover:bg-[#2A3942] rounded-lg text-xs'
-											>
-												<FaDownload size={11} className='text-[#8696A0]' />
-												Download
-											</button>
-											<button
-												onClick={() => {
-													setShowImageMenu(false);
-													setActiveEmojiPicker(message._id);
-												}}
-												className='w-full flex items-center gap-2 px-3 py-1.5 text-[#E9EDEF] hover:bg-[#2A3942] rounded-lg text-xs'
-											>
-												😊 React
-											</button>
-										</div>
-									)}
+									<MediaActions onReact={() => setActiveEmojiPicker(message._id)} />
 								</div>
 							)}
 
@@ -367,27 +338,37 @@ const Message = ({
 					)}
 
 					{/* Footer (time + read receipts) */}
-					<div className={`flex items-center justify-end gap-1 -mb-0.5 text-[11px] ${fromMe ? "text-white/55" : "text-[#8696A0]"}`}>
-						<span>{formattedTime}</span>
-						<MessageStatus status={message.status} fromMe={fromMe} />
-					</div>
+					{isMedia ? (
+						<div className='absolute bottom-1 right-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-black/40 backdrop-blur-sm text-[10px] text-white/90 z-[1]'>
+							<span>{formattedTime}</span>
+							<MessageStatus status={message.status} fromMe={fromMe} />
+						</div>
+					) : (
+						<div className={`flex items-center justify-end gap-1 -mb-0.5 text-[11px] ${fromMe ? "text-white/55" : "text-[#8696A0]"}`}>
+							<span>{formattedTime}</span>
+							<MessageStatus status={message.status} fromMe={fromMe} />
+						</div>
+					)}
 				</div>
 
-				{/* Reactions */}
+				{/* Reactions — bare emoji floating below the bubble corner, no pill,
+				    no background. Drop-shadow on the emoji itself for legibility. */}
 				{message.reactions && message.reactions.length > 0 && !message.deletedForEveryone && (
-					<div className={`absolute ${fromMe ? "-left-1" : "-right-1"} -bottom-2 flex items-center gap-0.5`}>
+					<div className={`absolute ${fromMe ? "-right-3" : "-left-2"} -bottom-1 flex items-center gap-0.5 z-[1]`}>
 						{Object.entries(groupedReactions).map(([emoji, reactions]) => {
 							const mine = reactions.some((r) => r.userId === authUser._id);
 							return (
 								<button
 									key={emoji}
 									onClick={() => handleReaction(emoji)}
-									className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs ring-1 ring-[#0B141A] transition-colors ${
-										mine ? "bg-[#00A884]/30 text-[#E9EDEF]" : "bg-[#2A3942] text-[#E9EDEF]"
-									}`}
+									className='flex items-center gap-0.5 leading-none transition-transform hover:scale-125 active:scale-95'
+									style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.6))" }}
+									title={`${reactions.length} reaction${reactions.length > 1 ? "s" : ""}${mine ? " (you reacted)" : ""}`}
 								>
-									<span>{emoji}</span>
-									{reactions.length > 1 && <span className='text-[10px] font-medium'>{reactions.length}</span>}
+									<span className='text-[15px] leading-none'>{emoji}</span>
+									{reactions.length > 1 && (
+										<span className='text-[11px] font-medium text-[#E9EDEF] pl-0.5'>{reactions.length}</span>
+									)}
 								</button>
 							);
 						})}
@@ -397,6 +378,33 @@ const Message = ({
 		</div>
 	);
 };
+
+const MediaActions = ({ onReact, onDownload }) => (
+	<div className='absolute top-1.5 right-1.5 flex items-center gap-1 opacity-0 group-hover/img:opacity-100 focus-within:opacity-100 transition-opacity z-[2]'>
+		<button
+			onClick={(e) => {
+				e.stopPropagation();
+				onReact();
+			}}
+			title='React'
+			className='w-7 h-7 rounded-full bg-black/55 hover:bg-black/75 backdrop-blur-sm text-white text-sm flex items-center justify-center transition-colors'
+		>
+			😊
+		</button>
+		{onDownload && (
+			<button
+				onClick={(e) => {
+					e.stopPropagation();
+					onDownload();
+				}}
+				title='Download'
+				className='w-7 h-7 rounded-full bg-black/55 hover:bg-black/75 backdrop-blur-sm text-white flex items-center justify-center transition-colors'
+			>
+				<FaDownload size={11} />
+			</button>
+		)}
+	</div>
+);
 
 const MessageStatus = ({ status, fromMe }) => {
 	if (!fromMe) return null;

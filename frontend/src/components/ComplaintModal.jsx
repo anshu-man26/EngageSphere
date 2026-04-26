@@ -121,7 +121,7 @@ const ComplaintModal = ({ isOpen, onClose, pageSubmitted }) => {
 								<input
 									type="text"
 									required
-									className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+									className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500/40"
 									placeholder="Your name"
 									value={formData.name}
 									onChange={(e) => handleInputChange("name", e.target.value)}
@@ -134,7 +134,7 @@ const ComplaintModal = ({ isOpen, onClose, pageSubmitted }) => {
 								<input
 									type="email"
 									required
-									className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+									className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500/40"
 									placeholder="your@email.com"
 									value={formData.email}
 									onChange={(e) => handleInputChange("email", e.target.value)}
@@ -152,7 +152,7 @@ const ComplaintModal = ({ isOpen, onClose, pageSubmitted }) => {
 							type="text"
 							required
 							maxLength={200}
-							className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+							className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500/40"
 							placeholder="Brief description of your issue"
 							value={formData.subject}
 							onChange={(e) => handleInputChange("subject", e.target.value)}
@@ -169,7 +169,7 @@ const ComplaintModal = ({ isOpen, onClose, pageSubmitted }) => {
 								Category
 							</label>
 							<select
-								className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+								className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500/40"
 								value={formData.category}
 								onChange={(e) => handleInputChange("category", e.target.value)}
 							>
@@ -185,7 +185,7 @@ const ComplaintModal = ({ isOpen, onClose, pageSubmitted }) => {
 								Priority
 							</label>
 							<select
-								className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+								className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500/40"
 								value={formData.priority}
 								onChange={(e) => handleInputChange("priority", e.target.value)}
 							>
@@ -207,7 +207,7 @@ const ComplaintModal = ({ isOpen, onClose, pageSubmitted }) => {
 							required
 							maxLength={2000}
 							rows={4}
-							className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+							className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500/40 resize-none"
 							placeholder="Please provide detailed information about your issue..."
 							value={formData.message}
 							onChange={(e) => handleInputChange("message", e.target.value)}
@@ -229,7 +229,7 @@ const ComplaintModal = ({ isOpen, onClose, pageSubmitted }) => {
 						<button
 							type="submit"
 							disabled={loading}
-							className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 disabled:cursor-not-allowed text-white font-medium rounded-md transition-colors"
+							className="flex-1 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium rounded-md transition-colors"
 						>
 							{loading ? "Submitting..." : "Submit Complaint"}
 						</button>

@@ -10,6 +10,9 @@ const MessageInput = ({ onGifPickerToggle }) => {
 	const [message, setMessage] = useState("");
 	const [showFileMenu, setShowFileMenu] = useState(false);
 	const fileInputRef = useRef(null);
+	const textInputRef = useRef(null);
+	const sendBtnRef = useRef(null);
+	const handleSubmitRef = useRef(null);
 
 	const { loading, sendMessage } = useSendMessage();
 	const { loading: uploadLoading, uploadFile } = useUploadFile();
@@ -34,12 +37,42 @@ const MessageInput = ({ onGifPickerToggle }) => {
 		};
 	}, [showFileMenu]);
 
+	// Keep the soft keyboard open when the send button is tapped. React's
+	// synthetic onTouchStart is passive (preventDefault is ignored), so we
+	// attach native non-passive listeners. We also fire submit on pointerup /
+	// touchend in case preventDefault on touchstart suppressed the click.
+	useEffect(() => {
+		const btn = sendBtnRef.current;
+		if (!btn) return;
+		const block = (e) => e.preventDefault();
+		const fire = (e) => {
+			e.preventDefault();
+			handleSubmitRef.current?.();
+		};
+		btn.addEventListener("pointerdown", block, { passive: false });
+		btn.addEventListener("touchstart", block, { passive: false });
+		btn.addEventListener("mousedown", block);
+		btn.addEventListener("touchend", fire, { passive: false });
+		return () => {
+			btn.removeEventListener("pointerdown", block);
+			btn.removeEventListener("touchstart", block);
+			btn.removeEventListener("mousedown", block);
+			btn.removeEventListener("touchend", fire);
+		};
+	}, []);
+
+
 	const handleSubmit = async (e) => {
-		e.preventDefault();
+		if (e?.preventDefault) e.preventDefault();
 		if (!message.trim() || disabled) return;
-		await sendMessage(message);
+		const text = message;
 		setMessage("");
+		// Keep keyboard open: refocus the input synchronously while we still
+		// have a fresh user-gesture context.
+		textInputRef.current?.focus();
+		await sendMessage(text);
 	};
+	handleSubmitRef.current = handleSubmit;
 
 	const handleKeyPress = (e) => {
 		if (e.key === "Enter" && !e.shiftKey) {
@@ -71,7 +104,7 @@ const MessageInput = ({ onGifPickerToggle }) => {
 
 	return (
 		<div className='px-3 py-2 sm:px-4 bg-[#202C33] mobile-input-container'>
-			<form onSubmit={handleSubmit} className='flex items-center gap-2'>
+			<form onSubmit={handleSubmit} className='flex items-center gap-2' autoComplete='off' data-form-type='other'>
 				{/* Attach button + menu */}
 				<div className='relative file-menu-container flex-shrink-0'>
 					<button
@@ -138,18 +171,29 @@ const MessageInput = ({ onGifPickerToggle }) => {
 				{/* Text input pill */}
 				<div className='flex-1 min-w-0'>
 					<input
+						ref={textInputRef}
 						type='text'
+						name='chat-message'
+						enterKeyHint='send'
+						autoComplete='off'
+						autoCorrect='off'
+						autoCapitalize='sentences'
+						spellCheck={true}
+						data-form-type='other'
+						data-lpignore='true'
+						data-1p-ignore
 						className='w-full h-11 px-4 bg-[#2A3942] rounded-lg text-[15px] text-[#E9EDEF] placeholder-[#8696A0] outline-none disabled:opacity-50'
 						placeholder={selectedConversation ? "Type a message" : "Select a conversation"}
 						value={message}
 						onChange={(e) => setMessage(e.target.value)}
 						onKeyPress={handleKeyPress}
-						disabled={disabled}
+						disabled={!selectedConversation}
 					/>
 				</div>
 
 				{/* Send button */}
 				<button
+					ref={sendBtnRef}
 					type='submit'
 					disabled={!canSend}
 					className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors flex-shrink-0 ${

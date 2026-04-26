@@ -1,4 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+// Paginated message fetcher.
+//
+// Initial load: newest 30 messages.
+// Scroll up: `loadMoreMessages()` fetches the next 30 older ones.
+//
+// StrictMode-safe: in dev React runs every effect twice (run → cleanup →
+// run again). We don't try to dedupe with refs — each invocation is just
+// a cheap idempotent GET. The `cancelled` flag only discards stale results
+// during conversation switches.
+
+import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import useConversation from "../zustand/useConversation";
 import { apiGet } from "../config/api";
@@ -16,61 +26,44 @@ const useGetMessages = () => {
 	const setHasMoreMessages = useConversation((s) => s.setHasMoreMessages);
 	const selectedConversation = useConversation((s) => s.selectedConversation);
 
-	// Track which conversation we last fetched for so socket-driven changes
-	// don't double-fetch.
-	const fetchedForRef = useRef(null);
-
 	const partnerId =
 		selectedConversation?.participant?._id || selectedConversation?._id || null;
 
-	// ── Initial fetch (newest page) ──────────────────────────────
 	useEffect(() => {
 		if (!partnerId) {
 			setMessages([]);
 			setHasMoreMessages(false);
-			fetchedForRef.current = null;
+			setLoading(false);
 			return;
 		}
-		if (fetchedForRef.current === partnerId) return; // already loaded
-		fetchedForRef.current = partnerId;
 
 		let cancelled = false;
 		setLoading(true);
-		(async () => {
-			try {
-				const data = await apiGet(`/api/messages/${partnerId}?limit=${PAGE_SIZE}`);
-				if (cancelled) return;
 
-				// Backwards compat: backend used to return an array directly.
+		apiGet(`/api/messages/${partnerId}?limit=${PAGE_SIZE}`)
+			.then((data) => {
+				if (cancelled) return;
 				const list = Array.isArray(data) ? data : data?.messages || [];
 				const more = Array.isArray(data) ? false : !!data?.hasMore;
-
 				setMessages(list);
 				setHasMoreMessages(more);
-			} catch (err) {
+			})
+			.catch((err) => {
 				if (cancelled) return;
 				console.error("Error fetching messages:", err);
 				toast.error(err.message || "Failed to load messages");
 				setMessages([]);
 				setHasMoreMessages(false);
-			} finally {
-				// Always clear loading. In React StrictMode dev, the effect
-				// runs → cleanup → runs again. If we gate this on `!cancelled`,
-				// the first run's fetch resolves *after* cleanup set
-				// cancelled=true, so loading would stay true forever (the
-				// second run takes the fetchedForRef early-exit and doesn't
-				// touch loading). Clearing unconditionally is safe because
-				// `setMessages`/`setHasMoreMessages` are gated by `!cancelled`.
-				setLoading(false);
-			}
-		})();
+			})
+			.finally(() => {
+				if (!cancelled) setLoading(false);
+			});
 
 		return () => {
 			cancelled = true;
 		};
 	}, [partnerId, setMessages, setHasMoreMessages]);
 
-	// ── Load older messages (called when user scrolls to top) ────
 	const loadMoreMessages = useCallback(async () => {
 		if (!partnerId || !hasMoreMessages || loadingMore || loading) return null;
 		const oldest = messages[0];
@@ -83,7 +76,6 @@ const useGetMessages = () => {
 			);
 			const older = Array.isArray(data) ? data : data?.messages || [];
 			const more = Array.isArray(data) ? false : !!data?.hasMore;
-
 			prependMessages(older);
 			setHasMoreMessages(more);
 			return older.length;

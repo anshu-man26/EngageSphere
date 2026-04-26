@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import useConversation from "../../zustand/useConversation";
 import MessageInput from "./MessageInput";
 import Messages from "./Messages";
@@ -17,10 +17,12 @@ import useSendGif from "../../hooks/useSendGif";
 import useVideoCallStatus from "../../hooks/useVideoCallStatus";
 import ChatBackgroundSelector from "../chat-background/ChatBackgroundSelector";
 import VideoCallMaintenanceNotice from "./VideoCallMaintenanceNotice";
+import Avatar from "../Avatar";
 import toast from "react-hot-toast";
 
 const MessageContainer = ({ isSidebarOpen, setIsSidebarOpen }) => {
 	const navigate = useNavigate();
+	const location = useLocation();
 	const { selectedConversation, setSelectedConversation, messages, updateConversationBackground } = useConversation();
 	const { onlineUsers } = useSocketContext();
 	const { loading: deleteLoading, deleteMultipleMessages } = useDeleteMultipleMessages();
@@ -52,6 +54,24 @@ const MessageContainer = ({ isSidebarOpen, setIsSidebarOpen }) => {
 		// cleanup function (unmounts)
 		return () => setSelectedConversation(null);
 	}, [setSelectedConversation]);
+
+	// If we navigated here with a target user (e.g. "Message" button on a profile),
+	// open that chat once. Runs after the cleanup-on-mount that StrictMode triggers,
+	// so the conversation isn't wiped before MessageContainer can render it.
+	useEffect(() => {
+		const target = location.state?.openWithUser;
+		if (!target?._id) return;
+		setSelectedConversation({
+			_id: target._id,
+			participant: target,
+			unreadCount: 0,
+			lastMessage: null,
+			lastMessageTime: new Date(),
+			createdAt: new Date(),
+		});
+		// Clear the state so a future back/forward doesn't re-open it.
+		window.history.replaceState({}, "");
+	}, [location.state, setSelectedConversation]);
 
 	// Function to detect if background is dark
 	const isBackgroundDark = (background) => {
@@ -273,24 +293,14 @@ const MessageContainer = ({ isSidebarOpen, setIsSidebarOpen }) => {
 										<IoChevronBack size={18} />
 									</button>
 
-									<div
-										className='w-10 h-10 rounded-full bg-[#2A3942] overflow-hidden flex items-center justify-center text-[#E9EDEF] font-semibold text-sm cursor-pointer hover:opacity-90 transition flex-shrink-0'
+									<Avatar
+										src={selectedConversation.participant?.profilePic}
+										alt={selectedConversation.participant?.fullName}
+										size={40}
+										className='cursor-pointer hover:opacity-90 transition'
 										onClick={() => navigate(`/user/${selectedConversation.participant._id}`)}
 										title={`View ${selectedConversation.participant.fullName}'s profile`}
-									>
-										{selectedConversation.participant?.profilePic ? (
-											<img
-												src={selectedConversation.participant.profilePic}
-												alt=''
-												className='w-full h-full object-cover'
-												onError={(e) => {
-													e.currentTarget.style.display = "none";
-												}}
-											/>
-										) : (
-											participantInitial
-										)}
-									</div>
+									/>
 
 									<div className='min-w-0 flex-1 cursor-pointer' onClick={() => navigate(`/user/${selectedConversation.participant._id}`)}>
 										<h3 className='text-[#E9EDEF] font-medium text-[15px] truncate leading-tight'>
