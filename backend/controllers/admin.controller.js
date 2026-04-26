@@ -6,6 +6,7 @@ import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
 import { v2 as cloudinary } from "cloudinary";
 import { io } from "../socket/socket.js";
+import { authCookieOptions, clearCookieOptions } from "../config/cookieOptions.js";
 
 // Configure Cloudinary
 cloudinary.config({
@@ -19,12 +20,7 @@ const generateAdminTokenAndSetCookie = (adminId, res) => {
 		expiresIn: "24h",
 	});
 
-	res.cookie("admin_jwt", token, {
-		maxAge: 24 * 60 * 60 * 1000, // 24 hours
-		httpOnly: true,
-		sameSite: "strict",
-		secure: process.env.NODE_ENV !== "development",
-	});
+	res.cookie("admin_jwt", token, authCookieOptions(24 * 60 * 60 * 1000));
 };
 
 // Email transporter for admin notifications
@@ -187,7 +183,7 @@ export const verifyAdminLoginOtp = async (req, res) => {
 
 export const adminLogout = (req, res) => {
 	try {
-		res.cookie("admin_jwt", "", { maxAge: 0 });
+		res.cookie("admin_jwt", "", { ...clearCookieOptions(), maxAge: 0 });
 		res.status(200).json({ message: "Admin logged out successfully" });
 	} catch (error) {
 		console.log("Error in adminLogout controller", error.message);

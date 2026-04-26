@@ -5,6 +5,7 @@ import cloudinary from "../config/cloudinary.js";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import createTransporter from "../config/nodemailer.js";
+import { clearCookieOptions } from "../config/cookieOptions.js";
 
 export const getUsersForSidebar = async (req, res) => {
 	try {
@@ -767,12 +768,7 @@ export const deleteAccount = async (req, res) => {
 		});
 
 		// Clear the JWT cookie
-		res.clearCookie("jwt", {
-			httpOnly: true,
-			secure: process.env.NODE_ENV === "production",
-			sameSite: "strict",
-			maxAge: 0
-		});
+		res.clearCookie("jwt", clearCookieOptions());
 
 		res.status(200).json({ 
 			message: "Account deleted successfully"
