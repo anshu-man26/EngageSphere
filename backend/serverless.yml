@@ -1,0 +1,95 @@
+service: engagesphere-api
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: ${env:AWS_REGION, 'ap-south-1'}
+  stage: ${opt:stage, 'production'}
+  memorySize: 512
+  timeout: 29  # API Gateway hard cap is 30s
+  logRetentionInDays: 14
+  environment:
+    NODE_ENV: production
+    MONGO_DB_URI: ${env:MONGO_DB_URI}
+    JWT_SECRET: ${env:JWT_SECRET}
+    CLOUDINARY_NAME: ${env:CLOUDINARY_NAME}
+    CLOUDINARY_API_KEY: ${env:CLOUDINARY_API_KEY}
+    CLOUDINARY_SECRET_KEY: ${env:CLOUDINARY_SECRET_KEY}
+    EMAIL_USER: ${env:EMAIL_USER}
+    EMAIL_PASS: ${env:EMAIL_PASS}
+    AGORA_APP_ID: ${env:AGORA_APP_ID, ''}
+    AGORA_APP_CERTIFICATE: ${env:AGORA_APP_CERTIFICATE, ''}
+    OPENAI_API_KEY: ${env:OPENAI_API_KEY, ''}
+    API_KEY: ${env:API_KEY, ''}
+    ADMIN_EMAILS: ${env:ADMIN_EMAILS, ''}
+    FRONTEND_URL: ${env:FRONTEND_URL}
+  httpApi:
+    cors:
+      allowedOrigins:
+        - ${env:FRONTEND_URL}
+      allowedHeaders:
+        - Content-Type
+        - Authorization
+        - X-Requested-With
+      allowedMethods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      allowCredentials: true
+
+functions:
+  api:
+    handler: lambda.main
+    events:
+      - httpApi: '*'
+
+# API Gateway HTTP API stage-level throttling. Sized for personal use:
+# 25 req/sec sustained with 50 req/sec bursts before 429.
+resources:
+  extensions:
+    HttpApiStage:
+      Properties:
+        DefaultRouteSettings:
+          ThrottlingBurstLimit: 50
+          ThrottlingRateLimit: 25
+
+package:
+  individually: false
+  excludeDevDependencies: true
+  patterns:
+    # Default-deny most things, then allow code + production node_modules.
+    - '!**'
+    - 'lambda.js'
+    - 'app.js'
+    - 'package.json'
+    - 'config/**'
+    - 'controllers/**'
+    - 'db/**'
+    - 'middleware/**'
+    - 'models/**'
+    - 'routes/**'
+    - 'services/**'
+    - 'socket/**'
+    - 'utils/**'
+    - 'node_modules/**'
+    # Strip junk that crept into node_modules
+    - '!node_modules/.cache/**'
+    - '!node_modules/**/test/**'
+    - '!node_modules/**/tests/**'
+    - '!node_modules/**/__tests__/**'
+    - '!node_modules/**/example/**'
+    - '!node_modules/**/examples/**'
+    - '!node_modules/**/docs/**'
+    - '!node_modules/**/*.md'
+    - '!node_modules/**/*.ts'
+    - '!node_modules/**/*.map'
+    - '!ecosystem.config.cjs'
+    - '!nodemon.json'
+    - '!server.js'
+    - '!scripts/**'
+    - '!uploads/**'
+    - '!.env'
+    - '!.env.*'

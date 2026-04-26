@@ -1,171 +1,178 @@
 # Deploying EngageSphere
 
-Frontend on **Vercel** via **GitHub Actions**, env vars managed by **Doppler**.
-Backend hosting decided separately (see end of file).
+Same shape as ClickAndCare:
 
-```
-GitHub push  ──▶  GitHub Actions  ──▶  vercel build  ──▶  Vercel CDN
-                                          ▲
-                                          │ (env vars synced)
-                                       Doppler
-```
+| Target | Where | Workflow |
+|---|---|---|
+| `frontend/` | Vercel | `.github/workflows/deploy-frontend.yml` (auto on push to main) |
+| `backend/` REST API | AWS Lambda + API Gateway | `.github/workflows/release-backend.yml` (manual) |
+| `backend/` Socket.IO | Shared EC2 with ClickAndCare | not in CI — pulled by hand |
 
----
+## Why the split
 
-## 1 · Doppler — set up the project
+Lambda can't hold persistent WebSocket connections. The Express app runs
+on Lambda for cheap, scalable REST. Socket.IO needs an always-on host —
+EngageSphere reuses the existing ClickAndCare EC2 (different port, different
+subdomain, same box).
 
-1. **Create a project** in Doppler (e.g. `engagesphere`) with two configs:
-   `dev` and `prd`.
-2. Add the frontend env vars to **prd**:
-   - `VITE_API_URL` — `https://api.yourdomain.com` (your backend origin)
-   - `VITE_SOCKET_URL` — same as above
-   - `VITE_AGORA_APP_ID` — fallback Agora App ID (optional)
-   - `VITE_GIPHY_API_KEY` — optional
-3. (Recommended) Install Doppler CLI locally and `doppler login` so you can
-   `doppler run -- npm run dev` in `frontend/` for local dev.
+## Env vars: Doppler is the source of truth
 
----
+Two configs in Doppler:
 
-## 2 · Vercel — connect the project
-
-1. **vercel.com → Add New → Project → Import** your GitHub repo.
-2. Vercel will detect the `frontend/vercel.json`. Confirm:
-   - **Root Directory:** `frontend`
-   - **Framework:** Vite (auto-detected)
-   - **Build Command:** `npm run build`
-   - **Output Directory:** `dist`
-3. **Disable** "Auto Deploy" on every push — we'll drive it from GitHub
-   Actions instead. (Settings → Git → toggle off.)
-4. (If you want Vercel to keep auto-deploying on push, leave it on and skip
-   step 4 below; the GitHub Actions workflow becomes optional.)
-
-### Wire Doppler → Vercel
-
-Use the official Doppler integration:
-
-1. Doppler dashboard → your project → **Integrations → Vercel** → connect.
-2. Pick the Vercel project + the `prd` config.
-3. Doppler now syncs every secret to Vercel's **Environment Variables → Production**
-   automatically — no manual copying.
-
----
-
-## 3 · GitHub Actions — the workflow
-
-The workflow lives at `.github/workflows/deploy-frontend.yml` and runs on:
-- any push to `main` that touches `frontend/**`
-- manual `workflow_dispatch`
-
-### Required GitHub repo secrets
-
-Set these in **Settings → Secrets and variables → Actions → New repository secret**:
-
-| Secret | Where to find it |
+| Doppler project / config | Used by |
 |---|---|
-| `VERCEL_TOKEN` | vercel.com → Account Settings → Tokens → Create |
-| `VERCEL_ORG_ID` | Run `vercel link` once locally — `.vercel/project.json` |
-| `VERCEL_PROJECT_ID` | Same file |
+| `engagesphere-fe / prd` | Vercel (synced via Doppler→Vercel integration) |
+| `engagesphere-be / prd` | Lambda + EC2 (read by `doppler run` at deploy/start time) |
 
-The fastest way to get the last two:
+Required vars in `engagesphere-be / prd`:
+
+- `NODE_ENV` = `production`
+- `MONGO_DB_URI`
+- `JWT_SECRET`
+- `EMAIL_USER`, `EMAIL_PASS`
+- `CLOUDINARY_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_SECRET_KEY`
+- `AGORA_APP_ID`, `AGORA_APP_CERTIFICATE`
+- `FRONTEND_URL` = `https://www.engage-sphere.in`
+- `OPENAI_API_KEY`, `API_KEY`, `ADMIN_EMAILS` (optional)
+
+Required vars in `engagesphere-fe / prd`:
+
+- `VITE_API_URL` = your Lambda HTTP API base (e.g.
+  `https://abc123.execute-api.ap-south-1.amazonaws.com`)
+- `VITE_SOCKET_URL` = `https://socket.engage-sphere.in` (your shared EC2
+  subdomain)
+- `VITE_AGORA_APP_ID` (optional fallback)
+- `VITE_GIPHY_API_KEY` (optional)
+
+## Backend — REST API (Lambda)
+
+### One-time AWS prep
+
+1. **IAM user** with programmatic access — `AdministratorAccess` or scoped
+   Serverless Framework permissions.
+2. **GitHub repo secrets** (Settings → Secrets and variables → Actions):
+
+| Secret | Value |
+|---|---|
+| `AWS_ACCESS_KEY_ID` | from IAM user |
+| `AWS_SECRET_ACCESS_KEY` | from IAM user |
+| `AWS_REGION` | optional, defaults to `ap-south-1` |
+| `DOPPLER_TOKEN_BACKEND` | Doppler service token scoped to `engagesphere-be / prd` (read-only) |
+
+### Running a release
+
+GitHub → **Actions** → **Build & Release — backend (AWS Lambda)** → **Run workflow**
+
+- `stage`: `production` or `staging`
+- `confirm`: type `release`
+
+The workflow runs:
+1. `npm ci --omit=dev` in `backend/`
+2. `npm i -g serverless@3`
+3. install Doppler CLI
+4. `doppler run --preserve-env -- serverless deploy --stage <stage>`
+
+After the first successful deploy, copy the API endpoint URL Serverless
+prints (looks like `https://abc123.execute-api.ap-south-1.amazonaws.com`)
+and put it in `engagesphere-fe / prd` → `VITE_API_URL`. Then redeploy the
+frontend (push any commit to main, or trigger the workflow manually).
+
+## Backend — Socket.IO (shared EC2)
+
+### Adding EngageSphere to the existing ClickAndCare EC2
 
 ```bash
-cd frontend
-npx vercel link            # follow prompts, picks the existing project
-cat .vercel/project.json   # copy "orgId" and "projectId"
+ssh ec2-user@<ec2 ip>
+cd ~/apps   # or wherever ClickAndCare lives
+git clone https://github.com/anshu-man26/EngageSphere.git
+cd EngageSphere/backend
+npm ci --omit=dev
+mkdir -p logs
 ```
 
-> Don't commit `.vercel/`. It's safe to leave there locally; it's gitignored
-> by default.
+Doppler is already installed (used by ClickAndCare). Link this folder:
 
-### What the workflow does
-
-1. Checks out the repo.
-2. Installs Node 20 + Vercel CLI.
-3. `vercel pull` — downloads project config + Doppler-synced env vars.
-4. `vercel build --prod` — runs the Vite build with prod env.
-5. `vercel deploy --prebuilt --prod` — uploads the prebuilt artifact (no
-   rebuilding on Vercel's side, deploy is ~10s instead of ~2min).
-
-That's it — push to main, watch the Actions tab, the new build goes live.
-
----
-
-## 4 · Custom domain on Vercel
-
-1. Vercel project → **Settings → Domains → Add** `yourdomain.com` (or
-   subdomain).
-2. Vercel shows the DNS records you need:
-   - **Apex** (`yourdomain.com`): `A 76.76.21.21`
-   - **Subdomain** (`app.yourdomain.com`): `CNAME cname.vercel-dns.com`
-3. Add those records at your domain registrar's DNS panel.
-4. Wait 5–30 minutes for DNS to propagate. TLS is auto-issued by Vercel.
-
----
-
-## 5 · Backend (still TODO)
-
-The frontend will call `VITE_API_URL` for REST and `VITE_SOCKET_URL` for
-Socket.IO. The backend needs to live somewhere — pick one:
-
-- **Railway** — easiest, supports Node + websockets, ~$5/month after trial.
-- **Render** — free tier sleeps; paid is fine.
-- **Fly.io** — Docker-based, generous free tier, the existing `Dockerfile` works.
-- **VPS** (DigitalOcean / Hetzner) — `docker compose up` + Caddy in front.
-
-When the backend is up, **two things must change** because frontend and backend
-are now on different origins:
-
-### a) Cookies must be cross-origin
-
-In `backend/utils/generateToken.js` and `backend/controllers/auth.controller.js`
-the cookie currently uses:
-
-```js
-sameSite: "strict",
-secure: process.env.NODE_ENV !== "development",
+```bash
+doppler setup    # pick engagesphere-be / prd
 ```
 
-For cross-origin auth (Vercel domain ↔ backend domain) change to:
+EngageSphere defaults to port `5050` (vs ClickAndCare's `3000`). Verify or
+set:
 
-```js
-sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-secure: process.env.NODE_ENV === "production",
+```bash
+doppler secrets set PORT=5050
 ```
 
-`sameSite: "none"` requires `secure: true`, so make sure both origins are
-HTTPS in prod (they will be — Vercel issues TLS, your backend host should
-too).
+Start with PM2:
 
-### b) CORS must allow the Vercel origin
+```bash
+doppler run --command "pm2 start ecosystem.config.cjs"
+pm2 save
+```
 
-Set `FRONTEND_URL=https://app.yourdomain.com` in the backend's env (Doppler
-config for backend, separate from frontend). The existing CORS code in
-`backend/server.js` already reads `process.env.FRONTEND_URL` and adds it to
-the allowed origins list, so no code change needed.
+PM2 startup is already configured for the box (ClickAndCare set it up);
+the new process is captured by `pm2 save`'s snapshot.
 
----
+### Caddy / nginx for `socket.engage-sphere.in`
 
-## 6 · Post-deploy checklist
+Pick whichever the box already runs. Caddy example — append to
+`/etc/caddy/Caddyfile`:
 
-- [ ] Vercel build succeeds (Actions tab green)
-- [ ] `https://app.yourdomain.com` loads the React app
-- [ ] DevTools → Network: API calls go to `VITE_API_URL`, not `localhost:5000`
-- [ ] DevTools → Application → Cookies: `jwt` cookie is set after login
-- [ ] DevTools → Network → WS: Socket.IO upgrades to `wss://`
-- [ ] Sending a message in two devices syncs in real time
+```caddyfile
+socket.engage-sphere.in {
+    reverse_proxy localhost:5050 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto https
+    }
+}
+```
 
----
+Then:
 
-## Common gotchas
+```bash
+sudo systemctl reload caddy
+```
 
-- **`vercel pull` says "no project linked"** in CI. → wrong `VERCEL_ORG_ID`
-  / `VERCEL_PROJECT_ID` secret.
-- **API calls hit `localhost:5000` in production.** → `VITE_API_URL` wasn't
-  set in Doppler-prd, OR the GitHub Actions ran before Doppler was wired
-  up. Re-run the workflow after fixing Doppler.
-- **Login works once but next page reload says you're logged out.** →
-  cookie `sameSite` is still `"strict"` after splitting frontend/backend.
-  See section 5a.
-- **`Failed to fetch` on first request after deploy.** → backend's CORS
-  doesn't include the Vercel domain. Set `FRONTEND_URL` in the backend's
-  Doppler config and redeploy backend.
+Caddy auto-issues TLS in ~30s. Test:
+
+```bash
+curl https://socket.engage-sphere.in/api/health
+```
+
+DNS: add `A  socket.engage-sphere.in  →  <EC2 IP>` at your registrar before
+running the Caddy reload.
+
+### Updating after a code push
+
+```bash
+ssh ec2-user@<ec2 ip>
+cd ~/apps/EngageSphere && git pull
+cd backend && npm ci --omit=dev
+pm2 restart engagesphere-backend
+```
+
+## Frontend — Vercel
+
+Already auto-deploys on push to main via
+`.github/workflows/deploy-frontend.yml`. Doppler→Vercel integration syncs
+env vars, so just keep `engagesphere-fe / prd` up to date.
+
+## Caveats
+
+- **API Gateway payload limit:** 10 MB. Cloudinary uploads cap at 5 MB,
+  safe.
+- **Lambda timeout:** 29 s (API Gateway hard cap 30 s).
+- **Mongo timeouts:** `serverSelectionTimeoutMS: 5000`,
+  `bufferCommands: false` — requests fail fast (5 s) if Mongo is down
+  instead of hitting the 29 s Lambda cap.
+- **Real-time push from Lambda:** any controller that calls
+  `io.to(...).emit(...)` from a Lambda invocation hits the no-op stub in
+  `socket/socket.js` — the message is saved, but recipients don't get a
+  live push from that path. Real-time chat flows through the EC2 socket
+  server (the frontend opens its WebSocket directly there via
+  `VITE_SOCKET_URL`).
+- **CORS on the socket host:** the EC2 socket server's CORS allow-list
+  reads `FRONTEND_URL` from the env, so make sure that's set correctly
+  in the Doppler config used on EC2.
