@@ -16,6 +16,7 @@ const Messages = ({ isSelectionMode = false, selectedMessages = new Set(), onMes
 	const { authUser } = useAuthContext();
 	const { selectedConversation } = useConversation();
 	const { markMultipleAsRead } = useMarkMessageAsRead();
+	const updateMultipleMessageStatuses = useConversation((s) => s.updateMultipleMessageStatuses);
 	useListenMessages();
 
 	const messagesArray = Array.isArray(messages) ? messages : [];
@@ -27,6 +28,10 @@ const Messages = ({ isSelectionMode = false, selectedMessages = new Set(), onMes
 	const { scrollToBottomAfterImagesLoad, smoothScrollToBottom, cleanup } = useScrollToBottom();
 
 	// ── Mark visible messages as read ─────────────────────────────
+	// The server only emits the read receipt to the message *sender* (so they
+	// see the blue ticks), not back to the reader. So we must locally mark
+	// these as "read" right after the PUT — otherwise the next render's
+	// filter would still see them as unread and we'd loop on the endpoint.
 	useEffect(() => {
 		if (!authUser || !selectedConversation || loading) return;
 
@@ -37,7 +42,12 @@ const Messages = ({ isSelectionMode = false, selectedMessages = new Set(), onMes
 
 		const t = setTimeout(async () => {
 			const ids = unread.map((m) => m._id);
-			await markMultipleAsRead(ids);
+			const ok = await markMultipleAsRead(ids);
+			if (!ok) return;
+
+			// Local update so the filter above stops finding them.
+			updateMultipleMessageStatuses(ids, "read", new Date().toISOString());
+
 			window.dispatchEvent(
 				new CustomEvent("messagesRead", {
 					detail: {
@@ -49,7 +59,7 @@ const Messages = ({ isSelectionMode = false, selectedMessages = new Set(), onMes
 			);
 		}, 500);
 		return () => clearTimeout(t);
-	}, [authUser, selectedConversation, loading, messagesArray, markMultipleAsRead]);
+	}, [authUser, selectedConversation, loading, messagesArray, markMultipleAsRead, updateMultipleMessageStatuses]);
 
 	// ── Reset unread count when conversation is opened ────────────
 	useEffect(() => {
