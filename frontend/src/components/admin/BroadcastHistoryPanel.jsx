@@ -2,6 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { FaEnvelope, FaEye, FaTrash, FaClock, FaUser, FaCheckCircle, FaExclamationTriangle, FaMinusCircle, FaRedo, FaSync, FaEdit, FaTimes, FaPaperPlane } from 'react-icons/fa';
 import { useSocketContext } from '../../context/SocketContext';
 import { toast } from 'react-hot-toast';
+import {
+	fetchBroadcastHistory as fetchBroadcastHistoryApi,
+	deleteBroadcast as deleteBroadcastApi,
+	sendBroadcastMessage,
+} from '../../hooks/useBroadcast';
 
 const BroadcastHistoryPanel = ({ onNewBroadcast }) => {
 	const { socket } = useSocketContext();
@@ -74,17 +79,9 @@ const BroadcastHistoryPanel = ({ onNewBroadcast }) => {
 	const fetchBroadcastHistory = async () => {
 		try {
 			setLoading(true);
-			const res = await fetch(`/api/admin/broadcast-history?page=${currentPage}&limit=10`, {
-				credentials: "include",
-			});
-
-			if (res.ok) {
-				const data = await res.json();
-				setBroadcasts(data.broadcasts);
-				setTotalPages(data.totalPages);
-			} else {
-				console.error("Failed to fetch broadcast history");
-			}
+			const data = await fetchBroadcastHistoryApi(currentPage, 10);
+			setBroadcasts(data?.broadcasts || []);
+			setTotalPages(data?.totalPages || 1);
 		} catch (error) {
 			console.error("Error fetching broadcast history:", error);
 		} finally {
@@ -104,22 +101,12 @@ const BroadcastHistoryPanel = ({ onNewBroadcast }) => {
 	const handleDeleteBroadcast = async (broadcast) => {
 		setDeleting(broadcast._id);
 		try {
-			const res = await fetch(`/api/admin/broadcast/${broadcast._id}`, {
-				method: "DELETE",
-				credentials: "include",
-			});
-
-			if (res.ok) {
-				// Remove from local state
-				setBroadcasts(prev => prev.filter(b => b._id !== broadcast._id));
-				toast.success("Broadcast deleted successfully!");
-			} else {
-				const data = await res.json();
-				toast.error(`Failed to delete broadcast: ${data.error || 'Unknown error'}`);
-			}
+			await deleteBroadcastApi(broadcast._id);
+			setBroadcasts(prev => prev.filter(b => b._id !== broadcast._id));
+			toast.success("Broadcast deleted successfully!");
 		} catch (error) {
 			console.error("Error deleting broadcast:", error);
-			toast.error("Failed to delete broadcast. Please try again.");
+			toast.error(`Failed to delete broadcast: ${error.message || "Unknown error"}`);
 		} finally {
 			setDeleting(null);
 		}
@@ -265,32 +252,18 @@ const BroadcastHistoryPanel = ({ onNewBroadcast }) => {
 	const handleResendBroadcast = async (broadcast) => {
 		setResending(broadcast._id);
 		try {
-			const res = await fetch("/api/admin/broadcast-message", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				credentials: "include",
-				body: JSON.stringify({
-					subject: broadcast.subject,
-					message: broadcast.message,
-					messageStyle: broadcast.messageStyle,
-					recipients: broadcast.recipients,
-					selectedUserIds: broadcast.selectedUserIds || [],
-				}),
+			const data = await sendBroadcastMessage({
+				subject: broadcast.subject,
+				message: broadcast.message,
+				messageStyle: broadcast.messageStyle,
+				recipients: broadcast.recipients,
+				selectedUserIds: broadcast.selectedUserIds || [],
 			});
-
-			const data = await res.json();
-			if (data.error) {
-				toast.error(`Failed to resend broadcast: ${data.error}`);
-				return;
-			}
-
 			toast.success(`Broadcast resent successfully! Queued for sending to ${data.totalUsers} users.`);
-			fetchBroadcastHistory(); // Refresh the list
+			fetchBroadcastHistory();
 		} catch (error) {
 			console.error("Error resending broadcast:", error);
-			toast.error("Failed to resend broadcast. Please try again.");
+			toast.error(`Failed to resend broadcast: ${error.message || "Please try again."}`);
 		} finally {
 			setResending(null);
 		}

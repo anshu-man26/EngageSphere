@@ -7,23 +7,15 @@ const useSystemSettings = () => {
 
 	useEffect(() => {
 		fetchSystemSettings();
-		
-		// Set up polling to refresh settings every 3 seconds for real-time updates
-		const interval = setInterval(() => {
-			fetchSystemSettings();
-		}, 3000);
 
-		// Listen for real-time system settings updates via socket
+		// Real-time updates arrive via socket → SocketContext bridges to a DOM event
 		const handleSystemSettingsUpdate = (event) => {
-			console.log("🔄 Received system settings update:", event.detail);
 			setSystemSettings(event.detail);
 		};
 
 		window.addEventListener('systemSettingsUpdated', handleSystemSettingsUpdate);
 
-		// Cleanup interval and event listener on unmount
 		return () => {
-			clearInterval(interval);
 			window.removeEventListener('systemSettingsUpdated', handleSystemSettingsUpdate);
 		};
 	}, []);

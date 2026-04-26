@@ -1,6 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import { FaUser, FaSave, FaTimes, FaUpload, FaEdit, FaEye, FaEyeSlash, FaLock, FaUnlock, FaImage, FaVolumeUp, FaVolumeMute, FaVolumeOff, FaAt, FaShieldAlt, FaTrash, FaArrowLeft, FaEnvelope, FaUsers, FaPaperPlane, FaExclamationTriangle } from "react-icons/fa";
 import { toast } from "react-hot-toast";
+import {
+	fetchAdminUser,
+	fetchAllAdminUsers,
+	updateAdminUser,
+	changeAdminUserPassword,
+	uploadAdminUserProfilePic,
+} from "../../hooks/useAdminUsers";
+import { sendBroadcastMessage } from "../../hooks/useBroadcast";
 
 const UserManagementPanel = ({ selectedUser, onClose, onUserUpdated }) => {
 	const [user, setUser] = useState(null);
@@ -88,23 +96,13 @@ const UserManagementPanel = ({ selectedUser, onClose, onUserUpdated }) => {
 
 	const fetchUserDetails = async () => {
 		if (!selectedUser) return;
-
 		setLoading(true);
 		try {
-			const res = await fetch(`/api/admin/users/${selectedUser}`, {
-				credentials: "include",
-			});
-			const data = await res.json();
-			
-			if (data.error) {
-				toast.error(data.error);
-				return;
-			}
-			
+			const data = await fetchAdminUser(selectedUser);
 			setUser(data);
 		} catch (error) {
 			console.error("Error fetching user details:", error);
-			toast.error("Failed to fetch user details");
+			toast.error(error.message || "Failed to fetch user details");
 		} finally {
 			setLoading(false);
 		}
@@ -225,30 +223,13 @@ const UserManagementPanel = ({ selectedUser, onClose, onUserUpdated }) => {
 		setShowSaveWarning(false);
 		setSaving(true);
 		try {
-			const res = await fetch(`/api/admin/users/${selectedUser}`, {
-				method: "PUT",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				credentials: "include",
-				body: JSON.stringify(formData),
-			});
-
-			const data = await res.json();
-
-			if (data.error) {
-				toast.error(data.error);
-				return;
-			}
-
+			const data = await updateAdminUser(selectedUser, formData);
 			toast.success("User profile updated successfully");
 			setUser(data.user);
-			if (onUserUpdated) {
-				onUserUpdated(data.user);
-			}
+			if (onUserUpdated) onUserUpdated(data.user);
 		} catch (error) {
 			console.error("Error updating user profile:", error);
-			toast.error("Failed to update user profile");
+			toast.error(error.message || "Failed to update user profile");
 		} finally {
 			setSaving(false);
 		}
@@ -256,32 +237,14 @@ const UserManagementPanel = ({ selectedUser, onClose, onUserUpdated }) => {
 
 	const handleChangePassword = async () => {
 		if (!validatePasswordForm()) return;
-
 		setSaving(true);
 		try {
-			const res = await fetch(`/api/admin/users/${selectedUser}/password`, {
-				method: "PUT",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				credentials: "include",
-				body: JSON.stringify({
-					newPassword: passwordData.newPassword
-				}),
-			});
-
-			const data = await res.json();
-
-			if (data.error) {
-				toast.error(data.error);
-				return;
-			}
-
+			await changeAdminUserPassword(selectedUser, passwordData.newPassword);
 			toast.success("User password changed successfully");
 			setPasswordData({ newPassword: "", confirmPassword: "" });
 		} catch (error) {
 			console.error("Error changing user password:", error);
-			toast.error("Failed to change user password");
+			toast.error(error.message || "Failed to change user password");
 		} finally {
 			setSaving(false);
 		}
@@ -329,33 +292,13 @@ const UserManagementPanel = ({ selectedUser, onClose, onUserUpdated }) => {
 
 		setUploadingPic(true);
 		try {
-			const formData = new FormData();
-			formData.append('profilePic', fileInputRef.current.files[0]);
-
-			const res = await fetch(`/api/admin/users/${selectedUser}/profile-pic`, {
-				method: "POST",
-				credentials: "include",
-				body: formData,
-			});
-
-			const data = await res.json();
-
-			if (data.error) {
-				toast.error(data.error);
-				return;
-			}
-
+			const data = await uploadAdminUserProfilePic(selectedUser, fileInputRef.current.files[0]);
 			toast.success("Profile picture uploaded successfully");
-			setFormData(prev => ({
-				...prev,
-				profilePic: data.profilePic
-			}));
-			
-			// Clear file input
+			setFormData(prev => ({ ...prev, profilePic: data.profilePic }));
 			fileInputRef.current.value = "";
 		} catch (error) {
 			console.error("Error uploading profile picture:", error);
-			toast.error("Failed to upload profile picture");
+			toast.error(error.message || "Failed to upload profile picture");
 		} finally {
 			setUploadingPic(false);
 		}
@@ -364,18 +307,11 @@ const UserManagementPanel = ({ selectedUser, onClose, onUserUpdated }) => {
 	// Broadcast message functions
 	const fetchAllUsers = async () => {
 		try {
-			const res = await fetch("/api/admin/users?limit=1000", {
-				credentials: "include",
-			});
-			const data = await res.json();
-			if (data.error) {
-				toast.error(data.error);
-				return;
-			}
-			setAllUsers(data.users || []);
+			const data = await fetchAllAdminUsers();
+			setAllUsers(data?.users || []);
 		} catch (error) {
 			console.error("Error fetching users:", error);
-			toast.error("Failed to fetch users");
+			toast.error(error.message || "Failed to fetch users");
 		}
 	};
 
@@ -437,38 +373,23 @@ const UserManagementPanel = ({ selectedUser, onClose, onUserUpdated }) => {
 
 		setSendingBroadcast(true);
 		try {
-			const res = await fetch("/api/admin/broadcast-message", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				credentials: "include",
-				body: JSON.stringify({
-					subject: broadcastData.subject.trim(),
-					message: broadcastData.message.trim(),
-					recipients: broadcastData.recipients,
-					selectedUserIds: broadcastData.recipients === "selected" ? broadcastData.selectedUsers : [],
-				}),
+			const data = await sendBroadcastMessage({
+				subject: broadcastData.subject.trim(),
+				message: broadcastData.message.trim(),
+				recipients: broadcastData.recipients,
+				selectedUserIds: broadcastData.recipients === "selected" ? broadcastData.selectedUsers : [],
 			});
-
-			const data = await res.json();
-			if (data.error) {
-				toast.error(data.error);
-				return;
-			}
-
 			toast.success(`Broadcast message sent successfully to ${data.sentCount} users!`);
 			setShowBroadcastMessage(false);
-			// Reset broadcast form
 			setBroadcastData({
 				subject: "",
 				message: "",
 				recipients: "all",
-				selectedUsers: []
+				selectedUsers: [],
 			});
 		} catch (error) {
 			console.error("Error sending broadcast:", error);
-			toast.error("Failed to send broadcast message");
+			toast.error(error.message || "Failed to send broadcast message");
 		} finally {
 			setSendingBroadcast(false);
 		}

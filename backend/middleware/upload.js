@@ -8,7 +8,6 @@ if (!fs.existsSync(uploadsDir)) {
 	fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Configure multer for memory storage
 const storage = multer.memoryStorage();
 
 // Configure multer for disk storage (for profile pictures)

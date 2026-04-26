@@ -291,65 +291,21 @@ input:focus, textarea:focus, select:focus {
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* Mobile-specific styles for chat layout */
+/* Mobile chat layout — relies on the JSX flex column (header / messages / input).
+ * No position:fixed hacks: they fight flex sizing and cause the input to sit
+ * on top of the last messages. We just ensure the container fills the dynamic
+ * viewport height and let flex do the rest. */
 @media (max-width: 1024px) {
-	/* Ensure the main container uses viewport height properly on mobile */
-	.mobile-chat-container {
-		height: 100vh;
-		height: 100dvh; /* Use dynamic viewport height for mobile */
-		overflow: hidden;
-		position: relative;
-	}
-	
-	/* Fixed header that stays at top */
-	.mobile-header {
-		position: fixed;
-		top: 0;
-		left: 0;
-		right: 0;
-		z-index: 50;
-		height: 60px; /* Fixed height for mobile header */
-		/* Ensure header stays visible when keyboard opens */
-		background: rgba(17, 24, 39, 0.95);
-		backdrop-filter: blur(10px);
-	}
-	
-	/* Fixed input bar that stays at bottom */
-	.mobile-input-container {
-		position: fixed;
-		bottom: 0;
-		left: 0;
-		right: 0;
-		z-index: 50;
-		padding-bottom: env(safe-area-inset-bottom); /* For devices with home indicator */
-		background: rgba(17, 24, 39, 0.95); /* Ensure background covers content */
-		backdrop-filter: blur(10px);
-	}
-	
-	/* Messages area that scrolls between fixed header and input */
-	.mobile-messages-area {
-		overflow-y: auto;
-		-webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
-		padding-bottom: 0px; /* No gap - messages can go below typing bar */
-		padding-top: 60px; /* Space for fixed header */
-		/* Dynamic height that adapts to keyboard - mobile Chrome specific */
-		height: calc(100vh - 60px);
-		height: calc(100dvh - 60px); /* Dynamic viewport height */
-		height: calc(100vh - 60px - env(safe-area-inset-bottom));
-		min-height: 200px; /* Minimum height to ensure usability */
-		position: relative;
-	}
-	
-	/* Ensure the main chat container doesn't overflow */
+	.mobile-chat-container,
 	.mobile-chat-main {
 		height: 100vh;
 		height: 100dvh;
 		overflow: hidden;
 	}
-	
-	/* Add padding to the last message to prevent overlap */
-	.mobile-messages-area .messages-container {
-		padding-bottom: 0px;
+
+	/* iOS notch padding so the send button isn't behind the home indicator */
+	.mobile-input-container {
+		padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
 	}
 }
 
@@ -461,24 +417,11 @@ input:focus, textarea:focus, select:focus {
   }
 }
 
-/* iOS Safari specific fixes */
+/* iOS Safari fallback — older Safari needs -webkit-fill-available */
 @supports (-webkit-touch-callout: none) {
-	.mobile-chat-container {
+	.mobile-chat-container,
+	.mobile-chat-main {
 		height: -webkit-fill-available;
-	}
-	
-	.mobile-messages-area {
-		max-height: calc(-webkit-fill-available - 120px);
-	}
-}
-
-/* Real mobile device specific fixes */
-@media (max-width: 768px) and (orientation: portrait) {
-	.mobile-messages-area {
-		max-height: calc(100vh - 60px);
-		max-height: calc(100dvh - 60px);
-		overflow-y: auto;
-		-webkit-overflow-scrolling: touch;
 	}
 }
 

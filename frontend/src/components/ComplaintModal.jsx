@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useAuthContext } from "../context/AuthContext";
 import { FaTimes, FaExclamationTriangle, FaCheckCircle } from "react-icons/fa";
+import useSubmitComplaint from "../hooks/useSubmitComplaint";
 
 const ComplaintModal = ({ isOpen, onClose, pageSubmitted }) => {
 	const { authUser } = useAuthContext();
+	const { loading, submitComplaint } = useSubmitComplaint();
 	const [formData, setFormData] = useState({
 		subject: "",
 		message: "",
@@ -12,7 +14,6 @@ const ComplaintModal = ({ isOpen, onClose, pageSubmitted }) => {
 		name: "",
 		email: ""
 	});
-	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
 	const [success, setSuccess] = useState(false);
 
@@ -42,59 +43,38 @@ const ComplaintModal = ({ isOpen, onClose, pageSubmitted }) => {
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
-		setLoading(true);
 		setError("");
 
-		try {
-			const complaintData = {
-				subject: formData.subject.trim(),
-				message: formData.message.trim(),
-				category: formData.category,
-				priority: formData.priority
-			};
-
-			// Add name and email for anonymous users
-			if (!authUser) {
-				complaintData.name = formData.name.trim();
-				complaintData.email = formData.email.trim();
-			}
-
-			const res = await fetch("/api/complaints/submit", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json"
-				},
-				credentials: "include",
-				body: JSON.stringify(complaintData)
-			});
-
-			const data = await res.json();
-
-			if (data.error) {
-				setError(data.error);
-				return;
-			}
-
-			setSuccess(true);
-			setFormData({
-				subject: "",
-				message: "",
-				category: "general",
-				priority: "medium",
-				name: "",
-				email: ""
-			});
-
-			// Close modal after 2 seconds
-			setTimeout(() => {
-				setSuccess(false);
-				onClose();
-			}, 2000);
-		} catch (error) {
-			setError("An error occurred. Please try again.");
-		} finally {
-			setLoading(false);
+		const complaintData = {
+			subject: formData.subject.trim(),
+			message: formData.message.trim(),
+			category: formData.category,
+			priority: formData.priority,
+		};
+		if (!authUser) {
+			complaintData.name = formData.name.trim();
+			complaintData.email = formData.email.trim();
 		}
+
+		const result = await submitComplaint(complaintData);
+		if (!result.ok) {
+			setError(result.message);
+			return;
+		}
+
+		setSuccess(true);
+		setFormData({
+			subject: "",
+			message: "",
+			category: "general",
+			priority: "medium",
+			name: "",
+			email: "",
+		});
+		setTimeout(() => {
+			setSuccess(false);
+			onClose();
+		}, 2000);
 	};
 
 	if (!isOpen) return null;

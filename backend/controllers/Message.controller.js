@@ -1,8 +1,6 @@
 import Conversation from "../models/conversation.model.js";
 import Message from "../models/message.model.js";
 import { getReceiverSocketId, io, sendOfflineNotification } from "../socket/socket.js";
-import profanityFilterService from "../services/profanityFilterService.js";
-import SystemSettings from "../models/systemSettings.model.js";
 
 export const sendMessage = async (req, res) => {
 	try {
@@ -32,31 +30,10 @@ export const sendMessage = async (req, res) => {
 			});
 		}
 
-		// Check system settings for profanity filter
-		const systemSettings = await SystemSettings.getInstance();
-		const isProfanityFilterEnabled = systemSettings.features.profanityFilter;
-		
-		let finalMessage = message.trim();
-		let isFiltered = false;
-		let filterReason = null;
-		
-		// Apply profanity filter if enabled globally and user has it enabled
-		if (isProfanityFilterEnabled && req.user.profanityFilterEnabled !== false) {
-			const filterResult = await profanityFilterService.filterMessage(finalMessage, {
-				profanityFilterEnabled: req.user.profanityFilterEnabled
-			});
-			
-			finalMessage = filterResult.filteredMessage;
-			isFiltered = filterResult.isFiltered;
-			filterReason = filterResult.reason;
-		}
-
 		const newMessage = new Message({
 			senderId,
 			receiverId,
-			message: finalMessage,
-			isFiltered: isFiltered,
-			filterReason: filterReason
+			message: message.trim(),
 		});
 
 		if (newMessage) {

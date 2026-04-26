@@ -1,178 +1,106 @@
-import { createContext, useState, useEffect, useContext } from "react";
+// SocketContext — connect/disconnect a single Socket.IO client to the backend
+// for the logged-in user, expose `socket` + `onlineUsers`, and bridge a few
+// server events into app state.
+//
+// Notification sounds live in `useListenMessages` (the per-conversation hook),
+// not here, to avoid playing twice for the same message.
+
+import { createContext, useContext, useEffect, useState } from "react";
+import io from "socket.io-client";
 import { useAuthContext } from "./AuthContext";
 import useConversation from "../zustand/useConversation";
-import io from "socket.io-client";
+import { getSocketUrl } from "../config/api";
 
-const SocketContext = createContext();
+const SocketContext = createContext(null);
 
-export const useSocketContext = () => {
-	return useContext(SocketContext);
-};
+export const useSocketContext = () => useContext(SocketContext);
 
 export const SocketContextProvider = ({ children }) => {
 	const [socket, setSocket] = useState(null);
 	const [onlineUsers, setOnlineUsers] = useState([]);
 	const { authUser } = useAuthContext();
-	const { updateMessageReaction, updateMessageStatus, updateMultipleMessageStatuses } = useConversation();
-
-	// Play notification sound
-	const playNotificationSound = () => {
-		// Check if user has enabled message sounds
-		if (!authUser?.soundSettings?.messageSound) {
-			return;
-		}
-		
-		try {
-			const audio = new Audio('/sounds/notification.mp3');
-			audio.volume = 0.5;
-			audio.play().catch(error => {
-				console.log("Could not play notification sound:", error);
-			});
-		} catch (error) {
-			console.log("Error playing notification sound:", error);
-		}
-	};
-
-	// Determine the backend URL based on environment
-	const getBackendUrl = () => {
-		if (import.meta.env.DEV) {
-			return "http://localhost:5000";
-		}
-		// For production, use the same domain
-		return window.location.origin;
-	};
+	const updateMessageReaction = useConversation((s) => s.updateMessageReaction);
+	const updateMessageStatus = useConversation((s) => s.updateMessageStatus);
+	const updateMultipleMessageStatuses = useConversation((s) => s.updateMultipleMessageStatuses);
 
 	useEffect(() => {
-		if (authUser) {
-			// Prevent duplicate socket connections
-			if (socket && socket.connected) {
-				console.log("Socket already connected, skipping new connection");
-				return;
-			}
-
-			const backendUrl = getBackendUrl();
-			const newSocket = io(backendUrl, {
-				query: {
-					userId: authUser._id,
-				},
-				transports: ['websocket', 'polling'],
-				reconnection: true,
-				reconnectionAttempts: 5,
-				reconnectionDelay: 1000,
+		if (!authUser) {
+			// Logged out — no socket needed.
+			setSocket((existing) => {
+				existing?.disconnect();
+				return null;
 			});
-
-			newSocket.on("connect", () => {
-				setOnlineUsers(prev => [...prev, authUser._id]);
-			});
-
-			newSocket.on("connect_error", (error) => {
-				console.error("Socket connection error:", error);
-			});
-
-			newSocket.on("disconnect", (reason) => {
-				setOnlineUsers(prev => prev.filter(id => id !== authUser._id));
-			});
-
-			// socket.on() is used to listen to the events. can be used both on client and server side
-			newSocket.on("getOnlineUsers", (users) => {
-				setOnlineUsers(users);
-			});
-
-			// Listen for new message events
-			newSocket.on("newMessage", (newMessage) => {
-				// Only handle notification and conversation refresh, not message adding
-				// Message adding is handled by useListenMessages hook
-				if (newMessage.senderId && newMessage.receiverId) {
-					// This is a new message
-					if (newMessage.senderId !== authUser._id) {
-						// Play notification sound
-						playNotificationSound();
-					}
-				}
-				
-				// Update specific conversation instead of refreshing entire list
-				window.dispatchEvent(new CustomEvent('updateConversation', {
-					detail: {
-						senderId: newMessage.senderId,
-						receiverId: newMessage.receiverId,
-						message: newMessage
-					}
-				}));
-			});
-
-			// Listen for conversation updates
-			newSocket.on("conversationUpdated", (data) => {
-				// This will be handled by the conversation store
-			});
-
-			// Listen for reaction events
-			newSocket.on("messageReactionAdded", (data) => {
-				updateMessageReaction(data.messageId, 'add', data.reaction);
-			});
-
-			newSocket.on("messageReactionRemoved", (data) => {
-				updateMessageReaction(data.messageId, 'remove', data.reaction);
-			});
-
-			// Listen for message status events
-			newSocket.on("messageDelivered", (data) => {
-				// Update message status to delivered
-				updateMessageStatus(data.messageId, 'delivered', data.deliveredAt);
-			});
-
-			newSocket.on("messageRead", (data) => {
-				// Update message status to read
-				updateMessageStatus(data.messageId, 'read', data.readAt);
-			});
-
-			newSocket.on("messagesRead", (data) => {
-				// Update multiple messages status to read
-				updateMultipleMessageStatuses(data.messageIds, 'read', data.readAt);
-			});
-
-			// Listen for system settings updates
-			newSocket.on("systemSettingsUpdated", (data) => {
-				// Dispatch a custom event to notify all components using system settings
-				window.dispatchEvent(new CustomEvent('systemSettingsUpdated', {
-					detail: data
-				}));
-			});
-
-			// Set up heartbeat interval
-			const heartbeatInterval = setInterval(() => {
-				if (newSocket.connected) {
-					newSocket.emit("heartbeat");
-				}
-			}, 30000); // Send heartbeat every 30 seconds
-
-			// Set up user activity tracking
-			const handleUserActivity = () => {
-				if (newSocket.connected) {
-					newSocket.emit("userActivity");
-				}
-			};
-
-			// Track user activity events
-			const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-			activityEvents.forEach(event => {
-				document.addEventListener(event, handleUserActivity, { passive: true });
-			});
-
-			return () => {
-				clearInterval(heartbeatInterval);
-				activityEvents.forEach(event => {
-					document.removeEventListener(event, handleUserActivity);
-				});
-				newSocket.disconnect();
-			};
-		} else {
-			if (socket) {
-				socket.disconnect();
-				setSocket(null);
-			}
 			setOnlineUsers([]);
+			return;
 		}
-	}, [authUser]);
 
-	return <SocketContext.Provider value={{ socket, onlineUsers }}>{children}</SocketContext.Provider>;
+		const newSocket = io(getSocketUrl(), {
+			query: { userId: authUser._id },
+			transports: ["websocket", "polling"],
+			reconnection: true,
+			reconnectionAttempts: 5,
+			reconnectionDelay: 1000,
+		});
+
+		// Presence
+		newSocket.on("getOnlineUsers", setOnlineUsers);
+
+		// Inbound message — let conversation list refresh, but DON'T add to
+		// `messages` here (the open-conversation hook handles that and avoids
+		// duplicates).
+		newSocket.on("newMessage", (msg) => {
+			window.dispatchEvent(
+				new CustomEvent("updateConversation", {
+					detail: {
+						senderId: msg.senderId,
+						receiverId: msg.receiverId,
+						message: msg,
+					},
+				}),
+			);
+		});
+
+		// Reactions
+		newSocket.on("messageReactionAdded", (d) =>
+			updateMessageReaction(d.messageId, "add", d.reaction),
+		);
+		newSocket.on("messageReactionRemoved", (d) =>
+			updateMessageReaction(d.messageId, "remove", d.reaction),
+		);
+
+		// Delivery / read receipts
+		newSocket.on("messageDelivered", (d) =>
+			updateMessageStatus(d.messageId, "delivered", d.deliveredAt),
+		);
+		newSocket.on("messageRead", (d) =>
+			updateMessageStatus(d.messageId, "read", d.readAt),
+		);
+		newSocket.on("messagesRead", (d) =>
+			updateMultipleMessageStatuses(d.messageIds, "read", d.readAt),
+		);
+
+		// System settings — bridge to a DOM event so any hook can subscribe
+		// without needing the socket directly.
+		newSocket.on("systemSettingsUpdated", (data) => {
+			window.dispatchEvent(
+				new CustomEvent("systemSettingsUpdated", { detail: data }),
+			);
+		});
+
+		newSocket.on("connect_error", (err) => {
+			console.error("Socket connect error:", err.message);
+		});
+
+		setSocket(newSocket);
+
+		return () => {
+			newSocket.disconnect();
+		};
+	}, [authUser?._id]);
+
+	return (
+		<SocketContext.Provider value={{ socket, onlineUsers }}>
+			{children}
+		</SocketContext.Provider>
+	);
 };

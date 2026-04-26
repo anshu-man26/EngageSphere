@@ -2,11 +2,6 @@
 
 A modern real-time chat application built with React, Node.js, and Socket.IO.
 
-## 🌐 Live Demo
-
-**Deployed Here:** [https://engagesphere-mrjv.onrender.com/](https://engagesphere-mrjv.onrender.com/)
-And https://engagesphere-production.up.railway.app/
-
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -89,3 +84,39 @@ npm run build
 cd frontend
 npm run build
 ```
+
+## 🚀 Deployment
+
+### Environment Variables for Production
+
+Set these in your deployment platform:
+
+```
+NODE_ENV=production
+PORT=10000
+MONGODB_URI=your_mongodb_atlas_connection_string
+JWT_SECRET=your_very_long_random_secret_key
+JWT_EXPIRE=7d
+EMAIL_USER=your_gmail@gmail.com
+EMAIL_PASS=your_gmail_app_password
+CLOUDINARY_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_SECRET_KEY=your_cloudinary_secret_key
+AGORA_APP_ID=your_agora_app_id
+AGORA_APP_CERTIFICATE=your_agora_certificate
+CLIENT_URL=https://your-frontend-domain
+```
+
+## 📱 Mobile Access
+
+For mobile testing, use your local IP address:
+```
+http://your_local_ip:5000
+```
+
+## 🔧 Troubleshooting
+
+- **Port conflicts:** Change PORT in .env file
+- **CORS issues:** Update CORS origins in backend/server.js
+- **Socket connection fails:** Ensure backend is running on correct port
+- **File upload issues:** Verify Cloudinary credentials 

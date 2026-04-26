@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { FaExclamationTriangle, FaKey, FaSpinner, FaTimes, FaCheck, FaShieldAlt, FaEnvelope } from "react-icons/fa";
+import { requestDeleteOtp, verifyDeleteOtp, confirmDelete } from "../../hooks/useAdminUserDeletion";
 
 const SecureDeleteModal = ({ 
 	isOpen, 
@@ -27,28 +28,13 @@ const SecureDeleteModal = ({
 	const handleProceedToOtp = async () => {
 		setLoading(true);
 		setError("");
-
 		try {
-			const res = await fetch("http://localhost:5000/api/admin/request-delete-otp", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({ userIds: selectedUsers }),
-				credentials: "include",
-			});
-
-			const data = await res.json();
-
-			if (res.ok) {
-				setMessage(data.message);
-				setUserDetails(data.users || []);
-				setStep("otp");
-			} else {
-				setError(data.error);
-			}
+			const data = await requestDeleteOtp(selectedUsers);
+			setMessage(data.message);
+			setUserDetails(data.users || []);
+			setStep("otp");
 		} catch (error) {
-			setError("Something went wrong. Please try again.");
+			setError(error.message || "Something went wrong. Please try again.");
 		} finally {
 			setLoading(false);
 		}
@@ -57,28 +43,13 @@ const SecureDeleteModal = ({
 	const handleVerifyOtp = async () => {
 		setLoading(true);
 		setError("");
-
 		try {
-			const res = await fetch("http://localhost:5000/api/admin/verify-delete-otp", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({ otp }),
-				credentials: "include",
-			});
-
-			const data = await res.json();
-
-			if (res.ok) {
-				setMessage(data.message);
-				setUserDetails(data.users || []);
-				setStep("final");
-			} else {
-				setError(data.error);
-			}
+			const data = await verifyDeleteOtp(otp);
+			setMessage(data.message);
+			setUserDetails(data.users || []);
+			setStep("final");
 		} catch (error) {
-			setError("Something went wrong. Please try again.");
+			setError(error.message || "Something went wrong. Please try again.");
 		} finally {
 			setLoading(false);
 		}
@@ -87,31 +58,15 @@ const SecureDeleteModal = ({
 	const handleFinalConfirm = async () => {
 		setLoading(true);
 		setError("");
-
 		try {
-			const res = await fetch("http://localhost:5000/api/admin/confirm-delete", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({ userIds: selectedUsers }),
-				credentials: "include",
-			});
-
-			const data = await res.json();
-
-			if (res.ok) {
-				setMessage(data.message);
-				// Close modal after 2 seconds and refresh
-				setTimeout(() => {
-					onDeleteSuccess();
-					onClose();
-				}, 2000);
-			} else {
-				setError(data.error);
-			}
+			const data = await confirmDelete(selectedUsers);
+			setMessage(data.message);
+			setTimeout(() => {
+				onDeleteSuccess();
+				onClose();
+			}, 2000);
 		} catch (error) {
-			setError("Something went wrong. Please try again.");
+			setError(error.message || "Something went wrong. Please try again.");
 		} finally {
 			setLoading(false);
 		}

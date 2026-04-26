@@ -18,7 +18,7 @@ class WelcomeEmailService {
 
 			console.log("✅ Email transporter created successfully");
 
-			const appUrl = process.env.CLIENT_URL || "https://engagesphere-mrjv.onrender.com";
+			const appUrl = process.env.CLIENT_URL || "http://localhost:5173";
 
 			const mailOptions = {
 				from: process.env.EMAIL_USER,

@@ -102,7 +102,7 @@ class NotificationService {
 
 		console.log("✅ Email transporter created successfully");
 
-		const appUrl = process.env.CLIENT_URL || "https://engagesphere-mrjv.onrender.com";
+		const appUrl = process.env.CLIENT_URL || "http://localhost:5173";
 		const senderName = sender.fullName || sender.username || "Someone";
 
 		console.log("📧 Email details:");

@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { FaEnvelope, FaUsers, FaPaperPlane, FaTimes, FaCheck, FaExclamationTriangle } from "react-icons/fa";
-import { toast } from "react-hot-toast";
+import useBroadcast from "../../hooks/useBroadcast";
 
 const BroadcastMessagePanel = ({ onClose, onMessageSent }) => {
 	const [message, setMessage] = useState("");
@@ -8,33 +8,9 @@ const BroadcastMessagePanel = ({ onClose, onMessageSent }) => {
 	const [messageStyle, setMessageStyle] = useState("normal"); // "normal", "serious", "friendly", "urgent", "informative"
 	const [recipients, setRecipients] = useState("all"); // "all", "verified", "unverified", "selected"
 	const [selectedUsers, setSelectedUsers] = useState([]);
-	const [users, setUsers] = useState([]);
-	const [loading, setLoading] = useState(false);
-	const [sending, setSending] = useState(false);
 	const [preview, setPreview] = useState(false);
 	const [errors, setErrors] = useState({});
-
-	// Fetch users for selection
-	useEffect(() => {
-		fetchUsers();
-	}, []);
-
-	const fetchUsers = async () => {
-		try {
-			const res = await fetch("/api/admin/users?limit=1000", {
-				credentials: "include",
-			});
-			const data = await res.json();
-			if (data.error) {
-				toast.error(data.error);
-				return;
-			}
-			setUsers(data.users || []);
-		} catch (error) {
-			console.error("Error fetching users:", error);
-			toast.error("Failed to fetch users");
-		}
-	};
+	const { users, sending, sendBroadcast } = useBroadcast();
 
 	const validateForm = () => {
 		const newErrors = {};
@@ -91,43 +67,16 @@ const BroadcastMessagePanel = ({ onClose, onMessageSent }) => {
 
 	const handleSendBroadcast = async () => {
 		if (!validateForm()) return;
-
-		setSending(true);
-		try {
-			const res = await fetch("/api/admin/broadcast-message", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				credentials: "include",
-				body: JSON.stringify({
-					subject: subject.trim(),
-					message: message.trim(),
-					messageStyle,
-					recipients,
-					selectedUserIds: recipients === "selected" ? selectedUsers : [],
-				}),
-			});
-
-			const data = await res.json();
-			if (data.error) {
-				toast.error(data.error);
-				return;
-			}
-
-			toast.success(`Broadcast message queued for sending to ${data.totalUsers} users!`);
-			
-			// Notify parent to refresh history
-			if (onMessageSent) {
-				onMessageSent();
-			}
-			
+		const result = await sendBroadcast({
+			subject: subject.trim(),
+			message: message.trim(),
+			messageStyle,
+			recipients,
+			selectedUserIds: recipients === "selected" ? selectedUsers : [],
+		});
+		if (result.ok) {
+			if (onMessageSent) onMessageSent();
 			onClose();
-		} catch (error) {
-			console.error("Error sending broadcast:", error);
-			toast.error("Failed to send broadcast message");
-		} finally {
-			setSending(false);
 		}
 	};
 

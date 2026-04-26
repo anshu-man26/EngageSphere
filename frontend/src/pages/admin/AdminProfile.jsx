@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthContext } from "../../context/AuthContext.jsx";
+import {
+	fetchAdminProfile as fetchAdminProfileApi,
+	updateAdminProfile,
+	changeAdminPassword,
+	adminLogout,
+} from "../../hooks/useAdminProfile";
 
 const AdminProfile = () => {
 	const [profileData, setProfileData] = useState({
@@ -30,20 +36,10 @@ const AdminProfile = () => {
 
 	const fetchAdminProfile = async () => {
 		try {
-			const res = await fetch("/api/admin/profile", {
-				credentials: "include",
-			});
-			const data = await res.json();
-			if (data.error) {
-				setError(data.error);
-				return;
-			}
-			setProfileData({
-				username: data.username,
-				email: data.email
-			});
+			const data = await fetchAdminProfileApi();
+			setProfileData({ username: data.username, email: data.email });
 		} catch (error) {
-			setError("Failed to fetch profile data");
+			setError(error.message || "Failed to fetch profile data");
 		}
 	};
 
@@ -52,28 +48,12 @@ const AdminProfile = () => {
 		setProfileLoading(true);
 		setError("");
 		setSuccess("");
-
 		try {
-			const res = await fetch("/api/admin/profile", {
-				method: "PUT",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify(profileData),
-				credentials: "include",
-			});
-
-			const data = await res.json();
-
-			if (data.error) {
-				setError(data.error);
-				return;
-			}
-
+			const data = await updateAdminProfile(profileData);
 			setSuccess("Profile updated successfully!");
 			setAdmin(data.admin);
 		} catch (error) {
-			setError("Failed to update profile");
+			setError(error.message || "Failed to update profile");
 		} finally {
 			setProfileLoading(false);
 		}
@@ -98,33 +78,11 @@ const AdminProfile = () => {
 		}
 
 		try {
-			const res = await fetch("/api/admin/password", {
-				method: "PUT",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					currentPassword: passwordData.currentPassword,
-					newPassword: passwordData.newPassword
-				}),
-				credentials: "include",
-			});
-
-			const data = await res.json();
-
-			if (data.error) {
-				setError(data.error);
-				return;
-			}
-
+			await changeAdminPassword(passwordData.currentPassword, passwordData.newPassword);
 			setSuccess("Password changed successfully!");
-			setPasswordData({
-				currentPassword: "",
-				newPassword: "",
-				confirmPassword: ""
-			});
+			setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
 		} catch (error) {
-			setError("Failed to change password");
+			setError(error.message || "Failed to change password");
 		} finally {
 			setPasswordLoading(false);
 		}
@@ -132,14 +90,12 @@ const AdminProfile = () => {
 
 	const handleLogout = async () => {
 		try {
-			await fetch("/api/admin/logout", {
-				method: "POST",
-				credentials: "include",
-			});
-			setAdmin(null);
-			navigate("/admin/login");
+			await adminLogout();
 		} catch (error) {
 			console.error("Error logging out:", error);
+		} finally {
+			setAdmin(null);
+			navigate("/admin/login");
 		}
 	};
 

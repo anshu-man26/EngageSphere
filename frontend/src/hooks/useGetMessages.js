@@ -1,52 +1,102 @@
-import { useEffect, useState } from "react";
-import useConversation from "../zustand/useConversation";
+import { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import useConversation from "../zustand/useConversation";
+import { apiGet } from "../config/api";
+
+const PAGE_SIZE = 30;
 
 const useGetMessages = () => {
 	const [loading, setLoading] = useState(false);
-	const { messages, setMessages, selectedConversation } = useConversation();
+	const [loadingMore, setLoadingMore] = useState(false);
 
+	const messages = useConversation((s) => s.messages);
+	const setMessages = useConversation((s) => s.setMessages);
+	const prependMessages = useConversation((s) => s.prependMessages);
+	const hasMoreMessages = useConversation((s) => s.hasMoreMessages);
+	const setHasMoreMessages = useConversation((s) => s.setHasMoreMessages);
+	const selectedConversation = useConversation((s) => s.selectedConversation);
+
+	// Track which conversation we last fetched for so socket-driven changes
+	// don't double-fetch.
+	const fetchedForRef = useRef(null);
+
+	const partnerId =
+		selectedConversation?.participant?._id || selectedConversation?._id || null;
+
+	// ── Initial fetch (newest page) ──────────────────────────────
 	useEffect(() => {
-		const getMessages = async () => {
-			if (!selectedConversation?._id) {
-				setMessages([]);
-				return;
-			}
+		if (!partnerId) {
+			setMessages([]);
+			setHasMoreMessages(false);
+			fetchedForRef.current = null;
+			return;
+		}
+		if (fetchedForRef.current === partnerId) return; // already loaded
+		fetchedForRef.current = partnerId;
 
-			setLoading(true);
+		let cancelled = false;
+		setLoading(true);
+		(async () => {
 			try {
-				const userToChatId = selectedConversation.participant?._id || selectedConversation._id;
-				
-				const res = await fetch(`/api/messages/${userToChatId}`, {
-					credentials: "include"
-				});
-				
-				if (!res.ok) {
-					throw new Error(`HTTP error! status: ${res.status}`);
-				}
-				
-				const data = await res.json();
-				
-				if (data.error) throw new Error(data.error);
-				
-				// Ensure data is an array
-				const messagesArray = Array.isArray(data) ? data : [];
-				setMessages(messagesArray);
-			} catch (error) {
-				console.error("Error fetching messages:", error);
-				toast.error(error.message || "Failed to load messages");
+				const data = await apiGet(`/api/messages/${partnerId}?limit=${PAGE_SIZE}`);
+				if (cancelled) return;
+
+				// Backwards compat: backend used to return an array directly.
+				const list = Array.isArray(data) ? data : data?.messages || [];
+				const more = Array.isArray(data) ? false : !!data?.hasMore;
+
+				setMessages(list);
+				setHasMoreMessages(more);
+			} catch (err) {
+				console.error("Error fetching messages:", err);
+				toast.error(err.message || "Failed to load messages");
 				setMessages([]);
+				setHasMoreMessages(false);
 			} finally {
-				setLoading(false);
+				if (!cancelled) setLoading(false);
 			}
+		})();
+
+		return () => {
+			cancelled = true;
 		};
+	}, [partnerId, setMessages, setHasMoreMessages]);
 
-		getMessages();
-	}, [selectedConversation?._id, selectedConversation?.participant?._id, setMessages]);
+	// ── Load older messages (called when user scrolls to top) ────
+	const loadMoreMessages = useCallback(async () => {
+		if (!partnerId || !hasMoreMessages || loadingMore || loading) return null;
+		const oldest = messages[0];
+		if (!oldest?._id) return null;
 
-	// Ensure we always return an array
+		setLoadingMore(true);
+		try {
+			const data = await apiGet(
+				`/api/messages/${partnerId}?limit=${PAGE_SIZE}&before=${oldest._id}`,
+			);
+			const older = Array.isArray(data) ? data : data?.messages || [];
+			const more = Array.isArray(data) ? false : !!data?.hasMore;
+
+			prependMessages(older);
+			setHasMoreMessages(more);
+			return older.length;
+		} catch (err) {
+			console.error("Error loading older messages:", err);
+			toast.error(err.message || "Failed to load older messages");
+			return null;
+		} finally {
+			setLoadingMore(false);
+		}
+	}, [partnerId, hasMoreMessages, loadingMore, loading, messages, prependMessages, setHasMoreMessages]);
+
 	const safeMessages = Array.isArray(messages) ? messages : [];
-	
-	return { messages: safeMessages, loading };
+
+	return {
+		messages: safeMessages,
+		loading,
+		loadingMore,
+		hasMore: hasMoreMessages,
+		loadMoreMessages,
+	};
 };
+
 export default useGetMessages;

@@ -1,6 +1,13 @@
 import { useState, useEffect } from "react";
 import { useAuthContext } from "../../context/AuthContext";
 import { FaEye, FaReply, FaTrash, FaFilter, FaSearch, FaExclamationTriangle, FaCheckCircle, FaClock, FaUser } from "react-icons/fa";
+import {
+	fetchComplaints as fetchComplaintsApi,
+	fetchComplaintStats,
+	updateComplaintStatus,
+	respondToComplaint,
+	deleteComplaint,
+} from "../../hooks/useComplaints";
 
 const ComplaintLogsPanel = () => {
 	const [complaints, setComplaints] = useState([]);
@@ -28,19 +35,7 @@ const ComplaintLogsPanel = () => {
 
 	const fetchComplaints = async () => {
 		try {
-			const queryParams = new URLSearchParams({
-				page: currentPage,
-				limit: 10,
-				...filters
-			});
-
-			const res = await fetch(`/api/complaints?${queryParams}`, {
-				credentials: "include"
-			});
-
-			if (!res.ok) throw new Error("Failed to fetch complaints");
-
-			const data = await res.json();
+			const data = await fetchComplaintsApi(currentPage, 10, filters);
 			setComplaints(data.complaints);
 			setTotalPages(data.totalPages);
 		} catch (error) {
@@ -52,14 +47,7 @@ const ComplaintLogsPanel = () => {
 
 	const fetchStats = async () => {
 		try {
-			const res = await fetch("/api/complaints/stats", {
-				credentials: "include"
-			});
-
-			if (!res.ok) throw new Error("Failed to fetch stats");
-
-			const data = await res.json();
-			setStats(data);
+			setStats(await fetchComplaintStats());
 		} catch (error) {
 			console.error("Error fetching stats:", error);
 		}
@@ -67,20 +55,9 @@ const ComplaintLogsPanel = () => {
 
 	const handleStatusUpdate = async (complaintId, newStatus) => {
 		try {
-			const res = await fetch(`/api/complaints/${complaintId}/status`, {
-				method: "PUT",
-				headers: { "Content-Type": "application/json" },
-				credentials: "include",
-				body: JSON.stringify({ status: newStatus })
-			});
-
-			if (!res.ok) throw new Error("Failed to update status");
-
-			// Update local state
-			setComplaints(prev => prev.map(complaint => 
-				complaint._id === complaintId 
-					? { ...complaint, status: newStatus }
-					: complaint
+			await updateComplaintStatus(complaintId, newStatus);
+			setComplaints(prev => prev.map(complaint =>
+				complaint._id === complaintId ? { ...complaint, status: newStatus } : complaint
 			));
 		} catch (error) {
 			console.error("Error updating status:", error);
@@ -89,27 +66,12 @@ const ComplaintLogsPanel = () => {
 
 	const handleRespond = async () => {
 		if (!responseMessage.trim()) return;
-
 		setSubmittingResponse(true);
 		try {
-			const res = await fetch(`/api/complaints/${selectedComplaint._id}/respond`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				credentials: "include",
-				body: JSON.stringify({ message: responseMessage })
-			});
-
-			if (!res.ok) throw new Error("Failed to send response");
-
-			const data = await res.json();
-			
-			// Update local state
-			setComplaints(prev => prev.map(complaint => 
-				complaint._id === selectedComplaint._id 
-					? { ...complaint, ...data.complaint }
-					: complaint
+			const data = await respondToComplaint(selectedComplaint._id, responseMessage);
+			setComplaints(prev => prev.map(complaint =>
+				complaint._id === selectedComplaint._id ? { ...complaint, ...data.complaint } : complaint
 			));
-
 			setShowResponseModal(false);
 			setResponseMessage("");
 			setSelectedComplaint(null);
@@ -122,15 +84,8 @@ const ComplaintLogsPanel = () => {
 
 	const handleDelete = async (complaintId) => {
 		if (!confirm("Are you sure you want to delete this complaint?")) return;
-
 		try {
-			const res = await fetch(`/api/complaints/${complaintId}`, {
-				method: "DELETE",
-				credentials: "include"
-			});
-
-			if (!res.ok) throw new Error("Failed to delete complaint");
-
+			await deleteComplaint(complaintId);
 			setComplaints(prev => prev.filter(complaint => complaint._id !== complaintId));
 		} catch (error) {
 			console.error("Error deleting complaint:", error);

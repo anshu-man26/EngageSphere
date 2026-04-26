@@ -1,82 +1,73 @@
-import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
+import {
+	FaArrowLeft,
+	FaUser,
+	FaCalendar,
+	FaEnvelope,
+	FaEdit,
+	FaPaperPlane,
+	FaVideo,
+	FaAt,
+} from "react-icons/fa";
 import { useAuthContext } from "../../context/AuthContext";
-import { FaArrowLeft, FaUser, FaCalendar, FaEnvelope, FaEdit } from "react-icons/fa";
-import { toast } from "react-hot-toast";
+import { useSocketContext } from "../../context/SocketContext";
+import useConversation from "../../zustand/useConversation";
+import useGetUserProfile from "../../hooks/useGetUserProfile";
+
+const formatJoined = (dateString) => {
+	if (!dateString) return "—";
+	const date = new Date(dateString);
+	return date.toLocaleDateString("en-US", { year: "numeric", month: "long" });
+};
 
 const UserProfile = () => {
 	const { userId } = useParams();
-	const { authUser } = useAuthContext();
 	const navigate = useNavigate();
-	
-	const [user, setUser] = useState(null);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState(null);
+	const { authUser } = useAuthContext();
+	const { onlineUsers } = useSocketContext();
+	const { setSelectedConversation } = useConversation();
+	const { user, loading, error } = useGetUserProfile(userId);
 
-	useEffect(() => {
-		const fetchUserProfile = async () => {
-			try {
-				setLoading(true);
-				const res = await fetch(`/api/users/profile/${userId}`, {
-					credentials: "include",
-				});
+	const isSelf = user?._id === authUser?._id;
+	const isOnline = user?._id ? onlineUsers.includes(user._id) : false;
+	const initial = (user?.fullName || "U").charAt(0).toUpperCase();
 
-				const data = await res.json();
-				if (data.error) {
-					setError(data.error);
-					return;
-				}
-
-				setUser(data.user);
-			} catch (error) {
-				setError("Failed to load user profile");
-			} finally {
-				setLoading(false);
-			}
-		};
-
-		if (userId) {
-			fetchUserProfile();
-		}
-	}, [userId]);
-
-	// Format date for "Member since"
-	const formatDate = (dateString) => {
-		const date = new Date(dateString);
-		return date.toLocaleDateString('en-US', { 
-			year: 'numeric', 
-			month: 'long' 
+	const openChat = () => {
+		if (!user) return;
+		setSelectedConversation({
+			_id: user._id,
+			participant: user,
+			unreadCount: 0,
+			lastMessage: null,
+			lastMessageTime: new Date(),
+			createdAt: new Date(),
 		});
+		navigate("/");
 	};
 
 	if (loading) {
 		return (
-			<div className='h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center'>
-				<div className='text-center'>
-					<div className='w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center'>
-						<div className='animate-spin rounded-full h-8 w-8 border-b-2 border-white'></div>
-					</div>
-					<p className='text-white text-lg'>Loading profile...</p>
-				</div>
+			<div className='min-h-screen bg-slate-950 flex items-center justify-center'>
+				<div className='animate-spin rounded-full h-8 w-8 border-2 border-emerald-500 border-t-transparent' />
 			</div>
 		);
 	}
 
-	if (error) {
+	if (error || !user) {
 		return (
-			<div className='h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center'>
-				<div className='text-center'>
-					<div className='w-16 h-16 mx-auto mb-4 bg-red-500 rounded-full flex items-center justify-center'>
-						<FaUser className='text-white text-2xl' />
+			<div className='min-h-screen bg-slate-950 flex items-center justify-center px-4'>
+				<div className='text-center max-w-sm'>
+					<div className='w-14 h-14 mx-auto mb-4 rounded-2xl bg-red-500/10 ring-1 ring-red-500/20 flex items-center justify-center'>
+						<FaUser className='text-red-400 text-xl' />
 					</div>
-					<h2 className='text-2xl font-bold text-white mb-2'>Profile Not Found</h2>
-					<p className='text-gray-300 mb-6'>{error}</p>
-					<Link 
-						to="/" 
-						className='inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-lg transition-all duration-200'
+					<h2 className='text-xl font-semibold text-slate-100 mb-1'>Profile not found</h2>
+					<p className='text-slate-400 text-sm mb-6'>{error || "We couldn't load this user."}</p>
+					<Link
+						to='/'
+						className='inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-lg text-sm font-medium transition-colors'
 					>
-						<FaArrowLeft className='text-sm' />
-						Back to Chat
+						<FaArrowLeft />
+						Back to chat
 					</Link>
 				</div>
 			</div>
@@ -84,104 +75,141 @@ const UserProfile = () => {
 	}
 
 	return (
-		<div className='h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 overflow-y-auto'>
-			<div className='max-w-2xl mx-auto px-4 py-8'>
-				{/* Header with back button */}
-				<div className='flex items-center justify-between mb-8'>
+		<div className='min-h-screen bg-slate-950'>
+			{/* Top bar */}
+			<div className='sticky top-0 z-10 bg-slate-950/95 backdrop-blur-md border-b border-slate-800'>
+				<div className='max-w-2xl mx-auto px-4 h-14 flex items-center justify-between'>
 					<button
 						onClick={() => navigate(-1)}
-						className='inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg transition-all duration-200'
+						className='inline-flex items-center gap-2 text-slate-300 hover:text-slate-100 hover:bg-slate-800 px-3 py-1.5 rounded-lg text-sm transition-colors'
 					>
-						<FaArrowLeft className='text-sm' />
+						<FaArrowLeft className='text-xs' />
 						Back
 					</button>
-					{user?._id === authUser?._id && (
-						<Link 
-							to="/profile" 
-							className='inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-all duration-200'
+					{isSelf && (
+						<Link
+							to='/profile'
+							className='inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 hover:text-emerald-200 ring-1 ring-emerald-500/30 rounded-lg text-sm font-medium transition-colors'
 						>
-							<FaEdit className='text-sm' />
-							Edit Profile
+							<FaEdit className='text-xs' />
+							Edit profile
 						</Link>
 					)}
 				</div>
+			</div>
 
-				{/* Profile Header - Instagram Style */}
-				<div className='bg-white/10 backdrop-blur-lg rounded-2xl p-8 mb-6 border border-white/20'>
-					<div className='flex flex-col md:flex-row items-center md:items-start gap-6'>
-						{/* Profile Picture */}
-						<div className='relative'>
-							<div className='w-32 h-32 md:w-40 md:h-40 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center overflow-hidden shadow-2xl'>
-								<img 
-									src={user?.profilePic || 'https://cdn0.iconfinder.com/data/icons/communication-line-10/24/account_profile_user_contact_person_avatar_placeholder-512.png'} 
-									alt={`${user?.fullName || 'User'} profile`}
-									className='w-full h-full object-cover'
-									onError={(e) => {
-										e.target.src = 'https://cdn0.iconfinder.com/data/icons/communication-line-10/24/account_profile_user_contact_person_avatar_placeholder-512.png';
-									}}
-								/>
-							</div>
-						</div>
-
-						{/* Profile Info */}
-						<div className='flex-1 text-center md:text-left'>
-							{/* Username and Name */}
-							<div className='mb-4'>
-								<h1 className='text-2xl md:text-3xl font-bold text-white mb-2'>
-									{user?.fullName || 'Unknown User'}
-								</h1>
-								{user?.username && (
-									<p className='text-gray-300 text-lg'>@{user.username}</p>
+			<div className='max-w-2xl mx-auto px-4 py-8'>
+				{/* Hero card */}
+				<div className='bg-slate-900 ring-1 ring-slate-800 rounded-2xl p-6 sm:p-8'>
+					<div className='flex flex-col sm:flex-row items-center sm:items-start gap-5 sm:gap-7'>
+						{/* Avatar */}
+						<div className='relative flex-shrink-0'>
+							<div className='w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-slate-800 ring-2 ring-slate-700 overflow-hidden flex items-center justify-center text-3xl sm:text-4xl font-semibold text-slate-200'>
+								{user.profilePic ? (
+									<img
+										src={user.profilePic}
+										alt={user.fullName || "Profile"}
+										className='w-full h-full object-cover'
+										onError={(e) => {
+											e.currentTarget.style.display = "none";
+										}}
+									/>
+								) : (
+									initial
 								)}
 							</div>
+							{isOnline && (
+								<span className='absolute bottom-1.5 right-1.5 w-4 h-4 bg-emerald-400 ring-2 ring-slate-900 rounded-full' />
+							)}
+						</div>
 
-							{/* Bio */}
-							<div className='mb-4'>
-								<p className='text-white text-sm md:text-base leading-relaxed'>
-									{user?.bio || "Hey there! I'm using EngageSphere"}
+						{/* Identity */}
+						<div className='flex-1 text-center sm:text-left min-w-0'>
+							<h1 className='text-2xl sm:text-3xl font-bold text-slate-100 leading-tight truncate'>
+								{user.fullName || "Unknown user"}
+							</h1>
+							{user.username && (
+								<p className='text-slate-400 text-sm mt-1 inline-flex items-center gap-1'>
+									<FaAt className='text-xs opacity-60' />
+									{user.username}
 								</p>
+							)}
+
+							{/* Status pill */}
+							<div className='mt-3 inline-flex items-center gap-2 px-2.5 py-1 bg-slate-800 ring-1 ring-slate-700 rounded-full'>
+								<span
+									className={`w-1.5 h-1.5 rounded-full ${
+										isOnline ? "bg-emerald-400" : "bg-slate-500"
+									}`}
+								/>
+								<span
+									className={`text-xs font-medium ${
+										isOnline ? "text-emerald-400" : "text-slate-400"
+									}`}
+								>
+									{isOnline ? "Online" : "Offline"}
+								</span>
 							</div>
 
-							{/* Member Since */}
-							<div className='flex items-center justify-center md:justify-start gap-2 text-gray-300 text-sm'>
-								<FaCalendar className='text-gray-400' />
-								<span>Member since {formatDate(user?.createdAt)}</span>
+							{/* Bio (if present) */}
+							{user.bio && (
+								<p className='mt-4 text-slate-300 text-sm leading-relaxed'>{user.bio}</p>
+							)}
+
+							{/* Member since */}
+							<p className='mt-4 text-slate-500 text-xs inline-flex items-center gap-1.5'>
+								<FaCalendar className='opacity-70' />
+								Member since {formatJoined(user.createdAt)}
+							</p>
+						</div>
+					</div>
+
+					{/* Actions */}
+					{!isSelf && (
+						<div className='mt-6 sm:mt-7 grid grid-cols-2 gap-2'>
+							<button
+								onClick={openChat}
+								className='flex items-center justify-center gap-2 h-11 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-medium text-sm transition-colors shadow-md shadow-emerald-900/30'
+							>
+								<FaPaperPlane />
+								Message
+							</button>
+							<button
+								onClick={openChat}
+								className='flex items-center justify-center gap-2 h-11 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-xl font-medium text-sm transition-colors'
+							>
+								<FaVideo />
+								Video call
+							</button>
+						</div>
+					)}
+				</div>
+
+				{/* Details (only if there's something worth showing besides what's in the hero) */}
+				{user.email && (
+					<div className='mt-4 bg-slate-900 ring-1 ring-slate-800 rounded-2xl p-6'>
+						<p className='text-[11px] uppercase tracking-wider text-slate-500 font-medium mb-3'>
+							Contact
+						</p>
+						<div className='flex items-center gap-3'>
+							<div className='w-9 h-9 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 flex-shrink-0'>
+								<FaEnvelope />
+							</div>
+							<div className='min-w-0 flex-1'>
+								<p className='text-[11px] text-slate-500 uppercase tracking-wider'>Email</p>
+								<a
+									href={`mailto:${user.email}`}
+									className='text-sm text-slate-100 hover:text-emerald-400 transition-colors truncate block'
+								>
+									{user.email}
+								</a>
 							</div>
 						</div>
 					</div>
-				</div>
-
-
-
-				{/* Additional Info */}
-				<div className='bg-white/10 backdrop-blur-lg rounded-2xl p-6 mt-6 border border-white/20'>
-					<h3 className='text-lg font-semibold text-white mb-4'>Profile Information</h3>
-					<div className='space-y-3'>
-						<div className='flex items-center gap-3 text-gray-300'>
-							<FaUser className='text-gray-400' />
-							<span>Full Name: {user?.fullName || 'Not provided'}</span>
-						</div>
-						{user?.username && (
-							<div className='flex items-center gap-3 text-gray-300'>
-								<FaUser className='text-gray-400' />
-								<span>Username: @{user.username}</span>
-							</div>
-						)}
-						{user?.email && (
-							<div className='flex items-center gap-3 text-gray-300'>
-								<FaEnvelope className='text-gray-400' />
-								<span>Email: {user.email}</span>
-							</div>
-						)}
-						<div className='flex items-center gap-3 text-gray-300'>
-							<FaCalendar className='text-gray-400' />
-							<span>Joined: {formatDate(user?.createdAt)}</span>
-						</div>
-					</div>
-				</div>
+				)}
 			</div>
 		</div>
 	);
 };
 
-export default UserProfile; 
+export default UserProfile;

@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
+import { apiGet } from "../config/api";
 
 export const AuthContext = createContext();
 
@@ -56,21 +57,12 @@ export const AuthContextProvider = ({ children }) => {
 		// Check for admin session independently
 		const checkAdminSession = async () => {
 			try {
-				const res = await fetch("/api/admin/profile", {
-					credentials: "include",
-				});
-				if (res.ok) {
-					const adminData = await res.json();
-					setAdmin(adminData);
-					localStorage.setItem("chat-admin", JSON.stringify(adminData));
-				} else if (res.status === 401) {
-					// Admin session expired or invalid
-					setAdmin(null);
-					localStorage.removeItem("chat-admin");
-				}
+				const adminData = await apiGet("/api/admin/profile");
+				setAdmin(adminData);
+				localStorage.setItem("chat-admin", JSON.stringify(adminData));
 			} catch (error) {
-				// Only log error if it's not a network error
-				if (error.name !== 'TypeError') {
+				// 401 = no session; anything else = log it (but ignore network errors)
+				if (error.status !== 401 && error.name !== "TypeError") {
 					console.error("Error checking admin session:", error);
 				}
 				setAdmin(null);

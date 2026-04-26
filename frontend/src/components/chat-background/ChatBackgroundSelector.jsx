@@ -7,9 +7,8 @@ const ChatBackgroundSelector = ({ conversationId, currentBackground, onClose, on
 	const [selectedBackground, setSelectedBackground] = useState(currentBackground || "");
 	const [customImage, setCustomImage] = useState(null);
 	const [previewUrl, setPreviewUrl] = useState(null);
-	const [uploadingImage, setUploadingImage] = useState(false);
 	const fileInputRef = useRef(null);
-	const { loading, updateChatBackground } = useChatBackground();
+	const { loading, uploading: uploadingImage, updateChatBackground, uploadBackground } = useChatBackground();
 
 	// Preset background options
 	const presetBackgrounds = [
@@ -60,29 +59,10 @@ const ChatBackgroundSelector = ({ conversationId, currentBackground, onClose, on
 
 	const handleSave = async () => {
 		let finalBackground = selectedBackground;
-		// If custom image is selected, upload it first
 		if (customImage) {
-			setUploadingImage(true);
-			try {
-				const formData = new FormData();
-				formData.append('backgroundImage', customImage);
-				const res = await fetch("/api/users/upload-background", {
-					method: "POST",
-					credentials: "include",
-					body: formData,
-				});
-				const data = await res.json();
-				if (data.error) {
-					throw new Error(data.error);
-				}
-				finalBackground = data.backgroundUrl;
-			} catch (error) {
-				toast.error("Failed to upload background image");
-				setUploadingImage(false);
-				return;
-			} finally {
-				setUploadingImage(false);
-			}
+			const url = await uploadBackground(customImage);
+			if (!url) return;
+			finalBackground = url;
 		}
 		if (!conversationId) {
 			// User mode: just call onBackgroundChange

@@ -1,11 +1,8 @@
+import "dotenv/config";
 import path from "path";
 import express from "express";
-import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import cors from "cors";
-
-// Load environment variables first
-dotenv.config();
 
 // Verify environment variables are loaded
 console.log("🔍 Environment Variables Check:");
@@ -19,6 +16,7 @@ import userRoutes from "./routes/user.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import complaintRoutes from "./routes/complaint.routes.js";
+import agoraRoutes from "./routes/agora.routes.js";
 
 import connectToMongoDB from "./db/connectToMongoDB.js";
 import { app, server } from "./socket/socket.js";
@@ -31,11 +29,12 @@ const PORT = process.env.PORT || 5000;
 // CORS configuration
 app.use(cors({
 	origin: [
-		"http://localhost:3000", 
-		"http://localhost:5173", 
+		"http://localhost:3000",
+		"http://localhost:5173",
 		"http://10.18.214.234:3000",
-		"https://engagesphere-mrjv.onrender.com"
-	], // Allow both common frontend ports and your IP
+		process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
+		process.env.FRONTEND_URL
+	].filter(Boolean), // Allow both common frontend ports and your IP
 	credentials: true, // Allow cookies and authentication headers
 	methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
 	allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
@@ -50,8 +49,9 @@ app.use("/api/users", userRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/complaints", complaintRoutes);
+app.use("/api/agora", agoraRoutes);
 
-// Health check endpoint for Render
+// Health check endpoint
 app.get('/api/health', (req, res) => {
 	res.status(200).json({ 
 		status: 'OK', 
@@ -69,13 +69,16 @@ console.log("  - /api/users");
 console.log("  - /api/notifications");
 console.log("  - /api/admin");
 console.log("  - /api/complaints");
+console.log("  - /api/agora");
 console.log("  - /api/health");
 
-// Debug middleware to log all requests
-app.use((req, res, next) => {
-	console.log(`${req.method} ${req.path}`);
-	next();
-});
+// Request logger — noisy in prod, only enabled when LOG_REQUESTS=true
+if (process.env.LOG_REQUESTS === "true") {
+	app.use((req, res, next) => {
+		console.log(`${req.method} ${req.path}`);
+		next();
+	});
+}
 
 // Only serve static files and handle frontend routes in production
 if (process.env.NODE_ENV === 'production') {
@@ -90,15 +93,13 @@ if (process.env.NODE_ENV === 'production') {
 
 server.listen(PORT, '0.0.0.0', () => {
 	connectToMongoDB();
-	console.log(`Server Running on port ${PORT}`);
-	console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-	console.log(`Access from mobile: http://10.18.214.234:3000`);
-	
+	console.log(`Server running on port ${PORT} (${process.env.NODE_ENV || 'development'})`);
+
 	// Start notification cleanup job (runs every 6 hours)
 	setInterval(() => {
 		notificationService.cleanupOldNotifications();
 	}, 6 * 60 * 60 * 1000);
-	
+
 	// Run initial cleanup
 	notificationService.cleanupOldNotifications();
 });
