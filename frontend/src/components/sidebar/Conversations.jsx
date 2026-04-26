@@ -1,9 +1,8 @@
 import { useNavigate } from "react-router-dom";
-import { useMemo, useRef, useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import useGetConversations from "../../hooks/useGetConversations";
 import useGetUsers from "../../hooks/useGetUsers";
 import useConversation from "../../zustand/useConversation";
-import { getRandomEmoji } from "../../utils/emojis";
 import Conversation from "./Conversation";
 
 const Conversations = ({ onConversationSelect }) => {
@@ -14,176 +13,129 @@ const Conversations = ({ onConversationSelect }) => {
 	const previousConversationsRef = useRef([]);
 	const [animatedConversations, setAnimatedConversations] = useState(new Set());
 
-	// Track conversations that should be animated (new messages)
 	useEffect(() => {
 		if (conversations.length > 0 && previousConversationsRef.current.length > 0) {
-			const newAnimatedConversations = new Set();
-			
-			conversations.forEach(conversation => {
-				const previousConversation = previousConversationsRef.current.find(
-					prev => prev._id === conversation._id
-				);
-				
-				// Check if this conversation moved to top (not just new messages)
-				if (previousConversation) {
-					const movedToTop = conversations.indexOf(conversation) === 0 && 
-						previousConversationsRef.current.indexOf(previousConversation) !== 0;
-					
-					// Only animate if conversation moved to top, not just for new messages
-					if (movedToTop) {
-						newAnimatedConversations.add(conversation._id);
-					}
+			const newAnimated = new Set();
+			conversations.forEach((c) => {
+				const prev = previousConversationsRef.current.find((p) => p._id === c._id);
+				if (prev) {
+					const movedToTop =
+						conversations.indexOf(c) === 0 &&
+						previousConversationsRef.current.indexOf(prev) !== 0;
+					if (movedToTop) newAnimated.add(c._id);
 				}
 			});
-			
-			if (newAnimatedConversations.size > 0) {
-				setAnimatedConversations(newAnimatedConversations);
-				
-				// Clear animation after 1 second
-				setTimeout(() => {
-					setAnimatedConversations(new Set());
-				}, 1000);
+			if (newAnimated.size > 0) {
+				setAnimatedConversations(newAnimated);
+				setTimeout(() => setAnimatedConversations(new Set()), 800);
 			}
 		}
-		
 		previousConversationsRef.current = conversations;
 	}, [conversations]);
 
-	// Memoize filtered conversations and users to prevent unnecessary re-renders
+	const term = searchTerm.trim().toLowerCase();
+
 	const filteredConversations = useMemo(() => {
-		return conversations.filter(conversation => {
-			if (!searchTerm.trim()) return true;
-			const participantName = conversation.participant?.fullName || '';
-			return participantName.toLowerCase().includes(searchTerm.toLowerCase().trim());
-		});
-	}, [conversations, searchTerm]);
+		if (!term) return conversations;
+		return conversations.filter((c) =>
+			(c.participant?.fullName || "").toLowerCase().includes(term),
+		);
+	}, [conversations, term]);
 
-	// Filter users for new chat (exclude users already in conversations)
 	const filteredUsers = useMemo(() => {
-		const existingConversationUserIds = conversations.map(conv => conv.participant._id);
-		const availableUsers = users.filter(user => !existingConversationUserIds.includes(user._id));
-		return availableUsers.filter(user => {
-			if (!searchTerm.trim()) return true;
-			return user.fullName && user.fullName.toLowerCase().includes(searchTerm.toLowerCase().trim());
-		});
-	}, [conversations, users, searchTerm]);
-
-	const handleConversationClick = (conversation) => {
-		setSelectedConversation(conversation);
-		if (onConversationSelect) onConversationSelect();
-	};
+		const existing = new Set(conversations.map((c) => c.participant._id));
+		const available = users.filter((u) => !existing.has(u._id));
+		if (!term) return available;
+		return available.filter((u) =>
+			(u.fullName || "").toLowerCase().includes(term),
+		);
+	}, [conversations, users, term]);
 
 	const handleUserClick = (user) => {
-		// Create a new conversation object for this user
-		const conversation = {
+		setSelectedConversation({
 			_id: user._id,
 			participant: user,
 			unreadCount: 0,
 			lastMessage: null,
 			lastMessageTime: new Date(),
-			createdAt: new Date()
-		};
-		setSelectedConversation(conversation);
+			createdAt: new Date(),
+		});
 		if (onConversationSelect) onConversationSelect();
 	};
 
 	if (loading) {
-		return (
-			<div className='py-2 flex flex-col overflow-auto'>
-				<div className='text-center py-8 text-gray-400'>
-					<p>Loading conversations...</p>
-				</div>
-			</div>
-		);
+		return <div className='py-6 text-center text-[#8696A0] text-sm'>Loading…</div>;
 	}
 
+	const totalResults = filteredConversations.length + filteredUsers.length;
+
 	return (
-		<div className='py-2 flex flex-col overflow-auto min-w-0 w-full sidebar-content conversation-list-container'>
-			{/* Search results indicator */}
-			{searchTerm.trim() && (
-				<div className='px-3 py-2 text-sm text-gray-400 border-b border-white/10 mb-2 overflow-hidden'>
-					<div className='truncate'>
-						{filteredConversations.length === 0 && filteredUsers.length === 0
-							? `No results found for "${searchTerm}"`
-							: `Found ${filteredConversations.length + filteredUsers.length} result${filteredConversations.length + filteredUsers.length === 1 ? '' : 's'} for "${searchTerm}"`
-						}
-					</div>
+		<div className='h-full overflow-y-auto conversation-list-container'>
+			{term && (
+				<p className='px-3 pt-3 pb-1 text-[11px] uppercase tracking-wider text-[#00A884] font-medium'>
+					{totalResults === 0 ? `No results for "${searchTerm}"` : `${totalResults} result${totalResults === 1 ? "" : "s"}`}
+				</p>
+			)}
+
+			{filteredConversations.length > 0 && (
+				<div>
+					{filteredConversations.map((c) => (
+						<Conversation
+							key={c._id}
+							conversation={c}
+							onConversationSelect={onConversationSelect}
+							isNewMessage={animatedConversations.has(c._id)}
+						/>
+					))}
 				</div>
 			)}
 
-			{/* Show existing conversations */}
-			{filteredConversations.length > 0 && (
+			{filteredUsers.length > 0 && (
 				<>
-					{filteredConversations.map((conversation, idx) => (
-						<Conversation 
-							key={conversation._id}
-							conversation={conversation}
-							lastIdx={idx === filteredConversations.length - 1 && filteredUsers.length === 0}
-							emoji={getRandomEmoji()}
-							onConversationSelect={onConversationSelect}
-							isNewMessage={animatedConversations.has(conversation._id)}
-						/>
-					))}
-					{filteredUsers.length > 0 && <div className='h-px bg-white/10 my-2'></div>}
+					<p className='px-3 pt-4 pb-1 text-[11px] uppercase tracking-wider text-[#00A884] font-medium'>
+						{term ? "Other contacts" : "Start a new chat"}
+					</p>
+					<div>
+						{filteredUsers.map((user) => {
+							const initial = (user.fullName || "U").charAt(0).toUpperCase();
+							return (
+								<button
+									key={user._id}
+									onClick={() => handleUserClick(user)}
+									className='w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-[#202C33] transition-colors border-b border-[#222D34]/40'
+								>
+									<div
+										className='w-12 h-12 rounded-full bg-[#2A3942] overflow-hidden flex items-center justify-center text-[#E9EDEF] font-semibold text-sm flex-shrink-0'
+										onClick={(e) => {
+											e.stopPropagation();
+											navigate(`/user/${user._id}`);
+										}}
+									>
+										{user.profilePic ? (
+											<img src={user.profilePic} alt='' className='w-full h-full object-cover' />
+										) : (
+											initial
+										)}
+									</div>
+									<div className='flex-1 min-w-0'>
+										<p className='text-[15px] font-medium text-[#E9EDEF] truncate'>{user.fullName}</p>
+										<p className='text-[13px] text-[#8696A0] truncate'>Click to start chat</p>
+									</div>
+								</button>
+							);
+						})}
+					</div>
 				</>
 			)}
 
-			{/* Show available users for new chats */}
-			{filteredUsers.map((user, idx) => (
-				<div
-					key={user._id}
-					className='flex items-center gap-2 sm:gap-3 p-3 hover:bg-white/10 cursor-pointer border-b border-white/10 last:border-b-0 transition-colors w-full min-w-0'
-					onClick={() => handleUserClick(user)}
-				>
-					<div 
-						className='w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-semibold text-sm cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0'
-						onClick={(e) => {
-							e.stopPropagation();
-							navigate(`/user/${user._id}`);
-						}}
-						title={`View ${user.fullName}'s profile`}
-					>
-						{user.profilePic ? (
-							<img 
-								src={user.profilePic} 
-								alt={user.fullName}
-								className='w-full h-full rounded-full object-cover'
-							/>
-						) : (
-							user.fullName.charAt(0).toUpperCase()
-						)}
-					</div>
-					<div className='flex-1 min-w-0 overflow-hidden'>
-						<p className='text-white font-medium truncate text-sm sm:text-base'>{user.fullName}</p>
-						<p className='text-gray-400 text-xs sm:text-sm truncate'>Click to start chat</p>
-					</div>
-				</div>
-			))}
-
-			{filteredConversations.length === 0 && filteredUsers.length === 0 && !searchTerm.trim() && (
-				<div className='text-center py-8 text-gray-400 px-4'>
-					<p>No conversations yet</p>
-					<p className='text-sm mt-1'>Start a chat with someone to see conversations here</p>
+			{filteredConversations.length === 0 && filteredUsers.length === 0 && !term && (
+				<div className='py-12 text-center text-[#8696A0]'>
+					<p className='text-sm'>No conversations yet</p>
+					<p className='text-xs mt-1'>Start a chat to see it here</p>
 				</div>
 			)}
 		</div>
 	);
 };
+
 export default Conversations;
-
-// STARTER CODE SNIPPET
-// import Conversation from "./Conversation";
-
-// const Conversations = () => {
-// 	return (
-// 		<div className='py-2 flex flex-col overflow-auto'>
-// 			<Conversation />
-// 			<Conversation />
-// 			<Conversation />
-// 			<Conversation />
-// 			<Conversation />
-// 			<Conversation />
-// 		</div>
-// 	);
-// };
-// export default Conversations;

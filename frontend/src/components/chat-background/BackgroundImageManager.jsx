@@ -1,63 +1,14 @@
-import { useState, useEffect } from "react";
 import { FaTrash, FaEye, FaDownload, FaTimes } from "react-icons/fa";
-import { toast } from "react-hot-toast";
+import useBackgroundImages from "../../hooks/useBackgroundImages";
 
 const BackgroundImageManager = ({ onClose }) => {
-	const [backgroundImages, setBackgroundImages] = useState([]);
-	const [loading, setLoading] = useState(true);
-	const [deletingImage, setDeletingImage] = useState(null);
-
-	useEffect(() => {
-		fetchBackgroundImages();
-	}, []);
-
-	const fetchBackgroundImages = async () => {
-		try {
-			const res = await fetch("/api/users/background-images", {
-				credentials: "include",
-			});
-			const data = await res.json();
-			
-			if (data.error) {
-				throw new Error(data.error);
-			}
-			
-			setBackgroundImages(data.backgroundImages || []);
-		} catch (error) {
-			toast.error("Failed to fetch background images");
-			console.error("Error fetching background images:", error);
-		} finally {
-			setLoading(false);
-		}
-	};
+	const { backgroundImages, loading, deletingImage, deleteImage } = useBackgroundImages();
 
 	const handleDeleteImage = async (imageUrl, conversationId) => {
 		if (!confirm("Are you sure you want to delete this background image? This action cannot be undone.")) {
 			return;
 		}
-
-		setDeletingImage(imageUrl);
-		try {
-			const res = await fetch("/api/users/background-image", {
-				method: "DELETE",
-				headers: { "Content-Type": "application/json" },
-				credentials: "include",
-				body: JSON.stringify({ imageUrl, conversationId }),
-			});
-			
-			const data = await res.json();
-			if (data.error) {
-				throw new Error(data.error);
-			}
-			
-			toast.success("Background image deleted successfully");
-			// Remove the image from the list
-			setBackgroundImages(prev => prev.filter(img => img.url !== imageUrl));
-		} catch (error) {
-			toast.error(error.message);
-		} finally {
-			setDeletingImage(null);
-		}
+		await deleteImage(imageUrl, conversationId);
 	};
 
 	const handleDownloadImage = (imageUrl, type) => {

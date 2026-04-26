@@ -1,8 +1,6 @@
 import Conversation from "../models/conversation.model.js";
 import Message from "../models/message.model.js";
 import { getReceiverSocketId, io } from "../socket/socket.js";
-import profanityFilterService from "../services/profanityFilterService.js";
-import SystemSettings from "../models/systemSettings.model.js";
 
 export const sendMessage = async (req, res) => {
 	try {
@@ -32,34 +30,10 @@ export const sendMessage = async (req, res) => {
 			});
 		}
 
-		// Check system settings for profanity filter
-		const systemSettings = await SystemSettings.getInstance();
-		const isProfanityFilterEnabled = systemSettings.features.profanityFilter;
-		
-		let finalMessage = message.trim();
-		let isProfanityFiltered = false;
-		let profanityReason = null;
-		
-		// Apply profanity filter if enabled globally and user has it enabled
-		if (isProfanityFilterEnabled && req.user.profanityFilterEnabled !== false) {
-			const filterResult = await profanityFilterService.filterMessage(finalMessage, {
-				profanityFilterEnabled: req.user.profanityFilterEnabled
-			});
-			
-			// If message is filtered by profanity filter, show profanity detected message
-			if (filterResult.isFiltered) {
-				isProfanityFiltered = true;
-				profanityReason = filterResult.reason;
-				finalMessage = "🚫 Profanity detected";
-			}
-		}
-
 		const newMessage = new Message({
 			senderId,
 			receiverId,
-			message: finalMessage,
-			isFiltered: isProfanityFiltered,
-			filterReason: profanityReason
+			message: message.trim(),
 		});
 
 		if (newMessage) {
@@ -214,6 +188,14 @@ export const deleteMultipleMessages = async (req, res) => {
 	}
 };
 
+// Paginated message fetch.
+//
+//   GET /api/messages/:id                  → newest 30 messages
+//   GET /api/messages/:id?limit=50         → newest 50 messages
+//   GET /api/messages/:id?before=<id>      → 30 messages older than <id>
+//
+// Response: { messages: Message[], hasMore: boolean }
+// Messages are returned oldest → newest so the client can render directly.
 export const getMessages = async (req, res) => {
 	try {
 		const { id: userToChatId } = req.params;
@@ -223,27 +205,45 @@ export const getMessages = async (req, res) => {
 			return res.status(400).json({ error: "User ID is required" });
 		}
 
+		const limit = Math.min(parseInt(req.query.limit, 10) || 30, 100);
+		const before = req.query.before;
+
+		// Make sure these two users actually share a conversation.
 		const conversation = await Conversation.findOne({
 			participants: { $all: [senderId, userToChatId] },
-		}).populate("messages"); // NOT REFERENCE BUT ACTUAL MESSAGES
-
+		});
 		if (!conversation) {
-			return res.status(200).json([]);
+			return res.status(200).json({ messages: [], hasMore: false });
 		}
 
-		const messages = conversation.messages || [];
+		// Build the query against the Message collection directly so we can
+		// paginate properly (populate-then-slice would load every message).
+		const query = {
+			$or: [
+				{ senderId, receiverId: userToChatId },
+				{ senderId: userToChatId, receiverId: senderId },
+			],
+			deletedFor: { $ne: senderId },
+		};
 
-		// Filter out messages deleted for the current user
-		const filteredMessages = messages.filter(message => {
-			// Don't show messages deleted for the current user (but keep messages deleted for everyone)
-			if (message.deletedFor && message.deletedFor.includes(senderId)) return false;
-			
-			return true;
-		});
+		if (before) {
+			const cursor = await Message.findById(before).select("createdAt").lean();
+			if (cursor?.createdAt) {
+				query.createdAt = { $lt: cursor.createdAt };
+			}
+		}
 
-		// Ensure we always return an array
-		const messagesArray = Array.isArray(filteredMessages) ? filteredMessages : [];
-		res.status(200).json(messagesArray);
+		// Fetch one extra so we can detect whether there are more older ones.
+		const docs = await Message.find(query)
+			.sort({ createdAt: -1 })
+			.limit(limit + 1)
+			.lean();
+
+		const hasMore = docs.length > limit;
+		const sliced = hasMore ? docs.slice(0, limit) : docs;
+		sliced.reverse(); // oldest → newest for the client
+
+		res.status(200).json({ messages: sliced, hasMore });
 	} catch (error) {
 		console.log("Error in getMessages controller: ", error.message);
 		res.status(500).json({ error: "Internal server error" });

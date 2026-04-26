@@ -2,10 +2,6 @@
 
 A modern real-time chat application built with React, Node.js, and Socket.IO.
 
-## 🌐 Live Demo
-
-**Deployed on Render:** [https://engagesphere-mrjv.onrender.com/](https://engagesphere-mrjv.onrender.com/)
-
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -91,16 +87,6 @@ npm run build
 
 ## 🚀 Deployment
 
-### Render.com Deployment
-
-1. **Connect your GitHub repository to Render**
-2. **Create a new Web Service**
-3. **Configure build settings:**
-   - Build Command: `npm run render-build`
-   - Start Command: `npm run render-start`
-4. **Set all environment variables in Render dashboard**
-5. **Deploy**
-
 ### Environment Variables for Production
 
 Set these in your deployment platform:
@@ -118,6 +104,7 @@ CLOUDINARY_API_KEY=your_cloudinary_api_key
 CLOUDINARY_SECRET_KEY=your_cloudinary_secret_key
 AGORA_APP_ID=your_agora_app_id
 AGORA_APP_CERTIFICATE=your_agora_certificate
+CLIENT_URL=https://your-frontend-domain
 ```
 
 ## 📱 Mobile Access

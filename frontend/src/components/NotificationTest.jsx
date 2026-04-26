@@ -1,5 +1,6 @@
 import { useState } from "react";
 import useGetUsers from "../hooks/useGetUsers.js";
+import { apiCall } from "../config/api";
 
 const NotificationTest = () => {
 	const [selectedUserId, setSelectedUserId] = useState("");
@@ -14,19 +15,9 @@ const NotificationTest = () => {
 		setResult("");
 
 		try {
-			console.log("Testing direct connection to backend...");
-			const response = await fetch("http://localhost:5000/api/notifications/ping", {
-				method: "GET",
-				credentials: "include",
-			});
-
-			if (response.ok) {
-				const data = await response.json();
-				setResult(`✅ Backend connection working! ${data.message}`);
-			} else {
-				const text = await response.text();
-				setResult(`❌ Backend connection failed. Status: ${response.status}. Response: ${text}`);
-			}
+			console.log("Testing connection to backend...");
+			const data = await apiCall("/api/notifications/ping");
+			setResult(`✅ Backend connection working! ${data.message}`);
 		} catch (error) {
 			setResult(`❌ Network error: ${error.message}`);
 		} finally {
@@ -53,48 +44,24 @@ const NotificationTest = () => {
 
 			// First, test if the backend is accessible
 			console.log("Testing backend connection...");
-			const pingResponse = await fetch("http://localhost:5000/api/notifications/ping", {
-				method: "GET",
-				credentials: "include",
-			});
-			
-			if (!pingResponse.ok) {
-				const pingText = await pingResponse.text();
-				console.error("Ping failed:", pingText);
-				setResult(`❌ Backend connection failed. Status: ${pingResponse.status}. Make sure backend is running on port 5000.`);
+			try {
+				await apiCall("/api/notifications/ping");
+				console.log("Backend connection successful, proceeding with test notification...");
+			} catch (error) {
+				console.error("Ping failed:", error);
+				setResult(`❌ Backend connection failed: ${error.message}`);
 				return;
 			}
 
-			console.log("Backend connection successful, proceeding with test notification...");
-
-			const response = await fetch("http://localhost:5000/api/notifications/test", {
+			const data = await apiCall("/api/notifications/test", {
 				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				credentials: "include", // This will send the HTTP-only JWT cookie
 				body: JSON.stringify({
 					recipientId: selectedUserId,
 					messagePreview: messagePreview || "Test message from notification system"
 				}),
 			});
 
-			// Check if response is JSON
-			const contentType = response.headers.get("content-type");
-			if (!contentType || !contentType.includes("application/json")) {
-				const text = await response.text();
-				console.error("Non-JSON response:", text);
-				setResult(`❌ Server error: Received HTML instead of JSON. Status: ${response.status}`);
-				return;
-			}
-
-			const data = await response.json();
-
-			if (response.ok) {
-				setResult(`✅ ${data.message}`);
-			} else {
-				setResult(`❌ ${data.error || 'Unknown error occurred'}`);
-			}
+			setResult(`✅ ${data.message}`);
 		} catch (error) {
 			console.error("Fetch error:", error);
 			setResult(`❌ Error: ${error.message}`);

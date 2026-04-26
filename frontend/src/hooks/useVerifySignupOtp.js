@@ -30,7 +30,7 @@ const useVerifySignupOtp = () => {
 			}
 
 			toast.success("Email verified successfully!");
-			return { success: true, message: data.message };
+			return { success: true, message: data.message, user: data.user };
 		} catch (error) {
 			toast.error(error.message);
 			return { success: false, error: error.message };

@@ -62,10 +62,6 @@ const systemSettingsSchema = new mongoose.Schema({
 		notifications: {
 			type: Boolean,
 			default: true
-		},
-		profanityFilter: {
-			type: Boolean,
-			default: true
 		}
 	}
 }, { timestamps: true });

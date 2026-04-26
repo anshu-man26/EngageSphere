@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from "react";
 import { useAuthContext } from "../../context/AuthContext";
 import useUpdateProfile from "../../hooks/useUpdateProfile";
 import useUpdateSoundSettings from "../../hooks/useUpdateSoundSettings";
-import useProfanityFilterSettings from "../../hooks/useProfanityFilterSettings";
 import usePrivacySettings from "../../hooks/usePrivacySettings";
 import useUploadProfilePic from "../../hooks/useUploadProfilePic";
 import useChangePassword from "../../hooks/useChangePassword";
@@ -17,12 +16,12 @@ import { toast } from "react-hot-toast";
 import ChatBackgroundSelector from "../../components/chat-background/ChatBackgroundSelector";
 import BackgroundImageManager from "../../components/chat-background/BackgroundImageManager";
 import useDefaultChatBackground from "../../hooks/useDefaultChatBackground";
+import { enable2FA, verifyEnable2FA, disable2FA } from "../../hooks/use2FA";
 
 const Profile = () => {
 	const { authUser, setAuthUser } = useAuthContext();
 	const { loading, updateProfile } = useUpdateProfile();
 	const { loading: soundSettingsLoading, updateSoundSettings } = useUpdateSoundSettings();
-	const { loading: profanityFilterLoading, updateProfanityFilterSettings } = useProfanityFilterSettings();
 	const { loading: privacyLoading, updateEmailVisibility } = usePrivacySettings();
 	const { loading: uploadLoading, uploadProfilePic } = useUploadProfilePic();
 	const { loading: passwordLoading, changePassword } = useChangePassword();
@@ -108,11 +107,6 @@ const Profile = () => {
 		emailVisible: authUser?.privacySettings?.emailVisible || false, // Default to hidden
 	});
 
-	// Profanity filter settings state
-	const [profanityFilterEnabled, setProfanityFilterEnabled] = useState(
-		authUser?.profanityFilterEnabled !== false // Default to true
-	);
-
 	// Separate loading states for each sound setting
 	const [messageSoundLoading, setMessageSoundLoading] = useState(false);
 	const [ringtoneLoading, setRingtoneLoading] = useState(false);
@@ -135,11 +129,6 @@ const Profile = () => {
 			});
 		}
 	}, [authUser?.privacySettings]);
-
-	// Update profanity filter settings when authUser changes
-	useEffect(() => {
-		setProfanityFilterEnabled(authUser?.profanityFilterEnabled !== false);
-	}, [authUser?.profanityFilterEnabled]);
 
 	// Update username input when authUser changes
 	useEffect(() => {
@@ -431,22 +420,11 @@ const Profile = () => {
 	const handleEnable2FA = async () => {
 		setEnable2FALoading(true);
 		try {
-			const res = await fetch("/api/auth/enable-2fa", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				credentials: "include",
-			});
-
-			const data = await res.json();
-			if (data.error) {
-				toast.error(data.error);
-				return;
-			}
-
+			await enable2FA();
 			toast.success("OTP sent to your email");
 			setShow2FAOTPForm(true);
 		} catch (error) {
-			toast.error("Failed to send OTP");
+			toast.error(error.message || "Failed to send OTP");
 		} finally {
 			setEnable2FALoading(false);
 		}
@@ -458,33 +436,17 @@ const Profile = () => {
 			setTwoFAOTPError("Please enter a valid 6-digit OTP");
 			return;
 		}
-
 		setVerify2FALoading(true);
 		try {
-			const res = await fetch("/api/auth/verify-enable-2fa", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				credentials: "include",
-				body: JSON.stringify({ otp: twoFAOTP }),
-			});
-
-			const data = await res.json();
-			if (data.error) {
-				setTwoFAOTPError(data.error);
-				return;
-			}
-
+			await verifyEnable2FA(twoFAOTP);
 			toast.success("2FA enabled successfully");
 			setTwoFactorEnabled(true);
 			setShow2FAOTPForm(false);
 			setTwoFAOTP("");
 			setTwoFAOTPError("");
-			// Update authUser context if available
-			if (authUser) {
-				authUser.twoFactorEnabled = true;
-			}
+			if (authUser) authUser.twoFactorEnabled = true;
 		} catch (error) {
-			setTwoFAOTPError("Failed to enable 2FA");
+			setTwoFAOTPError(error.message || "Failed to enable 2FA");
 		} finally {
 			setVerify2FALoading(false);
 		}
@@ -493,26 +455,12 @@ const Profile = () => {
 	const handleDisable2FA = async () => {
 		setDisable2FALoading(true);
 		try {
-			const res = await fetch("/api/auth/disable-2fa", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				credentials: "include",
-			});
-
-			const data = await res.json();
-			if (data.error) {
-				toast.error(data.error);
-				return;
-			}
-
+			await disable2FA();
 			toast.success("2FA disabled successfully");
 			setTwoFactorEnabled(false);
-			// Update authUser context if available
-			if (authUser) {
-				authUser.twoFactorEnabled = false;
-			}
+			if (authUser) authUser.twoFactorEnabled = false;
 		} catch (error) {
-			toast.error("Failed to disable 2FA");
+			toast.error(error.message || "Failed to disable 2FA");
 		} finally {
 			setDisable2FALoading(false);
 		}
@@ -645,16 +593,6 @@ const Profile = () => {
 			// Revert on error
 			setPrivacySettings(prev => ({ ...prev, [setting]: !value }));
 			toast.error('Failed to update privacy settings');
-		}
-	};
-
-	// Handle profanity filter settings update
-	const handleProfanityFilterChange = async (value) => {
-		try {
-			await updateProfanityFilterSettings(value);
-			setProfanityFilterEnabled(value);
-		} catch (error) {
-			console.error('Failed to update profanity filter settings:', error);
 		}
 	};
 
@@ -1815,53 +1753,6 @@ const Profile = () => {
 										</button>
 									</div>
 								</div>
-							</div>
-
-							{/* Profanity Filter Toggle */}
-							<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-gray-700 rounded-lg border border-gray-600 gap-4">
-								<div className="flex items-center gap-3 flex-1 min-w-0">
-									<div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-										profanityFilterEnabled 
-											? 'bg-green-600' 
-											: 'bg-gray-600'
-									}`}>
-										{profanityFilterEnabled ? (
-											<FaShieldAlt className="text-white" />
-										) : (
-											<FaUnlock className="text-white" />
-										)}
-									</div>
-									<div className="flex-1 min-w-0">
-										<h4 className="text-white font-medium">Profanity Filter</h4>
-										<p className="text-gray-300 text-sm">
-											{profanityFilterEnabled 
-												? "Filter inappropriate content in messages" 
-												: "Show all messages without filtering"
-											}
-										</p>
-									</div>
-								</div>
-								<button
-									onClick={() => handleProfanityFilterChange(!profanityFilterEnabled)}
-									disabled={profanityFilterLoading}
-									className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
-										profanityFilterEnabled 
-											? 'bg-green-500' 
-											: 'bg-gray-300'
-									} ${profanityFilterLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-								>
-									{profanityFilterLoading ? (
-										<div className="absolute inset-0 flex items-center justify-center">
-											<div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-										</div>
-									) : (
-										<span
-											className={`inline-block h-5 w-5 transform rounded-full bg-white transition duration-200 ease-in-out ${
-												profanityFilterEnabled ? 'translate-x-6' : 'translate-x-1'
-											}`}
-										/>
-									)}
-								</button>
 							</div>
 
 							{/* Default Chat Background Section */}

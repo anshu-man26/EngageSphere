@@ -10,11 +10,12 @@ const useConversation = create((set, get) => ({
 		
 		if (!currentConversation || currentConversation._id !== selectedConversation?._id) {
 			// Clear messages and uploading files when switching to a different conversation
-			set({ 
-				selectedConversation, 
-				messages: [], 
+			set({
+				selectedConversation,
+				messages: [],
 				uploadingFiles: [],
-				activeEmojiPicker: null // Close any open emoji picker
+				activeEmojiPicker: null, // Close any open emoji picker
+				hasMoreMessages: false,
 			});
 			
 			// Reset unread count for the selected conversation
@@ -40,6 +41,20 @@ const useConversation = create((set, get) => ({
 		const messagesArray = Array.isArray(messages) ? messages : [];
 		set({ messages: messagesArray });
 	},
+	// Prepend older messages (history pagination). Dedupes by _id so resending
+	// the same page is harmless.
+	prependMessages: (older) => {
+		if (!Array.isArray(older) || older.length === 0) return;
+		const { messages } = get();
+		const existing = Array.isArray(messages) ? messages : [];
+		const seen = new Set(existing.map((m) => m._id));
+		const fresh = older.filter((m) => !seen.has(m._id));
+		if (fresh.length === 0) return;
+		set({ messages: [...fresh, ...existing] });
+	},
+	// Whether older messages still exist on the server for the active chat.
+	hasMoreMessages: false,
+	setHasMoreMessages: (v) => set({ hasMoreMessages: !!v }),
 	// Global emoji picker state - only one can be open at a time
 	activeEmojiPicker: null, // messageId of the message with open emoji picker
 	setActiveEmojiPicker: (messageId) => {
@@ -215,7 +230,7 @@ const useConversation = create((set, get) => ({
 	},
 	// Reset function to clear all state
 	reset: () => {
-		set({ selectedConversation: null, messages: [], searchTerm: "", uploadingFiles: [] });
+		set({ selectedConversation: null, messages: [], searchTerm: "", uploadingFiles: [], hasMoreMessages: false });
 	},
 }));
 

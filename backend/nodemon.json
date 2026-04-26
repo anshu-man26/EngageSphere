@@ -27,6 +27,5 @@
   "verbose": true,
   "restartable": "rs",
   "colours": true,
-  "legacyWatch": true,
-  "signal": "SIGTERM"
+  "legacyWatch": true
 } 

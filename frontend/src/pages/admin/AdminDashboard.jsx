@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthContext } from "../../context/AuthContext.jsx";
 import { useSocketContext } from "../../context/SocketContext.jsx";
+import { fetchAdminUsersPage, fetchAdminStats, adminLogout } from "../../hooks/useAdminProfile";
 import SecureDeleteModal from "../../components/admin/SecureDeleteModal.jsx";
 import SystemHealthPanel from "../../components/admin/SystemHealthPanel.jsx";
 import SystemSettingsPanel from "../../components/admin/SystemSettingsPanel.jsx";
@@ -74,14 +75,7 @@ const AdminDashboard = () => {
 
 	const fetchUsers = async () => {
 		try {
-			const res = await fetch(`/api/admin/users?page=${currentPage}&search=${searchTerm}`, {
-				credentials: "include",
-			});
-			const data = await res.json();
-			if (data.error) {
-				console.error(data.error);
-				return;
-			}
+			const data = await fetchAdminUsersPage(currentPage, searchTerm);
 			setUsers(data.users);
 			setTotalPages(data.totalPages);
 		} catch (error) {
@@ -93,15 +87,7 @@ const AdminDashboard = () => {
 
 	const fetchStats = async () => {
 		try {
-			const res = await fetch("/api/admin/stats", {
-				credentials: "include",
-			});
-			const data = await res.json();
-			if (data.error) {
-				console.error(data.error);
-				return;
-			}
-			setStats(data);
+			setStats(await fetchAdminStats());
 		} catch (error) {
 			console.error("Error fetching stats:", error);
 		}
@@ -109,10 +95,7 @@ const AdminDashboard = () => {
 
 	const handleLogout = async () => {
 		try {
-			await fetch("/api/admin/logout", {
-				method: "POST",
-				credentials: "include",
-			});
+			await adminLogout();
 			setAdmin(null);
 			navigate("/admin/login");
 		} catch (error) {

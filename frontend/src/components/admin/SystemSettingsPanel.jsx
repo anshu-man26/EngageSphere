@@ -1,13 +1,12 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuthContext } from "../../context/AuthContext";
+import useAdminSystemSettings from "../../hooks/useAdminSystemSettings";
 
 const SystemSettingsPanel = () => {
-	const [settings, setSettings] = useState(null);
-	const [loading, setLoading] = useState(false);
-	const [saving, setSaving] = useState(false);
-	const [error, setError] = useState(null);
-	const [success, setSuccess] = useState(null);
 	const { admin } = useAuthContext();
+	const { settings, loading, saving, error, fetchSettings, saveSettings, setError } =
+		useAdminSystemSettings(!!admin);
+	const [success, setSuccess] = useState(null);
 
 	// Form state
 	const [formData, setFormData] = useState({
@@ -24,84 +23,31 @@ const SystemSettingsPanel = () => {
 			userLogin: true,
 			fileUpload: true,
 			videoCalls: true,
-			notifications: true,
-			profanityFilter: true
+			notifications: true
 		}
 	});
 
 	useEffect(() => {
-		fetchSettings();
-	}, []);
-
-	const fetchSettings = async () => {
-		if (!admin) return;
-
-		setLoading(true);
-		setError(null);
-		
-		try {
-			const res = await fetch("/api/admin/settings", {
-				credentials: "include"
-			});
-			
-			if (!res.ok) {
-				throw new Error(`HTTP error! status: ${res.status}`);
-			}
-			
-			const data = await res.json();
-			setSettings(data);
-			setFormData({
-				mobileAvailability: data.mobileAvailability || { enabled: true, message: "" },
-				maintenanceMode: data.maintenanceMode || { enabled: false, message: "" },
-				features: data.features || {
-					userRegistration: true,
-					userLogin: true,
-					fileUpload: true,
-					videoCalls: true,
-					notifications: true,
-					profanityFilter: true
-				}
-			});
-		} catch (error) {
-			console.error("Error fetching system settings:", error);
-			setError(error.message);
-		} finally {
-			setLoading(false);
-		}
-	};
+		if (!settings) return;
+		setFormData({
+			mobileAvailability: settings.mobileAvailability || { enabled: true, message: "" },
+			maintenanceMode: settings.maintenanceMode || { enabled: false, message: "" },
+			features: settings.features || {
+				userRegistration: true,
+				userLogin: true,
+				fileUpload: true,
+				videoCalls: true,
+				notifications: true,
+			},
+		});
+	}, [settings]);
 
 	const handleSave = async () => {
-		if (!admin) return;
-
-		setSaving(true);
-		setError(null);
 		setSuccess(null);
-		
-		try {
-			const res = await fetch("/api/admin/settings", {
-				method: "PUT",
-				headers: {
-					"Content-Type": "application/json"
-				},
-				credentials: "include",
-				body: JSON.stringify(formData)
-			});
-			
-			if (!res.ok) {
-				throw new Error(`HTTP error! status: ${res.status}`);
-			}
-			
-			const data = await res.json();
-			setSettings(data.settings);
+		const data = await saveSettings(formData);
+		if (data) {
 			setSuccess("System settings updated successfully!");
-			
-			// Clear success message after 3 seconds
 			setTimeout(() => setSuccess(null), 3000);
-		} catch (error) {
-			console.error("Error updating system settings:", error);
-			setError(error.message);
-		} finally {
-			setSaving(false);
 		}
 	};
 
