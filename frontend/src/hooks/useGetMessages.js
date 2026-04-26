@@ -48,12 +48,20 @@ const useGetMessages = () => {
 				setMessages(list);
 				setHasMoreMessages(more);
 			} catch (err) {
+				if (cancelled) return;
 				console.error("Error fetching messages:", err);
 				toast.error(err.message || "Failed to load messages");
 				setMessages([]);
 				setHasMoreMessages(false);
 			} finally {
-				if (!cancelled) setLoading(false);
+				// Always clear loading. In React StrictMode dev, the effect
+				// runs → cleanup → runs again. If we gate this on `!cancelled`,
+				// the first run's fetch resolves *after* cleanup set
+				// cancelled=true, so loading would stay true forever (the
+				// second run takes the fetchedForRef early-exit and doesn't
+				// touch loading). Clearing unconditionally is safe because
+				// `setMessages`/`setHasMoreMessages` are gated by `!cancelled`.
+				setLoading(false);
 			}
 		})();
 
