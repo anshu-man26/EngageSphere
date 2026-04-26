@@ -4,6 +4,10 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/api/messages/:path*",
+      "destination": "https://socket.engage-sphere.in/api/messages/:path*"
+    },
+    {
       "source": "/api/:path*",
       "destination": "https://qvst740q80.execute-api.ap-south-1.amazonaws.com/api/:path*"
     },
